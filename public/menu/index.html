@@ -3038,13 +3038,20 @@
 
         async function getNextPickupNo() {
             const dateKey = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei' }).format(new Date()).replaceAll('-', '');
-            const counterRef = ref(db, `dailyPickupCounters/${dateKey}`);
+            const usedCodesPath = `dailyPickupCodes/${dateKey}`;
             try {
-                const result = await runTransaction(counterRef, (current) => Number(current || 0) + 1);
-                return String(result.snapshot.val()).padStart(3, '0');
+                for (let attempt = 0; attempt < 30; attempt += 1) {
+                    const code = String(Math.floor(100 + Math.random() * 900));
+                    const codeRef = ref(db, `${usedCodesPath}/${code}`);
+                    const result = await runTransaction(codeRef, (current) => current || {
+                        createdAt: new Date().toISOString(),
+                    });
+                    if (result.committed) return code;
+                }
+                throw new Error('今日可用取餐號碼不足');
             } catch (error) {
-                console.warn('取餐流水號計數器無法使用，改用時間備援編號:', error);
-                return String(Date.now() % 1000).padStart(3, '0');
+                console.warn('隨機取餐號碼記錄無法使用，改用隨機備援編號:', error);
+                return String(Math.floor(100 + Math.random() * 900));
             }
         }
 
