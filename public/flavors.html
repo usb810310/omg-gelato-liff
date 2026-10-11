@@ -1,1217 +1,149 @@
-<!DOCTYPE html>
-<html lang="zh-TW">
+<!doctype html>
+<html lang="zh-Hant">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>OMG!Gelato 今日口味</title>
-    <script type="importmap">
-        {
-            "imports": {
-                "firebase/app": "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js",
-                "firebase/database": "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js"
-            }
-        }
-    </script>
-    <script>
-        (function() {
-            const stored = localStorage.getItem('omg-theme') || 'light';
-            if (stored === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
-            document.addEventListener('DOMContentLoaded', function() {
-                const btn = document.getElementById('themeToggle');
-                const knob = document.getElementById('toggleKnob');
-                const label = document.getElementById('themeLabel');
-                if (!btn) return;
-                function setTheme(theme) {
-                    const html = document.documentElement;
-                    if (theme === 'dark') {
-                        html.setAttribute('data-theme', 'dark');
-                        if (knob) knob.textContent = '☀️';
-                        if (label) label.textContent = '白主題';
-                        localStorage.setItem('omg-theme', 'dark');
-                    } else {
-                        html.removeAttribute('data-theme');
-                        if (knob) knob.textContent = '🌙';
-                        if (label) label.textContent = '黑主題';
-                        localStorage.setItem('omg-theme', 'light');
-                    }
-                }
-                btn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    const current = document.documentElement.getAttribute('data-theme');
-                    setTheme(current === 'dark' ? 'light' : 'dark');
-                });
-                const initTheme = document.documentElement.getAttribute('data-theme');
-                if (label) label.textContent = initTheme === 'dark' ? '白主題' : '黑主題';
-            });
-        })();
-    </script>
-    <style>
-        :root {
-            --bg-body: #f5f2ef;
-            --bg-card: #ffffff;
-            --bg-card-hover: #faf8f6;
-            --bg-sold: #f1eeea;
-            --text-primary: #2c241e;
-            --text-secondary: #8f8076;
-            --text-muted: #b3a69c;
-            --text-footer: #ccc2b8;
-            --border-light: #e5ddd6;
-            --border-hover: #d0c4ba;
-            --border-sold: #ddd5ce;
-            --shadow-card: 0 2px 12px rgba(44, 36, 30, 0.06);
-            --shadow-hover: 0 4px 16px rgba(44, 36, 30, 0.08);
-            --shadow-item: 0 1px 4px rgba(44, 36, 30, 0.04);
-            --accent: #b09888;
-            --accent-light: #d5c8be;
-            --scroll-track: #e5ddd6;
-            --scroll-fill: linear-gradient(90deg, #d5c8be, #e8ddd2);
-            --sold-tag-bg: rgba(255, 255, 255, 0.75);
-            --sold-tag-border: #ddd5ce;
-            --control-bg: var(--bg-card);
-            --control-border: var(--border-light);
-            --control-divider: var(--border-light);
-            --overlay-bg: rgba(0, 0, 0, 0.5);
-        }
-        [data-theme="dark"] {
-            --bg-body: #1e1b18;
-            --bg-card: #2b2724;
-            --bg-card-hover: #35302c;
-            --bg-sold: #25211e;
-            --text-primary: #ede7e0;
-            --text-secondary: #b8ada4;
-            --text-muted: #9a8e84;
-            --text-footer: #5a4f48;
-            --border-light: #3d3530;
-            --border-hover: #5a4f48;
-            --border-sold: #3d3530;
-            --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.3);
-            --shadow-hover: 0 4px 20px rgba(0, 0, 0, 0.4);
-            --shadow-item: 0 1px 4px rgba(0, 0, 0, 0.25);
-            --accent: #c4b0a4;
-            --accent-light: #e0d2c8;
-            --scroll-track: #3d3530;
-            --scroll-fill: linear-gradient(90deg, #a08878, #c4b0a4);
-            --sold-tag-bg: rgba(43, 39, 36, 0.85);
-            --sold-tag-border: #3d3530;
-            --control-bg: #2b2724;
-            --control-border: #3d3530;
-            --control-divider: #3d3530;
-            --overlay-bg: rgba(0, 0, 0, 0.7);
-        }
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Inter', -apple-system, sans-serif;
-        }
-        body {
-            background: var(--bg-body);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
-            padding: 20px 16px 110px;
-            transition: background 0.35s ease;
-            color: var(--text-primary);
-        }
-        .container {
-            max-width: 500px;
-            width: 100%;
-        }
-
-        /* ===== 品牌 ===== */
-        .brand { text-align: center; padding: 10px 0 14px; }
-        .brand-inner { display: flex; flex-direction: column; align-items: center; }
-        .brand-logo-wrapper { display: flex; justify-content: center; margin-bottom: 4px; }
-        .brand-logo {
-            width: 80px; height: 80px; object-fit: contain;
-            filter: drop-shadow(0 4px 16px rgba(44, 36, 30, 0.08));
-            transition: transform 0.4s ease;
-        }
-        .brand-logo:hover { transform: scale(1.05) rotate(-2deg); }
-        .brand-title {
-            font-size: 34px; font-weight: 700; color: var(--text-primary);
-            letter-spacing: 2px; line-height: 1.1;
-        }
-        .brand-title span { color: var(--accent); font-weight: 700; }
-        .brand-title-box { display: inline-flex; flex-direction: column; align-items: center; }
-        .brand-divider {
-            width: 100%; height: 3px;
-            background: linear-gradient(90deg, #009246 33.33%, #ffffff 33.33%, #ffffff 66.66%, #ce2b37 66.66%);
-            margin: 4px auto 16px; border-radius: 4px;
-            box-shadow: 0 0 12px rgba(206, 43, 55, 0.15), 0 0 12px rgba(0, 146, 70, 0.15);
-        }
-
-        /* ===== 控制欄 ===== */
-        .control-bar {
-            display: flex; align-items: center; justify-content: center;
-            gap: 0; background: var(--control-bg); border-radius: 40px;
-            border: 1px solid var(--control-border); box-shadow: var(--shadow-item);
-            padding: 4px 6px; margin: 10px auto 16px; width: fit-content; max-width: 100%;
-            transition: background 0.35s ease, border-color 0.35s ease;
-            position: sticky; top: 10px; z-index: 999;
-        }
-        .control-item {
-            display: flex; align-items: center; gap: 6px;
-            padding: 6px 16px; border-radius: 30px;
-            font-size: 12px; font-weight: 500; color: var(--text-secondary);
-            background: transparent; border: none; cursor: pointer;
-            transition: all 0.2s ease; text-decoration: none; white-space: nowrap;
-        }
-        .control-item .icon { font-size: 14px; line-height: 1; }
-        .control-item .label { font-size: 12px; font-weight: 500; letter-spacing: 0.3px; }
-        .control-item:hover { background: var(--bg-card-hover); color: var(--text-primary); }
-        .control-item:active { transform: scale(0.96); }
-        .control-divider {
-            width: 1px; height: 24px; background: var(--control-divider);
-            flex-shrink: 0; opacity: 0.5;
-        }
-        .sync-badge {
-            display: flex; align-items: center; gap: 6px;
-            padding: 6px 16px; border-radius: 30px;
-            font-size: 12px; font-weight: 500; color: var(--text-secondary);
-            background: transparent; border: none; cursor: default; white-space: nowrap;
-        }
-        .sync-badge .indicator {
-            width: 7px; height: 7px; border-radius: 50%;
-            background: #a0b8a8; flex-shrink: 0; transition: background 0.4s ease;
-        }
-        .sync-badge .indicator.online {
-            background: #34a853; box-shadow: 0 0 8px rgba(52, 168, 83, 0.35);
-            animation: pulse-dot 1.8s ease-in-out infinite;
-        }
-        .sync-badge .indicator.connecting { background: #fbbc04; animation: pulse-dot 1s ease-in-out infinite; }
-        .sync-badge .indicator.offline { background: #ea4335; }
-        .sync-badge .sync-label { font-size: 12px; font-weight: 500; letter-spacing: 0.3px; }
-        @keyframes pulse-dot {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.5; transform: scale(0.8); }
-        }
-        .theme-toggle-btn {
-            display: flex; align-items: center; gap: 6px;
-            padding: 6px 16px; border-radius: 30px;
-            font-size: 12px; font-weight: 500; color: var(--text-secondary);
-            background: transparent; border: none; cursor: pointer;
-            transition: all 0.2s ease; white-space: nowrap;
-        }
-        .theme-toggle-btn:hover { background: var(--bg-card-hover); color: var(--text-primary); }
-        .theme-toggle-btn:active { transform: scale(0.96); }
-        .theme-toggle-btn .icon { font-size: 14px; line-height: 1; }
-        .theme-toggle-btn .label { font-size: 12px; font-weight: 500; letter-spacing: 0.3px; }
-
-        /* ===== 品牌下方標題 ===== */
-        .brand-sub-title {
-            font-size: 13px; color: var(--text-secondary);
-            text-align: center; margin-top: 2px; padding: 0 8px;
-        }
-
-        /* ===== 營業狀態條 ===== */
-        .shop-status-bar {
-            display: flex; align-items: center; gap: 8px;
-            margin: 12px 0 4px; padding: 12px 16px;
-            border-radius: 14px; font-size: 14px; font-weight: 700;
-            background: #e7efe4; color: #3f6a3b;
-            transition: background 0.3s ease, color 0.3s ease;
-        }
-        .shop-status-bar .dot {
-            width: 9px; height: 9px; border-radius: 50%;
-            background: #4caf50; flex: none;
-            box-shadow: 0 0 8px rgba(76, 175, 80, 0.5);
-            animation: pulse-dot 1.8s ease-in-out infinite;
-        }
-        .shop-status-bar small {
-            display: block; font-weight: 500; opacity: .85;
-            font-size: 12px; margin-top: 2px;
-        }
-        .shop-status-bar.closed { background: #fbeeea; color: #8a5a4f; }
-        .shop-status-bar.closed .dot { background: #c9695b; box-shadow: none; animation: none; }
-        .shop-status-bar.reservable { background: #fff6e5; color: #8a6a2f; }
-        .shop-status-bar.reservable .dot { background: #e8a33d; box-shadow: none; animation: none; }
-
-        /* ===== 今日口味區 ===== */
-        .today-section {
-            position: relative; margin-bottom: 16px; margin-top: 12px;
-            background: var(--bg-card); border-radius: 20px;
-            padding: 18px 14px 16px; box-shadow: var(--shadow-card);
-            border: 1px solid var(--border-light);
-        }
-        .today-section .section-header {
-            display: flex; justify-content: space-between;
-            align-items: center; margin-bottom: 12px; flex-wrap: wrap;
-        }
-        .scroll-indicator {
-            display: flex; align-items: center; gap: 8px;
-            font-size: 10px; color: var(--text-muted); width: 100%;
-        }
-        .scroll-indicator .hint-text {
-            display: flex; align-items: center; gap: 4px; white-space: nowrap;
-        }
-        .scroll-indicator .track {
-            flex: 1; height: 3px; background: var(--scroll-track);
-            border-radius: 10px; overflow: hidden; max-width: 200px;
-        }
-        .scroll-indicator .track .fill {
-            height: 100%; width: 25%; background: var(--scroll-fill);
-            border-radius: 10px; transition: width 0.3s ease;
-        }
-        .today-scroll-wrapper { position: relative; overflow: hidden; margin-top: 2px; }
-        .today-scroll {
-            overflow-x: auto; overflow-y: hidden;
-            padding: 4px 0 6px 0; -webkit-overflow-scrolling: touch;
-            scroll-behavior: smooth; cursor: grab;
-        }
-        .today-scroll:active { cursor: grabbing; }
-        .today-scroll::-webkit-scrollbar { height: 0px; }
-        .today-scroll-content { display: flex; gap: 10px; width: max-content; }
-        .today-grid {
-            display: grid; grid-auto-flow: column;
-            grid-template-rows: repeat(2, 1fr);
-            gap: 10px; width: max-content;
-        }
-        .today-card {
-            width: 130px; background: var(--bg-card); border-radius: 16px;
-            padding: 22px 10px 12px; border: 1px solid var(--border-light);
-            box-shadow: var(--shadow-item); text-align: center;
-            min-height: 110px; display: flex; flex-direction: column;
-            align-items: center; position: relative;
-            transition: all 0.2s ease;
-        }
-        .today-card:hover:not(.sold-out) {
-            border-color: var(--border-hover); transform: translateY(-2px);
-            box-shadow: var(--shadow-hover);
-        }
-        .today-card.sold-out {
-            background: var(--bg-sold); border-color: var(--border-sold); opacity: 0.6;
-        }
-        .today-card.sold-out .today-name {
-            color: var(--text-muted); text-decoration: line-through;
-        }
-        .today-card .badge {
-            position: absolute; top: 6px; right: 6px;
-            font-size: 9px; font-weight: 700;
-            padding: 2px 8px; border-radius: 30px; z-index: 2;
-            line-height: 14px; white-space: nowrap;
-        }
-        .badge-sold {
-            color: var(--text-muted); background: var(--sold-tag-bg);
-            border: 1px solid var(--sold-tag-border);
-        }
-        .badge-new {
-            color: #fff;
-            background: linear-gradient(135deg, #ff8a65, #ff5252);
-            box-shadow: 0 1px 6px rgba(255, 82, 82, 0.45);
-            animation: newPulse 1.8s ease-in-out infinite;
-        }
-        @keyframes newPulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.06); }
-        }
-        .badge-hot {
-            color: #fff;
-            background: linear-gradient(135deg, #ffc107, #ff9800);
-            box-shadow: 0 1px 6px rgba(255, 152, 0, 0.45);
-        }
-        .badge-sales {
-            color: var(--text-secondary); background: var(--bg-sold);
-            border: 1px solid var(--border-light);
-        }
-        .today-card .today-name {
-            font-weight: 600; font-size: 15px; color: var(--text-primary);
-        }
-        .today-card .today-desc {
-            font-size: 11px; color: var(--text-muted); margin-top: 2px;
-        }
-        .today-card .color-tag {
-            width: 22px; height: 3px; border-radius: 10px;
-            margin-bottom: 6px; flex-shrink: 0;
-        }
-        .today-empty {
-            font-size: 13px; color: var(--text-muted);
-            padding: 12px 0; text-align: center;
-        }
-        .today-grid .loading {
-            font-size: 13px; color: var(--text-muted); padding: 12px 0;
-        }
-        .finger-swipe {
-            position: absolute; bottom: 8px; left: 50%;
-            transform: translateX(-50%); z-index: 5;
-            font-size: 26px; color: var(--accent); opacity: 0.8;
-            pointer-events: none; animation: fingerMove 1.8s ease-in-out 2;
-            transition: opacity 0.6s ease;
-        }
-        @keyframes fingerMove {
-            0%, 100% { transform: translateX(-50%) translateX(-15px); opacity: 0.4; }
-            50% { transform: translateX(-50%) translateX(15px); opacity: 1; }
-        }
-        .finger-swipe.hidden { opacity: 0 !important; animation: none !important; }
-
-        /* ===== 互動按鈕區 ===== */
-        .action-buttons {
-            display: flex; gap: 10px; margin: 16px 0 0;
-        }
-        .action-btn {
-            flex: 1; display: flex; align-items: center; justify-content: center;
-            gap: 8px; padding: 14px 16px; border-radius: 16px;
-            background: var(--bg-card); border: 1px solid var(--border-light);
-            box-shadow: var(--shadow-item); color: var(--text-primary);
-            font-size: 14px; font-weight: 600; cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        .action-btn:hover {
-            background: var(--bg-card-hover); transform: translateY(-1px);
-            box-shadow: var(--shadow-hover);
-        }
-        .action-btn:active { transform: scale(0.97); }
-        .action-btn .icon { font-size: 18px; }
-
-        /* ===== 底部固定 CTA ===== */
-        .bottom-cta-bar {
-            position: fixed; bottom: 0; left: 0; right: 0;
-            display: flex; gap: 10px;
-            padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
-            background: linear-gradient(to top, var(--bg-body) 75%, transparent);
-            z-index: 998; justify-content: center; pointer-events: none;
-        }
-        .bottom-cta-bar .cta-btn {
-            flex: 1; max-width: 240px;
-            display: flex; align-items: center; justify-content: center;
-            gap: 6px; padding: 14px 16px; border-radius: 30px;
-            font-size: 14px; font-weight: 700; text-decoration: none;
-            border: none; cursor: pointer; transition: all 0.2s ease;
-            pointer-events: auto; white-space: nowrap;
-        }
-        .bottom-cta-bar .cta-line {
-            background: #06C755; color: #fff;
-            box-shadow: 0 6px 20px rgba(6, 199, 85, 0.35);
-        }
-        .bottom-cta-bar .cta-line:hover { background: #05b04a; transform: translateY(-1px); }
-        .bottom-cta-bar .cta-order {
-            background: var(--accent); color: #fff;
-            box-shadow: 0 6px 20px rgba(176, 152, 136, 0.35);
-        }
-        .bottom-cta-bar .cta-order:hover {
-            background: var(--accent-light); color: var(--text-primary);
-            transform: translateY(-1px);
-        }
-
-        .global-update-time {
-            text-align: right; font-size: 11px;
-            color: var(--text-muted); margin: 12px 0 0;
-        }
-        .footer {
-            text-align: center; margin-top: 20px; font-size: 11px;
-            color: var(--text-footer); border-top: 1px solid var(--border-light);
-            padding-top: 16px;
-        }
-
-        /* ===== Modal 通用 ===== */
-        .modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: var(--overlay-bg); backdrop-filter: blur(8px);
-            z-index: 9999; display: flex; align-items: center; justify-content: center;
-            padding: 20px; opacity: 0; pointer-events: none;
-            transition: opacity 0.35s ease;
-        }
-        .modal-overlay.open { opacity: 1; pointer-events: auto; }
-        .modal-box {
-            background: var(--bg-card); border-radius: 28px;
-            padding: 24px 22px 20px; max-width: 420px; width: 100%;
-            max-height: 85vh; display: flex; flex-direction: column;
-            box-shadow: 0 24px 64px rgba(0, 0, 0, 0.35);
-            transform: translateY(24px) scale(0.96);
-            transition: transform 0.35s cubic-bezier(0.34, 1.2, 0.64, 1);
-        }
-        .modal-overlay.open .modal-box { transform: translateY(0) scale(1); }
-        .modal-header {
-            display: flex; justify-content: space-between;
-            align-items: center; margin-bottom: 8px;
-        }
-        .modal-header h3 {
-            font-size: 20px; font-weight: 700; color: var(--text-primary);
-        }
-        .modal-close {
-            background: var(--bg-sold); border: none; border-radius: 50%;
-            width: 34px; height: 34px; font-size: 16px; color: var(--text-muted);
-            cursor: pointer; display: flex; align-items: center; justify-content: center;
-            transition: all 0.2s;
-        }
-        .modal-close:hover { background: var(--border-light); color: var(--text-primary); }
-        .modal-sub {
-            font-size: 13px; color: var(--text-secondary);
-            margin: 4px 0 14px; padding-bottom: 12px;
-            border-bottom: 1px solid var(--border-light);
-        }
-        .modal-actions {
-            display: flex; gap: 10px; justify-content: flex-end;
-            padding-top: 12px; border-top: 1px solid var(--border-light);
-            margin-top: 4px;
-        }
-        .modal-actions button {
-            padding: 10px 24px; border-radius: 40px; border: none;
-            font-weight: 600; font-size: 14px; cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        .modal-actions button:active { transform: scale(0.96); }
-        .modal-actions .btn-cancel { background: var(--bg-sold); color: var(--text-muted); }
-        .modal-actions .btn-cancel:hover { background: var(--border-light); }
-        .modal-actions .btn-confirm {
-            background: var(--accent); color: #fff; min-width: 100px;
-        }
-        .modal-actions .btn-confirm:hover:not(:disabled) {
-            background: var(--accent-light); color: var(--text-primary);
-        }
-        .modal-actions .btn-confirm:disabled { opacity: 0.4; cursor: not-allowed; }
-        .modal-error {
-            color: #d93025; font-size: 13px; min-height: 20px;
-            margin: 4px 0; font-weight: 500;
-        }
-
-        /* ===== 許願池 ===== */
-        .wish-input-wrap { margin: 4px 0 6px; }
-        .wish-input-wrap input {
-            width: 100%; padding: 12px 16px; border-radius: 40px;
-            border: 2px solid var(--border-light); background: var(--bg-card);
-            color: var(--text-primary); font-size: 15px; outline: none;
-            transition: border 0.2s;
-        }
-        .wish-input-wrap input:focus { border-color: var(--accent); }
-        .wish-hint { font-size: 12px; color: var(--text-muted); margin-top: 6px; padding-left: 6px; }
-
-        /* ===== 首次訪問彈窗 ===== */
-        .welcome-box {
-            text-align: center; padding: 30px 22px 20px;
-        }
-        .welcome-icon {
-            font-size: 60px; margin-bottom: 10px;
-            animation: bounceIn 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
-        .welcome-box h3 {
-            font-size: 21px; color: var(--text-primary);
-            margin-bottom: 12px; line-height: 1.45; font-weight: 700;
-        }
-        .welcome-box p {
-            font-size: 14px; color: var(--text-secondary);
-            line-height: 1.7; margin-bottom: 20px;
-        }
-        .welcome-btn {
-            display: block; width: 100%; padding: 14px;
-            border-radius: 30px; background: #06C755; color: #fff;
-            font-size: 16px; font-weight: 700; text-decoration: none;
-            border: none; cursor: pointer;
-            box-shadow: 0 6px 20px rgba(6, 199, 85, 0.35);
-            transition: all 0.2s ease;
-        }
-        .welcome-btn:hover { background: #05b04a; transform: translateY(-1px); }
-        .welcome-skip {
-            display: block; width: 100%; margin-top: 8px; padding: 10px;
-            border-radius: 30px; background: transparent; border: none;
-            color: var(--text-muted); font-size: 13px; cursor: pointer;
-            transition: color 0.2s;
-        }
-        .welcome-skip:hover { color: var(--text-secondary); }
-        @keyframes bounceIn {
-            0% { transform: scale(0.4); opacity: 0; }
-            60% { transform: scale(1.15); }
-            100% { transform: scale(1); opacity: 1; }
-        }
-
-        /* ===== 隨機推薦 ===== */
-        .random-box { text-align: center; padding: 30px 22px 20px; }
-        .random-icon {
-            font-size: 54px; margin-bottom: 6px;
-            animation: diceSpin 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
-        @keyframes diceSpin {
-            from { transform: rotate(0deg) scale(0.4); opacity: 0; }
-            to { transform: rotate(360deg) scale(1); opacity: 1; }
-        }
-        .random-box h3 {
-            font-size: 15px; color: var(--text-secondary);
-            font-weight: 500; margin-bottom: 6px;
-        }
-        .random-result {
-            font-size: 30px; font-weight: 800; color: var(--accent);
-            margin-bottom: 22px; letter-spacing: 1px;
-            min-height: 40px; line-height: 1.2;
-        }
-        .random-actions { display: flex; gap: 10px; }
-        .random-actions button {
-            flex: 1; padding: 12px; border-radius: 30px;
-            border: none; font-size: 15px; font-weight: 600;
-            cursor: pointer; transition: all 0.2s ease;
-        }
-        .random-actions button:active { transform: scale(0.96); }
-        .random-actions .btn-cancel {
-            background: var(--bg-sold); color: var(--text-secondary);
-        }
-        .random-actions .btn-cancel:hover { background: var(--border-light); }
-        .random-actions .btn-confirm { background: var(--accent); color: #fff; }
-        .random-actions .btn-confirm:hover {
-            background: var(--accent-light); color: var(--text-primary);
-        }
-
-        /* ===== Floating Toast ===== */
-        .floating-toast {
-            position: fixed; top: 24px; left: 50%;
-            transform: translateX(-50%) translateY(-20px);
-            background: rgba(30, 30, 30, 0.92); color: #fff;
-            padding: 12px 24px; border-radius: 50px;
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
-            font-size: 14px; font-weight: 600; z-index: 10000;
-            opacity: 0; transition: opacity 0.35s ease, transform 0.35s ease;
-            pointer-events: none; white-space: nowrap;
-            backdrop-filter: blur(6px);
-        }
-        .floating-toast.show {
-            opacity: 1; transform: translateX(-50%) translateY(0);
-        }
-
-        @media (max-width: 480px) {
-            .brand-logo { width: 68px; height: 68px; }
-            .brand-title { font-size: 28px; letter-spacing: 1.5px; }
-            .control-bar {
-                padding: 3px 4px; border-radius: 30px;
-                flex-wrap: nowrap; overflow-x: auto;
-                -webkit-overflow-scrolling: touch; top: 5px;
-            }
-            .control-item, .sync-badge, .theme-toggle-btn {
-                padding: 4px 12px; font-size: 11px; flex-shrink: 0;
-            }
-            .control-item .icon, .theme-toggle-btn .icon { font-size: 12px; }
-            .control-divider { height: 18px; flex-shrink: 0; }
-            .today-card { width: 112px; padding: 20px 8px 10px; min-height: 100px; }
-            .today-card .today-name { font-size: 14px; }
-            .scroll-indicator .track { max-width: 120px; }
-            .action-btn { font-size: 13px; padding: 12px; }
-            .bottom-cta-bar .cta-btn { font-size: 13px; padding: 12px 10px; }
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>OMG! Gelato 今日口味</title>
+  <script type="importmap">
+    {
+      "imports": {
+        "firebase/app": "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js",
+        "firebase/database": "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js"
+      }
+    }
+  </script>
+  <style>
+    :root {
+      --bg: #fbf8f5;
+      --card: #ffffff;
+      --ink: #30251f;
+      --muted: #8b7c71;
+      --line: #eee5de;
+      --accent: #b98262;
+      --ok-bg: #edf7ee;
+      --ok: #39734a;
+      --closed-bg: #fff2eb;
+      --closed: #9a5a45;
+      --sold-bg: #f1eeeb;
+      --sold: #9a8e85;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--ink); }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Noto Sans TC", "PingFang TC", sans-serif; padding: 14px 12px 20px; }
+    .shell { width: min(100%, 420px); margin: 0 auto; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+    .brand { display: flex; align-items: center; gap: 9px; min-width: 0; }
+    .logo { width: 38px; height: 38px; object-fit: contain; border-radius: 12px; background: #fff; box-shadow: 0 3px 12px rgba(79, 55, 39, .08); }
+    .brand-copy { min-width: 0; }
+    .brand-title { margin: 0; font-size: 17px; line-height: 1.1; letter-spacing: .4px; white-space: nowrap; }
+    .brand-subtitle { margin-top: 3px; color: var(--muted); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sync { display: inline-flex; align-items: center; gap: 5px; color: var(--muted); font-size: 10px; white-space: nowrap; }
+    .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: #e3af55; }
+    .sync-dot.online { background: #4fa563; box-shadow: 0 0 0 3px rgba(79,165,99,.12); }
+    .sync-dot.offline { background: #d66b59; }
+    .status { display: flex; align-items: flex-start; gap: 8px; padding: 10px 11px; border: 1px solid #dcebdd; border-radius: 13px; background: var(--ok-bg); color: var(--ok); }
+    .status.closed { border-color: #f0d8ca; background: var(--closed-bg); color: var(--closed); }
+    .status-dot { width: 8px; height: 8px; flex: none; margin-top: 4px; border-radius: 50%; background: currentColor; }
+    .status strong { display: block; font-size: 12px; line-height: 1.2; }
+    .status small { display: block; margin-top: 3px; font-size: 10px; opacity: .85; line-height: 1.3; }
+    .section { margin-top: 12px; padding: 13px 11px 11px; border: 1px solid var(--line); border-radius: 17px; background: var(--card); box-shadow: 0 6px 20px rgba(73, 48, 32, .05); }
+    .section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+    .section-head h2 { margin: 0; font-size: 14px; letter-spacing: .3px; }
+    .section-head span { color: var(--muted); font-size: 10px; }
+    .flavor-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .flavor-card { position: relative; min-height: 66px; padding: 10px 9px 9px; overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: #fffdfb; }
+    .flavor-card::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--flavor, var(--accent)); }
+    .flavor-card.sold { background: var(--sold-bg); color: var(--sold); }
+    .flavor-card.sold::before { background: #c9c0b9; }
+    .flavor-name { padding-left: 5px; font-size: 13px; font-weight: 750; line-height: 1.25; }
+    .flavor-desc { padding: 4px 5px 0; color: var(--muted); font-size: 10px; line-height: 1.25; }
+    .badge { position: absolute; top: 7px; right: 7px; padding: 2px 5px; border-radius: 999px; background: rgba(255,255,255,.86); color: var(--accent); font-size: 9px; font-weight: 700; }
+    .sold .badge { background: #e5dfda; color: var(--sold); }
+    .empty { grid-column: 1 / -1; padding: 18px 8px; color: var(--muted); text-align: center; font-size: 12px; }
+    .note { margin: 11px 3px 0; color: var(--muted); font-size: 10px; line-height: 1.45; text-align: center; }
+    .updated { margin-top: 9px; color: #aa9b90; font-size: 9px; text-align: center; }
+    @media (max-width: 330px) {
+      body { padding: 11px 9px 16px; }
+      .flavor-grid { grid-template-columns: 1fr; }
+      .brand-title { font-size: 16px; }
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <!-- ===== 品牌 ===== -->
-        <div class="brand">
-            <div class="brand-inner">
-                <div class="brand-logo-wrapper">
-                    <img src="https://omg-gelato79.pages.dev/logo1.png" alt="OMG! Gelato" class="brand-logo" id="brandLogo" />
-                </div>
-                <div class="brand-title-box">
-                    <h1 class="brand-title" id="brandMainTitle">OMG! <span>Gelato</span></h1>
-                    <div class="brand-divider"></div>
-                </div>
-            </div>
+  <main class="shell">
+    <header class="topbar">
+      <div class="brand">
+        <img class="logo" src="https://omg-gelato79.pages.dev/logo1.png" alt="OMG! Gelato" onerror="this.style.display='none'" />
+        <div class="brand-copy">
+          <h1 class="brand-title" id="brandTitle">OMG! Gelato</h1>
+          <div class="brand-subtitle" id="brandSubtitle">今日口味・快速查看</div>
         </div>
+      </div>
+      <div class="sync"><i class="sync-dot" id="syncDot"></i><span id="syncText">連線中</span></div>
+    </header>
 
-        <!-- ===== 控制欄 ===== -->
-        <div class="control-bar">
-            <a href="/" class="control-item">
-                <span class="icon">🏠</span>
-                <span class="label">首頁</span>
-            </a>
-            <span class="control-divider"></span>
-            <div class="sync-badge" id="syncBadge">
-                <span class="indicator connecting" id="indicatorDot"></span>
-                <span class="sync-label" id="syncText">連線中</span>
-            </div>
-            <span class="control-divider"></span>
-            <button class="theme-toggle-btn" id="themeToggle">
-                <span class="icon" id="toggleKnob">🌙</span>
-                <span class="label" id="themeLabel">黑主題</span>
-            </button>
-        </div>
+    <section class="status" id="shopStatus">
+      <i class="status-dot"></i>
+      <div><strong id="statusLabel">確認營業狀態中…</strong><small id="statusDetail"></small></div>
+    </section>
 
-        <!-- ===== 營業狀態條 ===== -->
-        <div class="shop-status-bar" id="shopStatusBar">
-            <span class="dot" id="shopStatusDot"></span>
-            <div>
-                <span id="shopStatusLabel">確認營業狀態中…</span>
-                <small id="shopStatusDetail"></small>
-            </div>
-        </div>
+    <section class="section">
+      <div class="section-head"><h2>今天有哪些口味？</h2><span id="flavorCount">載入中</span></div>
+      <div class="flavor-grid" id="flavorGrid"><div class="empty">正在同步今日口味…</div></div>
+    </section>
 
-        <div class="brand-sub-title" id="todaySectionTitle">🪧 今日口味查看 & 同步店內冰櫃 🪧</div>
+    <p class="note">口味與供應數量會依店內現場為準</p>
+    <div class="updated" id="updatedAt">最後同步：—</div>
+  </main>
 
-        <!-- ===== 今日口味 ===== -->
-        <div class="today-section" id="todaySection">
-            <div class="section-header">
-                <div class="scroll-indicator">
-                    <span class="hint-text"><span class="arrow">→ 左右滑動查看更多口味</span></span>
-                    <div class="track"><div class="fill" id="scrollFill"></div></div>
-                </div>
-            </div>
-            <div class="today-scroll-wrapper">
-                <div class="finger-swipe" id="fingerSwipe">⬅️👆➡️</div>
-                <div class="today-scroll" id="todayScroll">
-                    <div class="today-scroll-content">
-                        <div class="today-grid" id="todayGrid"><div class="loading">⏳ 載入中...</div></div>
-                    </div>
-                </div>
-            </div>
-        </div>
+  <script type="module">
+    import { initializeApp, getApp, getApps } from 'firebase/app';
+    import { getDatabase, ref, onValue } from 'firebase/database';
 
-        <!-- ===== 互動按鈕區 ===== -->
-        <div class="action-buttons">
-            <button class="action-btn" id="randomBtn">
-                <span class="icon">🎲</span>
-                <span>幫我選</span>
-            </button>
-            <button class="action-btn" id="wishBtn">
-                <span class="icon">⭐</span>
-                <span>許願池</span>
-            </button>
-        </div>
+    const firebaseConfig = {
+      apiKey: 'AIzaSyDvzZKr2x3TGeOFZGisKKXjbYH00DLVhKg',
+      authDomain: 'omg-menu-5761a.firebaseapp.com',
+      databaseURL: 'https://omg-menu-5761a-default-rtdb.asia-southeast1.firebasedatabase.app',
+      projectId: 'omg-menu-5761a',
+      storageBucket: 'omg-menu-5761a.firebasestorage.app',
+      messagingSenderId: '193209930119',
+      appId: '1:193209930119:web:d9216165be9ef6c0bcc322'
+    };
+    const db = getDatabase(getApps().length ? getApp() : initializeApp(firebaseConfig));
+    const $ = (id) => document.getElementById(id);
+    const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+    const colors = { '開心果':'#8CB872', '草莓':'#E8837A', '巧克力':'#8D7A6D', '芒果':'#F5C542', '抹茶':'#89B87C', '香草':'#F5E6D3', '咖啡':'#B5957A', '檸檬':'#F5E56B', '覆盆子':'#E8707A', '百香果':'#F5B84D', '藍莓':'#7A8FC9', '芋頭牛奶':'#C9A8D0', '烏龍茶':'#A09080', '紅茶':'#C4B0A0', '黑金芝麻':'#4A3A30' };
+    const defaultHours = { open: true, start: '13:00', end: '20:00' };
+    const dayKey = (date) => new Intl.DateTimeFormat('en-US', { timeZone:'Asia/Taipei', weekday:'short' }).format(date).toLowerCase().slice(0, 3);
+    const minutes = (date) => { const p = new Intl.DateTimeFormat('en-US', { timeZone:'Asia/Taipei', hour:'2-digit', minute:'2-digit', hourCycle:'h23' }).formatToParts(date); return Number(p.find(x => x.type === 'hour')?.value || 0) * 60 + Number(p.find(x => x.type === 'minute')?.value || 0); };
+    const toMinutes = (v) => { const [h, m] = String(v || '0:0').split(':').map(Number); return h * 60 + m; };
 
-        <div class="global-update-time" id="updateTimeDisplay">口味同步系統更新於 --:--</div>
-        <div class="footer">©2026 OMG!Gelato · 口味同步系統供查看，實際以現場供應為準</div>
-    </div>
+    function setSync(state, text) { $('syncDot').className = `sync-dot ${state}`; $('syncText').textContent = text; $('updatedAt').textContent = `最後同步：${new Date().toLocaleTimeString('zh-TW', { hour:'2-digit', minute:'2-digit' })}`; }
+    function updateStatus(hours) {
+      const status = $('shopStatus');
+      if (!hours) { status.classList.remove('closed'); $('statusLabel').textContent = '營業狀態請以店內公告為準'; $('statusDetail').textContent = ''; return; }
+      const mode = hours.shopMode || (hours.shopClosed ? 'off' : 'auto');
+      const today = { ...defaultHours, ...(hours[dayKey(new Date())] || {}) };
+      const open = mode === 'open' || (mode !== 'off' && today.open && minutes(new Date()) >= toMinutes(today.start) && minutes(new Date()) < toMinutes(today.end));
+      status.classList.toggle('closed', !open);
+      $('statusLabel').textContent = open ? '目前營業中' : '目前非營業時間';
+      $('statusDetail').textContent = mode === 'off' ? '店休中，仍可查看今日口味' : `營業時間 ${today.start} – ${today.end}`;
+    }
 
-    <!-- ===== 底部固定 CTA ===== -->
-    <div class="bottom-cta-bar">
-        <a href="#" class="cta-btn cta-line" id="addLineBtn">
-            <span>➕</span> 加入 LINE 好友
-        </a>
-        <a href="#" class="cta-btn cta-order" id="orderBtn">
-            <span>🛒</span> 立即訂購
-        </a>
-    </div>
+    function renderFlavors(data) {
+      const items = Object.values(data || {}).filter(item => item?.name).sort((a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0));
+      $('flavorCount').textContent = items.length ? `${items.length} 種口味` : '暫無資料';
+      if (!items.length) { $('flavorGrid').innerHTML = '<div class="empty">今天尚未公布口味</div>'; return; }
+      $('flavorGrid').innerHTML = items.map(item => {
+        const sold = item.soldOut === true;
+        return `<article class="flavor-card${sold ? ' sold' : ''}" style="--flavor:${colors[item.name] || '#b98262'}"><div class="flavor-name">${escapeHtml(item.name)}</div>${item.desc ? `<div class="flavor-desc">${escapeHtml(item.desc)}</div>` : ''}${sold ? '<span class="badge">售完</span>' : ''}</article>`;
+      }).join('');
+    }
 
-    <!-- ===== 許願池 Modal ===== -->
-    <div class="modal-overlay" id="wishModal">
-        <div class="modal-box">
-            <div class="modal-header">
-                <h3>⭐ 許願池</h3>
-                <button class="modal-close" id="wishModalClose">✕</button>
-            </div>
-            <div class="modal-sub">寫下您想吃的口味，我們會評估納入未來菜單！</div>
-            <div class="wish-input-wrap">
-                <input type="text" id="wishInput" placeholder="例如：海鹽焦糖、開心果開心果…" maxlength="50" />
-                <div class="wish-hint">🔮 您的願望會傳送給我們，感謝您的建議！</div>
-            </div>
-            <div class="modal-error" id="wishError"></div>
-            <div class="modal-actions">
-                <button class="btn-cancel" id="wishCancelBtn">取消</button>
-                <button class="btn-confirm" id="wishConfirmBtn">送出願望 ✨</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- ===== 首次訪問優惠彈窗 ===== -->
-    <div class="modal-overlay" id="welcomeModal">
-        <div class="modal-box welcome-box">
-            <div class="welcome-icon">🎉</div>
-            <h3>首次加入好友<br>送冰淇淋折 $20</h3>
-            <p>加入 OMG!Gelato LINE 好友<br>接收新品通知與專屬優惠</p>
-            <a href="#" class="welcome-btn" id="welcomeJoinBtn">立即加入好友</a>
-            <button class="welcome-skip" id="welcomeSkipBtn">稍後再說</button>
-        </div>
-    </div>
-
-    <!-- ===== 隨機推薦 Modal ===== -->
-    <div class="modal-overlay" id="randomModal">
-        <div class="modal-box random-box">
-            <div class="random-icon" id="randomIcon">🎲</div>
-            <h3>今天就吃</h3>
-            <div class="random-result" id="randomResult">—</div>
-            <div class="random-actions">
-                <button class="btn-cancel" id="randomAgainBtn">再抽一次</button>
-                <button class="btn-confirm" id="randomCloseBtn">好，就這個</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- ===== Floating Toast ===== -->
-    <div class="floating-toast" id="floatingToast"><span id="toastMessage">訊息</span></div>
-
-    <script type="module">
-        import { initializeApp, getApp, getApps } from 'firebase/app';
-        import { getDatabase, ref, onValue, push, set, get, runTransaction } from 'firebase/database';
-
-        /* ===== 你要修改的地方 ===== */
-        const LINE_FRIEND_URL = 'https://line.me/R/ti/p/@585fychj';  // ← 改成你的 LINE 加好友連結
-        const ORDER_PAGE_URL = '/flavors.html';                          // ← 改成你的訂購頁路徑
-        /* ========================= */
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyDvzZKr2x3TGeOFZGisKKXjbYH00DLVhKg",
-            authDomain: "omg-menu-5761a.firebaseapp.com",
-            databaseURL: "https://omg-menu-5761a-default-rtdb.asia-southeast1.firebasedatabase.app",
-            projectId: "omg-menu-5761a",
-            storageBucket: "omg-menu-5761a.firebasestorage.app",
-            messagingSenderId: "193209930119",
-            appId: "1:193209930119:web:d9216165be9ef6c0bcc322"
-        };
-        const firebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig);
-        const db = getDatabase(firebaseApp);
-
-        // DOM
-        const todayGrid = document.getElementById('todayGrid');
-        const todayScroll = document.getElementById('todayScroll');
-        const scrollFill = document.getElementById('scrollFill');
-        const syncText = document.getElementById('syncText');
-        const indicatorDot = document.getElementById('indicatorDot');
-        const updateTimeDisplay = document.getElementById('updateTimeDisplay');
-        const fingerSwipe = document.getElementById('fingerSwipe');
-        const toast = document.getElementById('floatingToast');
-        const toastMessage = document.getElementById('toastMessage');
-
-        const COLOR_MAP = {
-            '開心果': '#8CB872', '草莓': '#E8837A', '巧克力': '#8D7A6D', '芒果': '#F5C542',
-            '抹茶': '#89B87C', '香草': '#F5E6D3', '咖啡': '#B5957A', '檸檬': '#F5E56B',
-            '覆盆子': '#E8707A', '椰奶': '#F5F0EA', '百香果': '#F5B84D', '牛奶': '#FDF8F0',
-            'Oreo': '#6B5A4D', '香蕉': '#F5D87A', '藍莓': '#7A8FC9', '水蜜桃': '#F5D0C0',
-            '提拉米蘇': '#C4B0A0', '紅茶': '#C4B0A0', '伯爵奶茶': '#E0D5CC', '榴槤': '#F5C542',
-            '芋頭牛奶': '#C9A8D0', '綜合堅果': '#C4B0A0', '芒果優格': '#F5C542', '烏龍茶': '#A09080',
-            '70%巧克力': '#6B5A4D', '白咖啡': '#D5C8BF', '蜜香紅茶': '#D5C0A8', '黑金芝麻': '#4A3A30',
-            '紅豆牛奶': '#D5A0A0', '法芙娜': '#6B5A4D', '波本香草': '#F5E6D3', '迎香紅茶': '#D5C0A8',
-            '青心烏龍茶': '#A09080', '藍莓優格': '#7A8FC9', '百香果優格': '#F5B84D', '榴蓮': '#F5C542',
-            '奇異果': '#89B87C', '草莓優格': '#E8837A', '火龍果': '#E8707A', '奶茶': '#D5C8BF',
-            '熱帶水果': '#F5C542'
-        };
-
-        // ---- 工具 ----
-        function escapeHtml(s) {
-            return s ? String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') : '';
-        }
-        function getCurrentTime() {
-            const d = new Date();
-            return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
-        }
-        function setSyncStatus(status, text) {
-            indicatorDot.className = 'indicator ' + status;
-            syncText.textContent = text;
-            updateTimeDisplay.textContent = '口味同步系統更新於 ' + getCurrentTime();
-        }
-        function setText(id, v) {
-            const el = document.getElementById(id);
-            if (el) el.textContent = v;
-        }
-        let toastTimer = null;
-        function showToast(msg) {
-            toastMessage.textContent = msg;
-            toast.classList.add('show');
-            clearTimeout(toastTimer);
-            toastTimer = setTimeout(() => toast.classList.remove('show'), 2600);
-        }
-
-        // ============================================================
-        // ★ 營業時間邏輯（1:1 對應你提供的 getShopStatus）
-        // ============================================================
-        const DEFAULT_HOURS = { open: true, start: '13:00', end: '20:00' };
-        const DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
-
-        function toMinutes(time) {
-            const [h, m] = String(time).split(':').map(Number);
-            return h * 60 + m;
-        }
-        function taipeiParts(date) {
-            const parts = new Intl.DateTimeFormat('en-US', {
-                timeZone: 'Asia/Taipei', weekday: 'short',
-                hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
-            }).formatToParts(date);
-            const get = (type) => parts.find(p => p.type === type)?.value ?? '0';
-            return {
-                dayKey: get('weekday').toLowerCase().slice(0, 3),
-                minutes: Number(get('hour')) * 60 + Number(get('minute'))
-            };
-        }
-        function dayHours(hours, key) {
-            return { ...DEFAULT_HOURS, ...(hours[key] || {}) };
-        }
-
-        // 尚未設定營業時間（null）時視為營業，避免設定資料遺失就鎖住
-        // shopMode：auto 依每週時間；open 強制營業中；closed 手動打烊（今天不接單、仍可預約明天）；off 店休中（全部暫停）
-        function getShopStatus(hours, now = new Date()) {
-            if (!hours) return { isOpen: true, canOrder: true, label: '今日營業中', detail: '' };
-            const mode = hours.shopMode || (hours.shopClosed ? 'off' : 'auto');
-            if (mode === 'off') {
-                return { isOpen: false, canOrder: false, label: '店休中', detail: '目前店休中，線上點餐暫停，歡迎先瀏覽口味。' };
-            }
-            const { dayKey, minutes } = taipeiParts(now);
-            const today = dayHours(hours, dayKey);
-            const tomorrow = dayHours(hours, taipeiParts(new Date(now.getTime() + 86400000)).dayKey);
-            const tomorrowOk = tomorrow.open;
-
-            if (mode === 'closed') {
-                if (!tomorrowOk) return { isOpen: false, canOrder: false, label: '已打烊', detail: '今天已打烊，明天不營業，線上點餐暫停。' };
-                return { isOpen: false, canOrder: true, label: '已打烊', detail: '今天已打烊，仍可預約明天取餐。' };
-            }
-
-            const forcedOpen = mode === 'open';
-            const isOpen = forcedOpen || (today.open && minutes >= toMinutes(today.start) && minutes < toMinutes(today.end));
-            const todayCanOrder = forcedOpen || (today.open && minutes < toMinutes(today.end));
-            const canOrder = todayCanOrder || tomorrowOk;
-            if (isOpen) return { isOpen, canOrder, label: '今日營業中', detail: forcedOpen ? '' : `營業時間 ${today.start} – ${today.end}` };
-
-            const label = !today.open ? '今日店休' : minutes < toMinutes(today.start) ? '尚未營業' : '今日已打烊';
-            if (!canOrder) return { isOpen, canOrder, label, detail: '今天與明天都不營業，線上點餐暫停，歡迎先瀏覽口味。' };
-            return { isOpen, canOrder, label, detail: `目前未營業，仍可預約${todayCanOrder ? '今天' : '明天'}取餐。` };
-        }
-
-        let shopHours = null;
-        function applyShopStatus() {
-            const st = getShopStatus(shopHours);
-            const bar = document.getElementById('shopStatusBar');
-            bar.classList.toggle('closed', !st.isOpen && !st.canOrder);
-            bar.classList.toggle('reservable', !st.isOpen && st.canOrder);
-            document.getElementById('shopStatusLabel').textContent = st.label;
-            document.getElementById('shopStatusDetail').textContent = st.detail || '';
-        }
-        onValue(ref(db, 'businessHours'), (snap) => {
-            shopHours = snap.val();
-            applyShopStatus();
-        }, (err) => { console.warn('營業時間讀取失敗:', err); });
-        setInterval(applyShopStatus, 30000);
-
-        // ============================================================
-        // ★ 今日口味 + 排行 + 新上架
-        // ============================================================
-        let todayFlavorsData = null;
-        let flavorStatsData = {};
-        let flavorFirstSeenData = {};
-
-        function renderTodayGrid() {
-            if (!todayFlavorsData) {
-                todayGrid.innerHTML = '<div class="today-empty">今天還沒有特別推薦 🍽️</div>';
-                return;
-            }
-            const items = Object.keys(todayFlavorsData).map(k => ({ id: k, ...todayFlavorsData[k] }));
-            items.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
-
-            const sortedBySales = [...items].sort((a, b) => {
-                const sa = Number(flavorStatsData[a.name]?.totalSold || 0);
-                const sb = Number(flavorStatsData[b.name]?.totalSold || 0);
-                return sb - sa;
-            });
-            const rankMap = {};
-            sortedBySales.forEach((item, index) => {
-                const sales = Number(flavorStatsData[item.name]?.totalSold || 0);
-                if (sales > 0) rankMap[item.name] = { rank: index + 1, sales };
-            });
-
-            const now = Date.now();
-            const NEW_DAYS = 14 * 24 * 60 * 60 * 1000;
-
-            let html = '';
-            items.forEach(item => {
-                const sold = item.soldOut === true;
-                const color = COLOR_MAP[item.name] || '#D5C8BF';
-                const stat = rankMap[item.name];
-                const firstSeen = Number(flavorFirstSeenData[item.name] || 0);
-                const isNew = item.isNew === true || (firstSeen > 0 && (now - firstSeen) < NEW_DAYS);
-
-                let badgeHtml = '';
-                if (sold) {
-                    badgeHtml = '<span class="badge badge-sold">售完</span>';
-                } else if (isNew) {
-                    badgeHtml = '<span class="badge badge-new">🆕 新上架</span>';
-                } else if (stat && stat.rank <= 3) {
-                    const medal = stat.rank === 1 ? '🥇' : stat.rank === 2 ? '🥈' : '🥉';
-                    badgeHtml = `<span class="badge badge-hot">${medal} TOP ${stat.rank}</span>`;
-                } else if (stat && stat.sales >= 5) {
-                    badgeHtml = `<span class="badge badge-sales">🔥 ${stat.sales}</span>`;
-                }
-
-                html += `
-                    <div class="today-card ${sold ? 'sold-out' : ''}" data-flavor="${escapeHtml(item.name)}">
-                        ${badgeHtml}
-                        <div class="color-tag" style="background:${color};"></div>
-                        <div class="today-name">${escapeHtml(item.name)}</div>
-                        ${item.desc ? `<div class="today-desc">${escapeHtml(item.desc)}</div>` : ''}
-                    </div>`;
-            });
-            todayGrid.innerHTML = html;
-        }
-
-        onValue(ref(db, 'todayFlavors'), (s) => {
-            todayFlavorsData = s.val();
-            renderTodayGrid();
-            setSyncStatus('online', '同步中');
-            setTimeout(checkScrollable, 400);
-            setTimeout(updateScrollIndicator, 500);
-
-            if (todayFlavorsData) {
-                Object.values(todayFlavorsData).forEach(item => {
-                    if (!item?.name) return;
-                    runTransaction(ref(db, `flavorFirstSeen/${item.name}`), (current) => {
-                        return current || Date.now();
-                    }).catch(() => {});
-                });
-            }
-        }, () => {
-            todayGrid.innerHTML = '<div class="today-empty">連線服務中斷⋯口味無法同步，請至門市直接洽詢</div>';
-            setSyncStatus('offline', '離線');
-        });
-
-        onValue(ref(db, 'flavorStats'), (s) => {
-            flavorStatsData = s.val() || {};
-            renderTodayGrid();
-        });
-
-        onValue(ref(db, 'flavorFirstSeen'), (s) => {
-            flavorFirstSeenData = s.val() || {};
-            renderTodayGrid();
-        });
-
-        // ---- siteConfig ----
-        onValue(ref(db, 'siteConfig'), (s) => {
-            const d = s.val();
-            if (!d) return;
-            setText('brandMainTitle', d.brand?.mainTitle || 'OMG! Gelato');
-            const subEl = document.getElementById('todaySectionTitle');
-            if (subEl) subEl.textContent = d.brand?.subTitle || '🪧 今日口味查看 & 同步店內冰櫃 🪧';
-        });
-
-        // ---- globalOverlay ----
-        onValue(ref(db, 'globalOverlay'), (snap) => {
-            const data = snap.val();
-            const existing = document.getElementById('globalOverlay');
-            if (data && data.isActive === true) {
-                if (existing) return;
-                const div = document.createElement('div');
-                div.id = 'globalOverlay';
-                div.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;z-index:99999;padding:24px;';
-                div.innerHTML = `
-                    <div style="background:#fff;border-radius:32px;padding:40px 32px;max-width:480px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
-                        <div style="font-size:64px;margin-bottom:8px;">${data.title ? data.title.split(' ')[0] : '📢'}</div>
-                        <p style="font-size:18px;font-weight:600;color:#2d1b12;margin-bottom:4px;">${escapeHtml(data.title) || '公告'}</p>
-                        <p style="font-size:16px;color:#6b5b4e;line-height:1.8;white-space:pre-line;">${escapeHtml(data.content || '')}</p>
-                        <div style="margin-top:20px;padding-top:16px;border-top:1px solid #f0ebe6;font-size:13px;color:#b0a094;">${escapeHtml(data.subText || '')}</div>
-                        ${data.isForce ? '' : `<button id="closeOverlayBtn" style="margin-top:16px;background:#f0ebe6;border:none;padding:8px 24px;border-radius:30px;font-weight:600;cursor:pointer;">關閉</button>`}
-                    </div>
-                `;
-                document.body.appendChild(div);
-                document.body.style.overflow = 'hidden';
-                if (!data.isForce) {
-                    document.getElementById('closeOverlayBtn')?.addEventListener('click', () => {
-                        div.remove();
-                        document.body.style.overflow = '';
-                    });
-                }
-            } else {
-                if (existing) {
-                    existing.remove();
-                    document.body.style.overflow = '';
-                }
-            }
-        });
-
-        // ============================================================
-        // 手指滑動提示
-        // ============================================================
-        function handleFingerSwipe(show) {
-            if (!fingerSwipe) return;
-            if (show) {
-                fingerSwipe.classList.remove('hidden');
-                fingerSwipe.style.display = 'block';
-                clearTimeout(window.fingerTimer);
-                window.fingerTimer = setTimeout(() => {
-                    fingerSwipe.classList.add('hidden');
-                    setTimeout(() => fingerSwipe.style.display = 'none', 600);
-                }, 3800);
-            } else {
-                fingerSwipe.classList.add('hidden');
-                fingerSwipe.style.display = 'none';
-            }
-        }
-        function checkScrollable() {
-            if (!todayScroll || !fingerSwipe) return;
-            const isScrollable = todayScroll.scrollWidth > todayScroll.clientWidth;
-            if (isScrollable) handleFingerSwipe(true);
-            else handleFingerSwipe(false);
-        }
-        todayScroll.addEventListener('scroll', () => {
-            if (fingerSwipe && !fingerSwipe.classList.contains('hidden')) {
-                fingerSwipe.classList.add('hidden');
-                setTimeout(() => fingerSwipe.style.display = 'none', 600);
-            }
-        });
-        function updateScrollIndicator() {
-            const el = todayScroll;
-            const fill = scrollFill;
-            if (!el || !fill) return;
-            const update = () => {
-                const max = el.scrollWidth - el.clientWidth;
-                if (max <= 0) { fill.style.width = '100%'; return; }
-                fill.style.width = Math.min((el.scrollLeft / max) * 100 + 20, 100) + '%';
-            };
-            el.addEventListener('scroll', update);
-            window.addEventListener('resize', update);
-            setTimeout(update, 200);
-        }
-
-        // ============================================================
-        // 許願池
-        // ============================================================
-        const wishModal = document.getElementById('wishModal');
-        const wishInput = document.getElementById('wishInput');
-        const wishError = document.getElementById('wishError');
-        const wishConfirmBtn = document.getElementById('wishConfirmBtn');
-
-        function openWishModal() {
-            wishInput.value = '';
-            wishError.textContent = '';
-            wishConfirmBtn.disabled = false;
-            wishConfirmBtn.textContent = '送出願望 ✨';
-            wishModal.classList.add('open');
-            document.body.style.overflow = 'hidden';
-            setTimeout(() => wishInput.focus(), 200);
-        }
-        function closeWishModal() {
-            wishModal.classList.remove('open');
-            document.body.style.overflow = '';
-        }
-        function submitWish() {
-            const val = wishInput.value.trim();
-            if (!val) { wishError.textContent = '請輸入您想吃的口味名稱'; return; }
-            if (val.length < 2) { wishError.textContent = '請輸入至少 2 個字'; return; }
-
-            wishConfirmBtn.disabled = true;
-            wishConfirmBtn.textContent = '⏳ 送出中...';
-            wishError.textContent = '';
-
-            const wishData = {
-                flavor: val,
-                timestamp: Date.now(),
-                date: new Date().toISOString().split('T')[0],
-                status: 'pending',
-                source: 'visitor_page'
-            };
-            set(push(ref(db, 'wishlist')), wishData)
-                .then(() => {
-                    wishConfirmBtn.textContent = '✅ 已送出';
-                    showToast(`已收到你的許願：${val}`);
-                    setTimeout(closeWishModal, 900);
-                })
-                .catch(err => {
-                    console.warn('許願送出失敗:', err);
-                    const pending = JSON.parse(localStorage.getItem('pendingWishes') || '[]');
-                    pending.push(wishData);
-                    localStorage.setItem('pendingWishes', JSON.stringify(pending));
-                    wishError.textContent = '📡 網路不穩，已先記錄，稍後自動同步';
-                    wishConfirmBtn.disabled = false;
-                    wishConfirmBtn.textContent = '送出願望 ✨';
-                });
-        }
-        document.getElementById('wishBtn').addEventListener('click', openWishModal);
-        document.getElementById('wishModalClose').addEventListener('click', closeWishModal);
-        document.getElementById('wishCancelBtn').addEventListener('click', closeWishModal);
-        wishModal.addEventListener('click', (e) => { if (e.target === wishModal) closeWishModal(); });
-        wishConfirmBtn.addEventListener('click', submitWish);
-        wishInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitWish(); });
-
-        function syncPendingWishes() {
-            const pending = JSON.parse(localStorage.getItem('pendingWishes') || '[]');
-            if (pending.length === 0) return;
-            let successCount = 0;
-            pending.forEach(item => {
-                set(push(ref(db, 'wishlist')), item).then(() => {
-                    successCount++;
-                    if (successCount === pending.length) {
-                        localStorage.removeItem('pendingWishes');
-                    }
-                }).catch(() => {});
-            });
-        }
-        syncPendingWishes();
-
-        // ============================================================
-        // 隨機推薦
-        // ============================================================
-        function getAvailableFlavors() {
-            const cards = document.querySelectorAll('#todayGrid .today-card:not(.sold-out)');
-            const flavors = [];
-            cards.forEach(c => {
-                const name = c.dataset.flavor;
-                if (name && !flavors.includes(name)) flavors.push(name);
-            });
-            return flavors;
-        }
-        function pickRandom(flavors) {
-            const arr = flavors || getAvailableFlavors();
-            if (!arr.length) return;
-            const el = document.getElementById('randomIcon');
-            el.style.animation = 'none';
-            void el.offsetWidth;
-            el.style.animation = '';
-            const pick = arr[Math.floor(Math.random() * arr.length)];
-            document.getElementById('randomResult').textContent = pick;
-        }
-        function openRandomModal() {
-            const flavors = getAvailableFlavors();
-            if (!flavors.length) {
-                showToast('目前沒有可選的口味');
-                return;
-            }
-            pickRandom(flavors);
-            document.getElementById('randomModal').classList.add('open');
-            document.body.style.overflow = 'hidden';
-        }
-        function closeRandomModal() {
-            document.getElementById('randomModal').classList.remove('open');
-            document.body.style.overflow = '';
-        }
-        document.getElementById('randomBtn').addEventListener('click', openRandomModal);
-        document.getElementById('randomAgainBtn').addEventListener('click', () => pickRandom());
-        document.getElementById('randomCloseBtn').addEventListener('click', closeRandomModal);
-        document.getElementById('randomModal').addEventListener('click', (e) => {
-            if (e.target === document.getElementById('randomModal')) closeRandomModal();
-        });
-
-        // ============================================================
-        // CTA 按鈕
-        // ============================================================
-        document.getElementById('addLineBtn').href = LINE_FRIEND_URL;
-        document.getElementById('orderBtn').href = ORDER_PAGE_URL;
-        document.getElementById('welcomeJoinBtn').href = LINE_FRIEND_URL;
-
-        document.getElementById('addLineBtn').addEventListener('click', () => {
-            const guestId = localStorage.getItem('omg-guest-id') || (() => {
-                const id = (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`);
-                localStorage.setItem('omg-guest-id', id);
-                return id;
-            })();
-            set(ref(db, `visitorClicks/addLine/${guestId.replace(/[^A-Za-z0-9_-]/g, '')}`), Date.now()).catch(() => {});
-        });
-
-        // ============================================================
-        // 首次訪問彈窗
-        // ============================================================
-        const welcomeModal = document.getElementById('welcomeModal');
-        const WELCOME_KEY = 'omg-welcomed-v1';
-        if (!localStorage.getItem(WELCOME_KEY)) {
-            setTimeout(() => {
-                welcomeModal.classList.add('open');
-                document.body.style.overflow = 'hidden';
-            }, 1200);
-        }
-        document.getElementById('welcomeSkipBtn').addEventListener('click', () => {
-            localStorage.setItem(WELCOME_KEY, 'skipped');
-            welcomeModal.classList.remove('open');
-            document.body.style.overflow = '';
-        });
-        document.getElementById('welcomeJoinBtn').addEventListener('click', () => {
-            localStorage.setItem(WELCOME_KEY, 'joined');
-        });
-        welcomeModal.addEventListener('click', (e) => {
-            if (e.target === welcomeModal) {
-                localStorage.setItem(WELCOME_KEY, 'closed');
-                welcomeModal.classList.remove('open');
-                document.body.style.overflow = '';
-            }
-        });
-
-        // ============================================================
-        // 初始化
-        // ============================================================
-        setSyncStatus('connecting', '連線中');
-        setTimeout(checkScrollable, 600);
-        updateScrollIndicator();
-
-        document.getElementById('brandLogo')?.addEventListener('error', function() {
-            this.outerHTML = '<span style="font-size:72px;display:block;text-align:center;">🍨</span>';
-        });
-
-        console.log('🍦 訪客口味頁已載入');
-    </script>
+    onValue(ref(db, 'todayFlavors'), snap => { renderFlavors(snap.val()); setSync('online', '即時同步'); }, () => { $('flavorGrid').innerHTML = '<div class="empty">目前無法同步，請稍後再試</div>'; setSync('offline', '同步中斷'); });
+    onValue(ref(db, 'businessHours'), snap => updateStatus(snap.val()));
+    onValue(ref(db, 'siteConfig'), snap => { const value = snap.val(); if (!value) return; $('brandTitle').textContent = value.brand?.mainTitle || 'OMG! Gelato'; $('brandSubtitle').textContent = '今日口味・快速查看'; });
+    setInterval(() => onValue(ref(db, 'businessHours'), snap => updateStatus(snap.val()), { onlyOnce: true }), 30000);
+  </script>
 </body>
 </html>
