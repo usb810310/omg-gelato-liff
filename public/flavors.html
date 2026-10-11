@@ -29,43 +29,43 @@
     }
     * { box-sizing: border-box; }
     html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--ink); }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Noto Sans TC", "PingFang TC", sans-serif; padding: 14px 12px 20px; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Noto Sans TC", "PingFang TC", sans-serif; padding: 9px 9px 14px; }
     .shell { width: min(100%, 420px); margin: 0 auto; }
-    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
     .brand { display: flex; align-items: center; gap: 9px; min-width: 0; }
-    .logo { width: 38px; height: 38px; object-fit: contain; border-radius: 12px; background: #fff; box-shadow: 0 3px 12px rgba(79, 55, 39, .08); }
+    .logo { width: 32px; height: 32px; object-fit: contain; border-radius: 10px; background: #fff; box-shadow: 0 3px 12px rgba(79, 55, 39, .08); }
     .brand-copy { min-width: 0; }
-    .brand-title { margin: 0; font-size: 17px; line-height: 1.1; letter-spacing: .4px; white-space: nowrap; }
-    .brand-subtitle { margin-top: 3px; color: var(--muted); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .brand-title { margin: 0; font-size: 15px; line-height: 1.1; letter-spacing: .3px; white-space: nowrap; }
+    .brand-subtitle { margin-top: 2px; color: var(--muted); font-size: 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .sync { display: inline-flex; align-items: center; gap: 5px; color: var(--muted); font-size: 10px; white-space: nowrap; }
     .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: #e3af55; }
     .sync-dot.online { background: #4fa563; box-shadow: 0 0 0 3px rgba(79,165,99,.12); }
     .sync-dot.offline { background: #d66b59; }
-    .status { display: flex; align-items: flex-start; gap: 8px; padding: 10px 11px; border: 1px solid #dcebdd; border-radius: 13px; background: var(--ok-bg); color: var(--ok); }
+    .status { display: flex; align-items: flex-start; gap: 7px; padding: 7px 9px; border: 1px solid #dcebdd; border-radius: 11px; background: var(--ok-bg); color: var(--ok); }
     .status.closed { border-color: #f0d8ca; background: var(--closed-bg); color: var(--closed); }
     .status-dot { width: 8px; height: 8px; flex: none; margin-top: 4px; border-radius: 50%; background: currentColor; }
-    .status strong { display: block; font-size: 12px; line-height: 1.2; }
-    .status small { display: block; margin-top: 3px; font-size: 10px; opacity: .85; line-height: 1.3; }
-    .section { margin-top: 12px; padding: 13px 11px 11px; border: 1px solid var(--line); border-radius: 17px; background: var(--card); box-shadow: 0 6px 20px rgba(73, 48, 32, .05); }
-    .section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
-    .section-head h2 { margin: 0; font-size: 14px; letter-spacing: .3px; }
-    .section-head span { color: var(--muted); font-size: 10px; }
-    .flavor-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-    .flavor-card { position: relative; min-height: 66px; padding: 10px 9px 9px; overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: #fffdfb; }
+    .status strong { display: block; font-size: 11px; line-height: 1.2; }
+    .status small { display: block; margin-top: 2px; font-size: 9px; opacity: .85; line-height: 1.2; }
+    .section { margin-top: 9px; padding: 10px 8px 8px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); box-shadow: 0 5px 16px rgba(73, 48, 32, .045); }
+    .section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 7px; }
+    .section-head h2 { margin: 0; font-size: 12px; letter-spacing: .2px; }
+    .section-head span { color: var(--muted); font-size: 9px; }
+    .flavor-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+    .flavor-card { position: relative; min-height: 47px; padding: 8px 5px 7px 8px; overflow: hidden; border: 1px solid var(--line); border-radius: 9px; background: #fffdfb; }
     .flavor-card::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--flavor, var(--accent)); }
     .flavor-card.sold { background: var(--sold-bg); color: var(--sold); }
     .flavor-card.sold::before { background: #c9c0b9; }
-    .flavor-name { padding-left: 5px; font-size: 13px; font-weight: 750; line-height: 1.25; }
-    .flavor-desc { padding: 4px 5px 0; color: var(--muted); font-size: 10px; line-height: 1.25; }
-    .badge { position: absolute; top: 7px; right: 7px; padding: 2px 5px; border-radius: 999px; background: rgba(255,255,255,.86); color: var(--accent); font-size: 9px; font-weight: 700; }
+    .flavor-name { padding-left: 3px; padding-right: 2px; font-size: 11px; font-weight: 750; line-height: 1.15; }
+    .flavor-desc { display: none; }
+    .badge { position: absolute; top: 4px; right: 4px; padding: 1px 3px; border-radius: 999px; background: rgba(255,255,255,.9); color: var(--accent); font-size: 8px; font-weight: 700; }
     .sold .badge { background: #e5dfda; color: var(--sold); }
     .empty { grid-column: 1 / -1; padding: 18px 8px; color: var(--muted); text-align: center; font-size: 12px; }
-    .note { margin: 11px 3px 0; color: var(--muted); font-size: 10px; line-height: 1.45; text-align: center; }
-    .updated { margin-top: 9px; color: #aa9b90; font-size: 9px; text-align: center; }
+    .note { margin: 7px 3px 0; color: var(--muted); font-size: 9px; line-height: 1.3; text-align: center; }
+    .updated { margin-top: 5px; color: #aa9b90; font-size: 8px; text-align: center; }
     @media (max-width: 330px) {
       body { padding: 11px 9px 16px; }
-      .flavor-grid { grid-template-columns: 1fr; }
-      .brand-title { font-size: 16px; }
+      .flavor-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .brand-title { font-size: 14px; }
     }
   </style>
 </head>
