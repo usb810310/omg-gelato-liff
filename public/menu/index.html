@@ -2379,6 +2379,9 @@
             showToast(`✅ 已加入分享盒 (${modalSelectedFlavors.join(' + ')})`, '🎁');
             closeShareModal();
             clearTasteFocus();
+            activeTarget = null;
+            pendingDuetFlavor = null;
+            updateModeLabel(null);
             updateOrderDisplay();
         }
 
@@ -2844,6 +2847,8 @@
                 duetPairs.push([pendingDuetFlavor, flavor]);
                 showToast(`配對成功！${pendingDuetFlavor} + ${flavor}`, '✅');
                 pendingDuetFlavor = null;
+                activeTarget = null;
+                updateModeLabel(null);
                 clearTasteFocus();
                 updateOrderDisplay();
             } else {
@@ -2856,6 +2861,9 @@
         function appendCupFlavor(flavor) {
             cupMap[flavor] = (cupMap[flavor] || 0) + 1;
             showToast(`已加入 ${flavor} (${cupMap[flavor]}杯)`, '🍦');
+            activeTarget = null;
+            pendingDuetFlavor = null;
+            updateModeLabel(null);
             clearTasteFocus();
             updateOrderDisplay();
         }
