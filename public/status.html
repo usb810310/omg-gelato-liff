@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>OMG! Gelato 營業狀態</title>
+  <script type="importmap">
+    {
+      "imports": {
+        "firebase/app": "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js",
+        "firebase/database": "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js"
+      }
+    }
+  </script>
+  <style>
+    :root { --bg:#fbf8f5; --card:#fff; --ink:#30251f; --muted:#8b7c71; --line:#eee5de; --ok-bg:#edf7ee; --ok:#39734a; --closed-bg:#fff2eb; --closed:#9a5a45; --accent:#b98262; }
+    * { box-sizing:border-box; }
+    html, body { margin:0; min-height:100%; background:var(--bg); color:var(--ink); }
+    body { padding:9px 9px 14px; font-family:-apple-system,BlinkMacSystemFont,"Noto Sans TC","PingFang TC",sans-serif; }
+    .shell { width:min(100%,420px); margin:0 auto; }
+    .topbar { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; }
+    .brand { display:flex; align-items:center; gap:9px; min-width:0; }
+    .logo { width:32px; height:32px; object-fit:contain; border-radius:10px; background:#fff; box-shadow:0 3px 12px rgba(79,55,39,.08); }
+    .brand-title { margin:0; font-size:15px; line-height:1.1; letter-spacing:.3px; white-space:nowrap; }
+    .brand-subtitle { margin-top:2px; color:var(--muted); font-size:9px; white-space:nowrap; }
+    .sync { display:inline-flex; align-items:center; gap:5px; color:var(--muted); font-size:10px; white-space:nowrap; }
+    .sync-dot { width:7px; height:7px; border-radius:50%; background:#e3af55; }
+    .sync-dot.online { background:#4fa563; box-shadow:0 0 0 3px rgba(79,165,99,.12); }
+    .sync-dot.offline { background:#d66b59; }
+    .status { display:flex; align-items:flex-start; gap:8px; padding:13px 12px; border:1px solid #dcebdd; border-radius:13px; background:var(--ok-bg); color:var(--ok); }
+    .status.closed { border-color:#f0d8ca; background:var(--closed-bg); color:var(--closed); }
+    .status-dot { width:10px; height:10px; flex:none; margin-top:3px; border-radius:50%; background:currentColor; }
+    .status strong { display:block; font-size:15px; line-height:1.2; }
+    .status small { display:block; margin-top:5px; font-size:10px; opacity:.85; line-height:1.45; }
+    .section { margin-top:9px; padding:13px 12px 12px; border:1px solid var(--line); border-radius:14px; background:var(--card); box-shadow:0 5px 16px rgba(73,48,32,.045); }
+    .section-head { display:flex; align-items:baseline; justify-content:space-between; gap:8px; margin-bottom:10px; }
+    .section-head h2 { margin:0; font-size:13px; letter-spacing:.2px; }
+    .section-head span { color:var(--muted); font-size:9px; }
+    .hours { display:grid; gap:7px; }
+    .hours-row { display:flex; align-items:center; justify-content:space-between; padding:9px 10px; border-radius:9px; background:#fffdfb; color:#5e5148; font-size:11px; }
+    .hours-row.today { background:#f4eadf; color:#6d4c38; font-weight:750; }
+    .hours-row.closed-day { color:#aaa098; }
+    .hours-row span:last-child { color:var(--muted); font-size:10px; }
+    .note { margin:8px 3px 0; color:var(--muted); font-size:9px; line-height:1.4; text-align:center; }
+    .updated { margin-top:5px; color:#aa9b90; font-size:8px; text-align:center; }
+    .error { margin:9px 3px 0; color:var(--closed); font-size:10px; line-height:1.4; text-align:center; }
+    @media (max-width:330px) { body { padding:11px 9px 16px; } .brand-title { font-size:14px; } }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div class="brand">
+        <img class="logo" src="logo-new.png" alt="OMG! Gelato" onerror="this.style.display='none'" />
+        <div>
+          <h1 class="brand-title">OMG! Gelato</h1>
+          <div class="brand-subtitle">今日營業狀態・快速查看</div>
+        </div>
+      </div>
+      <div class="sync"><i class="sync-dot" id="syncDot"></i><span id="syncText">連線中</span></div>
+    </header>
+
+    <section class="status" id="shopStatus">
+      <i class="status-dot"></i>
+      <div><strong id="statusLabel">確認營業狀態中…</strong><small id="statusDetail">正在同步店家最新設定</small></div>
+    </section>
+
+    <section class="section">
+      <div class="section-head"><h2>本週營業時間</h2><span id="todayText">台北時間</span></div>
+      <div class="hours" id="hoursList"><div class="hours-row"><span>正在載入…</span><span>—</span></div></div>
+    </section>
+
+    <p class="note">營業狀態會依店家後台設定即時更新</p>
+    <div class="updated" id="updatedAt">最後同步：—</div>
+    <p class="error" id="errorText" hidden>目前無法同步最新資料，請稍後重新開啟。</p>
+  </main>
+
+  <script type="module">
+    import { initializeApp, getApp, getApps } from 'firebase/app';
+    import { getDatabase, ref, onValue } from 'firebase/database';
+
+    const firebaseConfig = {
+      apiKey: 'AIzaSyDvzZKr2x3TGeOFZGisKKXjbYH00DLVhKg',
+      authDomain: 'omg-menu-5761a.firebaseapp.com',
+      databaseURL: 'https://omg-menu-5761a-default-rtdb.asia-southeast1.firebasedatabase.app',
+      projectId: 'omg-menu-5761a',
+      storageBucket: 'omg-menu-5761a.firebasestorage.app',
+      messagingSenderId: '193209930119',
+      appId: '1:193209930119:web:d9216165be9ef6c0bcc322'
+    };
+    const db = getDatabase(getApps().length ? getApp() : initializeApp(firebaseConfig));
+    const $ = (id) => document.getElementById(id);
+    const dayKeys = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+    const dayNames = { sun:'星期日', mon:'星期一', tue:'星期二', wed:'星期三', thu:'星期四', fri:'星期五', sat:'星期六' };
+    const defaultHours = { open:true, start:'13:00', end:'20:00' };
+
+    function taipeiParts(date) {
+      const parts = new Intl.DateTimeFormat('en-US', { timeZone:'Asia/Taipei', weekday:'short', hour:'2-digit', minute:'2-digit', hourCycle:'h23' }).formatToParts(date);
+      const get = (type) => parts.find((part) => part.type === type)?.value || '0';
+      return { key:get('weekday').toLowerCase().slice(0,3), minutes:Number(get('hour')) * 60 + Number(get('minute')) };
+    }
+    function toMinutes(value) { const [h, m] = String(value || '0:0').split(':').map(Number); return h * 60 + m; }
+    function getMode(hours) { return hours?.shopMode || (hours?.shopClosed ? 'off' : 'auto'); }
+    function currentStatus(hours) {
+      if (!hours) return { open:true, label:'營業狀態同步中', detail:'尚未取得店家設定，請稍候。' };
+      const mode = getMode(hours), now = taipeiParts(new Date()), today = { ...defaultHours, ...(hours[now.key] || {}) };
+      if (mode === 'off') return { open:false, label:'店休中', detail:'目前店休中，線上點餐暫停。' };
+      const open = mode === 'open' || (mode === 'auto' && today.open && now.minutes >= toMinutes(today.start) && now.minutes < toMinutes(today.end));
+      if (open) return { open:true, label:'目前營業中', detail:`今日營業時間 ${today.start} – ${today.end}` };
+      if (!today.open) return { open:false, label:'今日店休', detail:'今天沒有安排營業，歡迎改天再來。' };
+      return { open:false, label:now.minutes < toMinutes(today.start) ? '尚未營業' : '今日已打烊', detail:`今日營業時間 ${today.start} – ${today.end}` };
+    }
+    function renderHours(hours) {
+      const nowKey = taipeiParts(new Date()).key;
+      $('hoursList').innerHTML = dayKeys.map((key) => {
+        const day = { ...defaultHours, ...(hours?.[key] || {}) };
+        const isOpen = day.open !== false;
+        return `<div class="hours-row${key === nowKey ? ' today' : ''}${!isOpen ? ' closed-day' : ''}"><span>${dayNames[key]}${key === nowKey ? '（今天）' : ''}</span><span>${isOpen ? `${day.start} – ${day.end}` : '店休'}</span></div>`;
+      }).join('');
+      $('todayText').textContent = `今天是${dayNames[nowKey]}`;
+    }
+    function update(hours) {
+      const result = currentStatus(hours);
+      $('shopStatus').classList.toggle('closed', !result.open);
+      $('statusLabel').textContent = result.label;
+      $('statusDetail').textContent = result.detail;
+      renderHours(hours);
+    }
+    function setSync(state, text) {
+      $('syncDot').className = `sync-dot ${state}`;
+      $('syncText').textContent = text;
+      $('updatedAt').textContent = `最後同步：${new Date().toLocaleTimeString('zh-TW', { hour:'2-digit', minute:'2-digit' })}`;
+    }
+    function syncOnce() { onValue(ref(db, 'businessHours'), (snap) => { update(snap.val()); $('errorText').hidden = true; setSync('online', '即時同步'); }, () => { $('errorText').hidden = false; setSync('offline', '同步中斷'); }, { onlyOnce:true }); }
+
+    onValue(ref(db, 'businessHours'), (snap) => { update(snap.val()); $('errorText').hidden = true; setSync('online', '即時同步'); }, () => { $('errorText').hidden = false; setSync('offline', '同步中斷'); });
+    setInterval(syncOnce, 30000);
+  </script>
+</body>
+</html>
