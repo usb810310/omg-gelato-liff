@@ -20,6 +20,11 @@ const dailyData = [
 ];
 // ===================================
 
+const businessDayRows = [
+  ['mon', '星期一'], ['tue', '星期二'], ['wed', '星期三'], ['thu', '星期四'],
+  ['fri', '星期五'], ['sat', '星期六'], ['sun', '星期日'],
+] as const;
+
 type Profile = { userId: string; displayName: string; pictureUrl?: string };
 
 type Order = {
@@ -241,7 +246,7 @@ function getGelatoDatabase() {
 export default function Home() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [status, setStatus] = useState('正在初始化...');
-  const [activeTab, setActiveTab] = useState<'home' | 'orders' | 'member'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'orders' | 'member' | 'status'>('home');
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoadingOrders, setIsLoadingOrders] = useState(false);
   const [wishText, setWishText] = useState('');
@@ -367,7 +372,7 @@ export default function Home() {
     }
   };
 
-  const switchTab = (tab: 'home' | 'orders' | 'member') => {
+  const switchTab = (tab: 'home' | 'orders' | 'member' | 'status') => {
     setActiveTab(tab);
     setSelectedOrderNo(null); // 切換分頁時回到訂單列表
     if (tab === 'orders') loadOrders();
@@ -632,10 +637,51 @@ export default function Home() {
             </div>
           </section>
         )}
+
+        {activeTab === 'status' && (
+          <section className={styles.pageView}>
+            <div className={styles.sectionHeading}>
+              <div>
+                <p className={styles.kicker}>LIVE STORE STATUS</p>
+                <h1>營業狀況</h1>
+              </div>
+              <span className={`${styles.statusLargeDot} ${shopStatus.isOpen ? styles.statusLargeDotOpen : ''}`} />
+            </div>
+
+            <section className={`${styles.businessStatusCard} ${shopStatus.isOpen ? styles.businessStatusOpen : styles.businessStatusClosed}`}>
+              <div className={styles.businessStatusIcon}>{shopStatus.isOpen ? '✓' : '—'}</div>
+              <div>
+                <p className={styles.businessStatusLabel}>目前狀態</p>
+                <h2>{shopStatus.label}</h2>
+                <p>{shopStatus.detail || '歡迎來店享用今日義式冰淇淋。'}</p>
+              </div>
+            </section>
+
+            <section className={styles.hoursCard}>
+              <div className={styles.hoursCardHeading}>
+                <h2>本週營業時間</h2>
+                <span>台北時間</span>
+              </div>
+              <div className={styles.hoursList}>
+                {businessDayRows.map(([key, label]) => {
+                  const day = businessHours?.[key];
+                  const isOpenDay = day?.open !== false;
+                  return (
+                    <div className={`${styles.hoursRow} ${key === new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Taipei', weekday: 'short' }).format(new Date(clock)).toLowerCase().slice(0, 3) ? styles.hoursRowToday : ''}`} key={key}>
+                      <span>{label}</span>
+                      <strong>{isOpenDay ? `${day?.start || '13:00'} – ${day?.end || '20:00'}` : '店休'}</strong>
+                    </div>
+                  );
+                })}
+              </div>
+              <p className={styles.statusAutoNote}><span />營業狀態會依店家設定自動更新</p>
+            </section>
+          </section>
+        )}
       </section>
 
       <nav className={styles.bottomNav} aria-label="主要導覽">
-        {([['home', '⌂', '首頁'], ['orders', '▤', '訂單'], ['member', '○', '會員']] as const).map(([tab, icon, label]) => (
+        {([['home', '⌂', '首頁'], ['orders', '▤', '訂單'], ['status', '◷', '營業'], ['member', '○', '會員']] as const).map(([tab, icon, label]) => (
           <button key={tab} onClick={() => switchTab(tab)} className={activeTab === tab ? styles.activeNav : ''}>
             <span>{icon}</span><small>{label}</small>
           </button>
