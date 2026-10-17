@@ -32,14 +32,19 @@
     .status-dot { width:10px; height:10px; flex:none; margin-top:3px; border-radius:50%; background:currentColor; }
     .status strong { display:block; font-size:15px; line-height:1.2; }
     .status small { display:block; margin-top:5px; font-size:10px; opacity:.85; line-height:1.45; }
-    .today-card { margin-top:9px; padding:13px 12px; border:1px solid #eee5de; border-radius:13px; background:#fff; box-shadow:0 5px 16px rgba(73,48,32,.045); }
-    .today-label { margin:0 0 5px; color:var(--muted); font-size:10px; }
-    .today-hours { margin:0; color:var(--ink); font-size:16px; font-weight:800; letter-spacing:.1px; }
-    .payment-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-    .payment-item { display:flex; align-items:center; gap:8px; padding:8px; border:1px solid var(--line); border-radius:10px; background:#fffdfb; }
-    .payment-item img { width:56px; height:auto; max-height:32px; flex:none; object-fit:contain; }
-    .payment-item strong { display:block; font-size:11px; }
-    .payment-item small { display:block; margin-top:2px; color:var(--muted); font-size:9px; }
+    .summary-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:9px; }
+    .summary-card { min-height:91px; padding:12px 11px; border:1px solid var(--line); border-radius:14px; background:#fff; box-shadow:0 5px 16px rgba(73,48,32,.045); }
+    .summary-card.status-summary { border-color:#dcebdd; background:var(--ok-bg); color:var(--ok); }
+    .summary-card.status-summary.closed-summary { border-color:#f0d8ca; background:var(--closed-bg); color:var(--closed); }
+    .summary-label { display:block; margin-bottom:9px; color:var(--muted); font-size:9px; }
+    .status-summary .summary-label { color:currentColor; opacity:.75; }
+    .summary-value { display:block; color:var(--ink); font-size:15px; font-weight:850; line-height:1.25; }
+    .status-summary .summary-value { color:currentColor; }
+    .summary-note { display:block; margin-top:5px; color:var(--muted); font-size:9px; line-height:1.35; }
+    .status-summary .summary-note { color:currentColor; opacity:.8; }
+    .summary-payment { display:flex; flex-direction:column; justify-content:space-between; }
+    .summary-payment img { width:58px; height:auto; max-height:32px; object-fit:contain; object-position:left center; }
+    .summary-payment .summary-label { margin-bottom:5px; }
     .section { margin-top:9px; padding:13px 12px 12px; border:1px solid var(--line); border-radius:14px; background:var(--card); box-shadow:0 5px 16px rgba(73,48,32,.045); }
     .section-head { display:flex; align-items:baseline; justify-content:space-between; gap:8px; margin-bottom:10px; }
     .section-head h2 { margin:0; font-size:13px; letter-spacing:.2px; }
@@ -73,22 +78,31 @@
       <div><strong id="statusLabel">確認營業狀態中…</strong><small id="statusDetail">正在同步店家最新設定</small></div>
     </section>
 
-    <section class="today-card">
-      <p class="today-label">今日營業時間</p>
-      <p class="today-hours" id="todayHours">（今天）星期六 14:00 – 20:00</p>
+    <section class="summary-grid" aria-label="營業摘要">
+      <article class="summary-card status-summary" id="summaryStatusCard">
+        <span class="summary-label">目前狀態</span>
+        <strong class="summary-value" id="summaryStatusLabel">目前營業中</strong>
+        <small class="summary-note" id="summaryStatusDetail">歡迎來店享用</small>
+      </article>
+      <article class="summary-card">
+        <span class="summary-label">今日營業時間</span>
+        <strong class="summary-value" id="todayHours">（今天）星期六<br />14:00 – 20:00</strong>
+      </article>
+      <article class="summary-card summary-payment">
+        <span class="summary-label">付款方式</span>
+        <img src="cash.svg" alt="現金" />
+        <small class="summary-note">現金・到店付款</small>
+      </article>
+      <article class="summary-card summary-payment">
+        <span class="summary-label">付款方式</span>
+        <img src="line-pay.png" alt="LINE Pay" />
+        <small class="summary-note">LINE Pay・快速付款</small>
+      </article>
     </section>
 
     <section class="section">
       <div class="section-head"><h2>本週營業時間</h2><span id="todayText">台北時間</span></div>
       <div class="hours" id="hoursList"><div class="hours-row"><span>正在載入…</span><span>—</span></div></div>
-    </section>
-
-    <section class="section">
-      <div class="section-head"><h2>付款方式</h2><span>到店付款</span></div>
-      <div class="payment-grid">
-        <div class="payment-item"><img src="cash.svg" alt="現金" /><div><strong>現金</strong><small>到店付款</small></div></div>
-        <div class="payment-item"><img src="line-pay.png" alt="LINE Pay" /><div><strong>LINE Pay</strong><small>快速付款</small></div></div>
-      </div>
     </section>
 
     <p class="note">營業狀態會依店家後台設定即時更新</p>
@@ -145,8 +159,11 @@
     function update(hours) {
       const result = currentStatus(hours);
       $('shopStatus').classList.toggle('closed', !result.open);
+      $('summaryStatusCard').classList.toggle('closed-summary', !result.open);
       $('statusLabel').textContent = result.label;
       $('statusDetail').textContent = result.detail;
+      $('summaryStatusLabel').textContent = result.label;
+      $('summaryStatusDetail').textContent = result.detail || '歡迎來店享用';
       renderHours(hours);
     }
     function setSync(state, text) {
