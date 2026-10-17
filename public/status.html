@@ -40,6 +40,15 @@
     .hero-time i { width: 7px; height: 7px; border-radius: 50%; background: var(--lime); }
     .hero.closed .hero-kicker { color: #ffd1bd; }
     .hero.closed .hero-time i { background: var(--coral); }
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+    .info-card { min-height: 126px; padding: 15px; border-radius: 20px; background: var(--paper); box-shadow: 0 7px 22px rgba(61, 41, 56, .06); }
+    .info-label { display: block; margin-bottom: 12px; color: var(--muted); font-size: 9px; font-weight: 800; letter-spacing: .13em; }
+    .info-value { display: block; color: var(--plum); font-size: 15px; font-weight: 850; line-height: 1.35; letter-spacing: -.04em; }
+    .info-note { margin: 8px 0 0; color: var(--muted); font-size: 9px; line-height: 1.5; }
+    .payment-copy { margin: 0 0 11px; color: var(--plum); font-size: 11px; font-weight: 750; line-height: 1.45; }
+    .payment-icons { display: flex; align-items: center; gap: 7px; }
+    .payment-icon-box { display: grid; place-items: center; width: 64px; height: 34px; border-radius: 9px; background: #fbf7f2; }
+    .payment-icon-box img { width: 56px; height: 27px; object-fit: contain; }
 
     .section-label { display: flex; align-items: center; justify-content: space-between; margin: 25px 3px 10px; }
     .section-label h2 { margin: 0; color: var(--plum); font-size: 15px; letter-spacing: -.03em; }
@@ -57,7 +66,13 @@
     .summary-note { display: block; margin-top: 7px; color: var(--muted); font-size: 10px; line-height: 1.4; }
     .summary-card.dark .summary-note { color: rgba(255,250,242,.65); }
 
-    .schedule { padding: 17px 16px 16px; border-radius: 22px; background: var(--paper); box-shadow: 0 7px 22px rgba(61, 41, 56, .06); }
+    .schedule { padding: 0 16px 16px; border-radius: 22px; background: var(--paper); box-shadow: 0 7px 22px rgba(61, 41, 56, .06); }
+    .schedule-toggle { display: flex; align-items: center; justify-content: space-between; padding: 16px 0 14px; color: var(--plum); cursor: pointer; list-style: none; }
+    .schedule-toggle::-webkit-details-marker { display: none; }
+    .schedule-toggle strong { font-size: 14px; }
+    .schedule-toggle span { color: var(--muted); font-size: 10px; }
+    .schedule-toggle::after { content: '＋'; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; color: var(--plum); background: #f3eee8; font-size: 16px; }
+    .schedule[open] .schedule-toggle::after { content: '−'; }
     .schedule-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid rgba(61,41,56,.07); }
     .schedule-row:last-child { border-bottom: 0; }
     .schedule-day { width: 50px; color: #7f706f; font-size: 11px; }
@@ -69,12 +84,6 @@
     .schedule-row.today .schedule-time { color: var(--plum); font-weight: 800; }
     .schedule-row.closed-day .schedule-time { color: #c4b8b2; }
 
-    .payments { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .payment-card { display: flex; flex-direction: column; justify-content: space-between; min-height: 126px; padding: 15px; border-radius: 20px; background: var(--paper); box-shadow: 0 7px 22px rgba(61, 41, 56, .06); }
-    .payment-image-box { display: grid; place-items: center; width: 100%; height: 39px; border-radius: 10px; background: #fbf7f2; }
-    .payment-card img { width: 80px; height: 31px; object-fit: contain; object-position: center; }
-    .payment-name { margin: 12px 0 0; color: var(--plum); font-size: 13px; font-weight: 850; }
-    .payment-note { margin: 4px 0 0; color: var(--muted); font-size: 9px; }
     .footer-note { margin: 23px 8px 0; color: var(--muted); font-size: 9px; line-height: 1.6; text-align: center; }
     .refresh { display: block; width: 100%; margin-top: 15px; padding: 12px; border: 0; border-radius: 999px; color: var(--plum); background: rgba(61,41,56,.08); font-size: 11px; font-weight: 800; cursor: pointer; }
     .error { margin: 10px 0 0; color: #b15e4c; font-size: 10px; text-align: center; }
@@ -94,14 +103,27 @@
       </div>
     </section>
 
-    <div class="section-label"><h2>本週營業時間</h2><span>WEEKLY HOURS</span></div>
-    <section class="schedule" id="schedule"><div class="schedule-row"><span class="schedule-day">載入中</span><span class="schedule-bar"></span><span class="schedule-time">—</span></div></section>
-
-    <div class="section-label"><h2>付款方式</h2><span>PAYMENT</span></div>
-    <section class="payments">
-      <article class="payment-card"><div class="payment-image-box"><img src="cash.svg" alt="現金" /></div><div><p class="payment-name">現金</p><p class="payment-note">到店付款</p></div></article>
-      <article class="payment-card"><div class="payment-image-box"><img src="line-pay.png" alt="LINE Pay" /></div><div><p class="payment-name">LINE Pay</p><p class="payment-note">快速付款</p></div></article>
+    <section class="info-grid" aria-label="今日資訊">
+      <article class="info-card">
+        <span class="info-label">今日營業</span>
+        <strong class="info-value" id="infoTodayHours">星期六<br />14:00 – 20:00</strong>
+        <p class="info-note">歡迎來店享用義式冰淇淋</p>
+      </article>
+      <article class="info-card">
+        <span class="info-label">付款方式</span>
+        <p class="payment-copy">門市接受現金、LINE Pay 付款</p>
+        <div class="payment-icons">
+          <span class="payment-icon-box"><img src="cash.svg" alt="現金" /></span>
+          <span class="payment-icon-box"><img src="line-pay.png" alt="LINE Pay" /></span>
+        </div>
+      </article>
     </section>
+
+    <div class="section-label"><h2>營業時間</h2><span>點擊展開查看</span></div>
+    <details class="schedule" id="scheduleDetails">
+      <summary class="schedule-toggle"><strong>本週營業時間</strong><span>WEEKLY HOURS</span></summary>
+      <div id="schedule"><div class="schedule-row"><span class="schedule-day">載入中</span><span class="schedule-bar"></span><span class="schedule-time">—</span></div></div>
+    </details>
 
     <button class="refresh" type="button" id="refreshButton">重新整理營業狀態</button>
     <p class="error" id="errorText" hidden>目前無法同步最新資料，請稍後再試。</p>
@@ -153,7 +175,9 @@
       $('heroKicker').textContent = result.kicker;
       $('statusLabel').textContent = result.label;
       $('statusDetail').textContent = result.detail;
-      $('todayHours').textContent = `${dayNames[nowKey]} · ${today.open === false ? '店休' : `${today.start} – ${today.end}`}`;
+      const todayText = `${dayNames[nowKey]} · ${today.open === false ? '店休' : `${today.start} – ${today.end}`}`;
+      $('todayHours').textContent = todayText;
+      $('infoTodayHours').innerHTML = `${dayNames[nowKey]}<br />${today.open === false ? '店休' : `${today.start} – ${today.end}`}`;
       renderSchedule(hours, nowKey);
     }
     function setSync(state, text) {
