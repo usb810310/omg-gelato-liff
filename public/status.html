@@ -3,111 +3,124 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>OMG! Gelato 營業狀態</title>
-  <script type="importmap">
-    {
-      "imports": {
-        "firebase/app": "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js",
-        "firebase/database": "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js"
-      }
-    }
-  </script>
+  <title>OMG Gelato｜營業公告</title>
   <style>
-    :root { --bg:#fbf8f5; --card:#fff; --ink:#30251f; --muted:#8b7c71; --line:#eee5de; --ok-bg:#edf7ee; --ok:#39734a; --closed-bg:#fff2eb; --closed:#9a5a45; --accent:#b98262; }
-    * { box-sizing:border-box; }
-    html, body { margin:0; min-height:100%; background:var(--bg); color:var(--ink); }
-    body { padding:9px 9px 14px; font-family:-apple-system,BlinkMacSystemFont,"Noto Sans TC","PingFang TC",sans-serif; }
-    .shell { width:min(100%,420px); margin:0 auto; }
-    .topbar { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; }
-    .brand { display:flex; align-items:center; gap:9px; min-width:0; }
-    .logo { width:32px; height:32px; object-fit:contain; border-radius:10px; background:#fff; box-shadow:0 3px 12px rgba(79,55,39,.08); }
-    .brand-title { margin:0; font-size:15px; line-height:1.1; letter-spacing:.3px; white-space:nowrap; }
-    .brand-subtitle { margin-top:2px; color:var(--muted); font-size:9px; white-space:nowrap; }
-    .sync { display:inline-flex; align-items:center; gap:5px; color:var(--muted); font-size:10px; white-space:nowrap; }
-    .sync-dot { width:7px; height:7px; border-radius:50%; background:#e3af55; }
-    .sync-dot.online { background:#4fa563; box-shadow:0 0 0 3px rgba(79,165,99,.12); }
-    .sync-dot.offline { background:#d66b59; }
-    .status { display:flex; align-items:flex-start; gap:8px; padding:13px 12px; border:1px solid #dcebdd; border-radius:13px; background:var(--ok-bg); color:var(--ok); }
-    .status.closed { border-color:#f0d8ca; background:var(--closed-bg); color:var(--closed); }
-    .status-dot { width:10px; height:10px; flex:none; margin-top:3px; border-radius:50%; background:currentColor; }
-    .status strong { display:block; font-size:15px; line-height:1.2; }
-    .status small { display:block; margin-top:5px; font-size:10px; opacity:.85; line-height:1.45; }
-    .summary-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:9px; }
-    .summary-card { min-height:91px; padding:12px 11px; border:1px solid var(--line); border-radius:14px; background:#fff; box-shadow:0 5px 16px rgba(73,48,32,.045); }
-    .summary-card.status-summary { border-color:#dcebdd; background:var(--ok-bg); color:var(--ok); }
-    .summary-card.status-summary.closed-summary { border-color:#f0d8ca; background:var(--closed-bg); color:var(--closed); }
-    .summary-label { display:block; margin-bottom:9px; color:var(--muted); font-size:9px; }
-    .status-summary .summary-label { color:currentColor; opacity:.75; }
-    .summary-value { display:block; color:var(--ink); font-size:15px; font-weight:850; line-height:1.25; }
-    .status-summary .summary-value { color:currentColor; }
-    .summary-note { display:block; margin-top:5px; color:var(--muted); font-size:9px; line-height:1.35; }
-    .status-summary .summary-note { color:currentColor; opacity:.8; }
-    .summary-payment { display:flex; flex-direction:column; justify-content:space-between; }
-    .summary-payment img { width:58px; height:auto; max-height:32px; object-fit:contain; object-position:left center; }
-    .summary-payment .summary-label { margin-bottom:5px; }
-    .section { margin-top:9px; padding:13px 12px 12px; border:1px solid var(--line); border-radius:14px; background:var(--card); box-shadow:0 5px 16px rgba(73,48,32,.045); }
-    .section-head { display:flex; align-items:baseline; justify-content:space-between; gap:8px; margin-bottom:10px; }
-    .section-head h2 { margin:0; font-size:13px; letter-spacing:.2px; }
-    .section-head span { color:var(--muted); font-size:9px; }
-    .hours { display:grid; gap:7px; }
-    .hours-row { display:flex; align-items:center; justify-content:space-between; padding:9px 10px; border-radius:9px; background:#fffdfb; color:#5e5148; font-size:11px; }
-    .hours-row.today { background:#f4eadf; color:#6d4c38; font-weight:750; }
-    .hours-row.closed-day { color:#aaa098; }
-    .hours-row span:last-child { color:var(--muted); font-size:10px; }
-    .note { margin:8px 3px 0; color:var(--muted); font-size:9px; line-height:1.4; text-align:center; }
-    .updated { margin-top:5px; color:#aa9b90; font-size:8px; text-align:center; }
-    .error { margin:9px 3px 0; color:var(--closed); font-size:10px; line-height:1.4; text-align:center; }
-    @media (max-width:330px) { body { padding:11px 9px 16px; } .brand-title { font-size:14px; } }
+    :root {
+      --ink: #282326;
+      --plum: #3d2938;
+      --plum-2: #624457;
+      --cream: #fbf5ed;
+      --paper: #fffdf9;
+      --muted: #a79691;
+      --line: rgba(61, 41, 56, .13);
+      --lime: #d9eea7;
+      --coral: #f29b7d;
+      --green: #9ecb83;
+      --shadow: 0 18px 45px rgba(61, 41, 56, .13);
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; background: var(--cream); color: var(--ink); }
+    body { padding: 14px 14px 28px; font-family: -apple-system, BlinkMacSystemFont, "Noto Sans TC", "PingFang TC", sans-serif; }
+    button, a { font: inherit; }
+    .page { width: min(100%, 440px); margin: 0 auto; }
+
+    .topbar { display: flex; align-items: center; justify-content: space-between; padding: 5px 2px 18px; }
+    .brand { display: flex; align-items: center; gap: 10px; }
+    .logo { width: 40px; height: 40px; border-radius: 14px; object-fit: contain; background: #fff; box-shadow: 0 5px 15px rgba(61, 41, 56, .1); }
+    .brand-name { margin: 0; color: var(--plum); font-size: 16px; font-weight: 850; letter-spacing: -.04em; }
+    .brand-sub { margin: 3px 0 0; color: var(--muted); font-size: 9px; letter-spacing: .13em; }
+    .live-dot { display: inline-flex; align-items: center; gap: 6px; color: var(--plum-2); font-size: 10px; font-weight: 750; }
+    .live-dot i { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 4px rgba(158, 203, 131, .22); }
+
+    .hero { position: relative; min-height: 285px; overflow: hidden; padding: 25px 22px 23px; border-radius: 30px; color: #fffaf2; background: var(--plum); box-shadow: var(--shadow); }
+    .hero::before { content: ""; position: absolute; width: 220px; height: 220px; right: -75px; top: -58px; border-radius: 50%; background: var(--coral); opacity: .9; }
+    .hero::after { content: ""; position: absolute; width: 170px; height: 170px; right: -32px; bottom: -78px; border-radius: 50%; border: 1px solid rgba(255,255,255,.18); box-shadow: 0 0 0 22px rgba(255,255,255,.05), 0 0 0 44px rgba(255,255,255,.04); }
+    .hero-content { position: relative; z-index: 1; }
+    .hero-kicker { margin: 0; color: var(--lime); font-size: 10px; font-weight: 850; letter-spacing: .2em; }
+    .hero h1 { max-width: 285px; margin: 17px 0 16px; font-size: clamp(37px, 12vw, 57px); line-height: .96; letter-spacing: -.09em; }
+    .hero-detail { max-width: 255px; margin: 0; color: rgba(255,250,242,.72); font-size: 12px; line-height: 1.65; }
+    .hero-time { display: inline-flex; align-items: center; gap: 8px; margin-top: 24px; padding: 9px 12px; border: 1px solid rgba(255,255,255,.17); border-radius: 999px; background: rgba(255,255,255,.08); color: #fff; font-size: 11px; font-weight: 700; }
+    .hero-time i { width: 7px; height: 7px; border-radius: 50%; background: var(--lime); }
+    .hero.closed .hero-kicker { color: #ffd1bd; }
+    .hero.closed .hero-time i { background: var(--coral); }
+
+    .section-label { display: flex; align-items: center; justify-content: space-between; margin: 25px 3px 10px; }
+    .section-label h2 { margin: 0; color: var(--plum); font-size: 15px; letter-spacing: -.03em; }
+    .section-label span { color: var(--muted); font-size: 9px; letter-spacing: .08em; }
+
+    .summary-grid { display: grid; grid-template-columns: 1.15fr .85fr; gap: 10px; }
+    .summary-card { min-height: 108px; padding: 16px; border-radius: 20px; background: var(--paper); box-shadow: 0 7px 22px rgba(61, 41, 56, .06); }
+    .summary-card.accent { background: var(--lime); }
+    .summary-card.dark { color: #fffaf2; background: var(--plum-2); }
+    .summary-label { display: block; margin-bottom: 14px; color: var(--muted); font-size: 9px; font-weight: 800; letter-spacing: .13em; }
+    .summary-card.accent .summary-label { color: #637743; }
+    .summary-card.dark .summary-label { color: rgba(255,250,242,.62); }
+    .summary-value { display: block; color: var(--plum); font-size: 18px; font-weight: 850; letter-spacing: -.05em; line-height: 1.15; }
+    .summary-card.dark .summary-value { color: #fffaf2; }
+    .summary-note { display: block; margin-top: 7px; color: var(--muted); font-size: 10px; line-height: 1.4; }
+    .summary-card.dark .summary-note { color: rgba(255,250,242,.65); }
+
+    .schedule { padding: 17px 16px 16px; border-radius: 22px; background: var(--paper); box-shadow: 0 7px 22px rgba(61, 41, 56, .06); }
+    .schedule-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid rgba(61,41,56,.07); }
+    .schedule-row:last-child { border-bottom: 0; }
+    .schedule-day { width: 50px; color: #7f706f; font-size: 11px; }
+    .schedule-row.today .schedule-day { color: var(--plum); font-weight: 850; }
+    .schedule-bar { position: relative; flex: 1; height: 7px; overflow: hidden; border-radius: 99px; background: #f0e9e2; }
+    .schedule-bar::after { content: ""; position: absolute; inset: 0 28% 0 19%; border-radius: inherit; background: #d5e7ae; }
+    .schedule-row.closed-day .schedule-bar::after { display: none; }
+    .schedule-time { width: 92px; color: var(--muted); font-size: 10px; text-align: right; }
+    .schedule-row.today .schedule-time { color: var(--plum); font-weight: 800; }
+    .schedule-row.closed-day .schedule-time { color: #c4b8b2; }
+
+    .payments { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .payment-card { display: flex; flex-direction: column; justify-content: space-between; min-height: 126px; padding: 15px; border-radius: 20px; background: var(--paper); box-shadow: 0 7px 22px rgba(61, 41, 56, .06); }
+    .payment-card img { align-self: flex-start; width: 76px; height: auto; max-height: 35px; object-fit: contain; object-position: left center; }
+    .payment-name { margin: 12px 0 0; color: var(--plum); font-size: 13px; font-weight: 850; }
+    .payment-note { margin: 4px 0 0; color: var(--muted); font-size: 9px; }
+    .footer-note { margin: 23px 8px 0; color: var(--muted); font-size: 9px; line-height: 1.6; text-align: center; }
+    .refresh { display: block; width: 100%; margin-top: 15px; padding: 12px; border: 0; border-radius: 999px; color: var(--plum); background: rgba(61,41,56,.08); font-size: 11px; font-weight: 800; cursor: pointer; }
+    .error { margin: 10px 0 0; color: #b15e4c; font-size: 10px; text-align: center; }
+    [hidden] { display: none !important; }
+    @media (max-width: 340px) { .hero { min-height: 265px; padding: 22px 18px; } .hero h1 { font-size: 43px; } .schedule-time { width: 84px; font-size: 9px; } }
   </style>
 </head>
 <body>
-  <main class="shell">
+  <main class="page">
     <header class="topbar">
       <div class="brand">
-        <img class="logo" src="logo-new.png" alt="OMG! Gelato" onerror="this.style.display='none'" />
-        <div>
-          <h1 class="brand-title">OMG! Gelato</h1>
-          <div class="brand-subtitle">今日營業狀態・快速查看</div>
-        </div>
+        <img class="logo" src="logo-new.png" alt="OMG Gelato" onerror="this.style.display='none'" />
+        <div><p class="brand-name">OMG Gelato</p><p class="brand-sub">DAILY STORE STATUS</p></div>
       </div>
-      <div class="sync"><i class="sync-dot" id="syncDot"></i><span id="syncText">連線中</span></div>
+      <div class="live-dot"><i></i><span id="syncText">即時同步</span></div>
     </header>
 
-    <section class="status" id="shopStatus">
-      <i class="status-dot"></i>
-      <div><strong id="statusLabel">確認營業狀態中…</strong><small id="statusDetail">正在同步店家最新設定</small></div>
+    <section class="hero" id="hero">
+      <div class="hero-content">
+        <p class="hero-kicker" id="heroKicker">OPEN TODAY</p>
+        <h1 id="statusLabel">目前營業中</h1>
+        <p class="hero-detail" id="statusDetail">歡迎來店享用今日義式冰淇淋。</p>
+        <div class="hero-time"><i></i><span id="todayHours">星期六 · 14:00 – 20:00</span></div>
+      </div>
     </section>
 
-    <section class="summary-grid" aria-label="營業摘要">
-      <article class="summary-card status-summary" id="summaryStatusCard">
-        <span class="summary-label">目前狀態</span>
-        <strong class="summary-value" id="summaryStatusLabel">目前營業中</strong>
-        <small class="summary-note" id="summaryStatusDetail">歡迎來店享用</small>
-      </article>
-      <article class="summary-card">
-        <span class="summary-label">今日營業時間</span>
-        <strong class="summary-value" id="todayHours">（今天）星期六<br />14:00 – 20:00</strong>
-      </article>
-      <article class="summary-card summary-payment">
-        <span class="summary-label">付款方式</span>
-        <img src="cash.svg" alt="現金" />
-        <small class="summary-note">現金・到店付款</small>
-      </article>
-      <article class="summary-card summary-payment">
-        <span class="summary-label">付款方式</span>
-        <img src="line-pay.png" alt="LINE Pay" />
-        <small class="summary-note">LINE Pay・快速付款</small>
-      </article>
+    <div class="section-label"><h2>今天的摘要</h2><span>AT A GLANCE</span></div>
+    <section class="summary-grid" aria-label="今日摘要">
+      <article class="summary-card accent"><span class="summary-label">今天</span><strong class="summary-value" id="summaryDay">星期六</strong><small class="summary-note">台北時間</small></article>
+      <article class="summary-card dark"><span class="summary-label">營業時間</span><strong class="summary-value" id="summaryHours">14:00 – 20:00</strong><small class="summary-note">今日到店時間</small></article>
     </section>
 
-    <section class="section">
-      <div class="section-head"><h2>本週營業時間</h2><span id="todayText">台北時間</span></div>
-      <div class="hours" id="hoursList"><div class="hours-row"><span>正在載入…</span><span>—</span></div></div>
+    <div class="section-label"><h2>本週營業時間</h2><span>WEEKLY HOURS</span></div>
+    <section class="schedule" id="schedule"><div class="schedule-row"><span class="schedule-day">載入中</span><span class="schedule-bar"></span><span class="schedule-time">—</span></div></section>
+
+    <div class="section-label"><h2>付款方式</h2><span>PAYMENT</span></div>
+    <section class="payments">
+      <article class="payment-card"><img src="cash.svg" alt="現金" /><div><p class="payment-name">現金</p><p class="payment-note">到店付款</p></div></article>
+      <article class="payment-card"><img src="line-pay.png" alt="LINE Pay" /><div><p class="payment-name">LINE Pay</p><p class="payment-note">快速付款</p></div></article>
     </section>
 
-    <p class="note">營業狀態會依店家後台設定即時更新</p>
-    <div class="updated" id="updatedAt">最後同步：—</div>
-    <p class="error" id="errorText" hidden>目前無法同步最新資料，請稍後重新開啟。</p>
+    <button class="refresh" type="button" id="refreshButton">重新整理營業狀態</button>
+    <p class="error" id="errorText" hidden>目前無法同步最新資料，請稍後再試。</p>
+    <p class="footer-note">營業時間與店家現場狀況可能有所調整，最新狀態以本頁公告為準。</p>
   </main>
 
   <script type="module">
@@ -135,46 +148,41 @@
       return { key:get('weekday').toLowerCase().slice(0,3), minutes:Number(get('hour')) * 60 + Number(get('minute')) };
     }
     function toMinutes(value) { const [h, m] = String(value || '0:0').split(':').map(Number); return h * 60 + m; }
-    function getMode(hours) { return hours?.shopMode || (hours?.shopClosed ? 'off' : 'auto'); }
     function currentStatus(hours) {
-      if (!hours) return { open:true, label:'營業狀態同步中', detail:'尚未取得店家設定，請稍候。' };
-      const mode = getMode(hours), now = taipeiParts(new Date()), today = { ...defaultHours, ...(hours[now.key] || {}) };
-      if (mode === 'off') return { open:false, label:'店休中', detail:'目前店休中，線上點餐暫停。' };
+      const now = taipeiParts(new Date()), today = { ...defaultHours, ...(hours?.[now.key] || {}) }, mode = hours?.shopMode || (hours?.shopClosed ? 'off' : 'auto');
+      if (mode === 'off') return { open:false, label:'店休中', kicker:'CLOSED TODAY', detail:'目前店休中，線上點餐暫停。', today };
       const open = mode === 'open' || (mode === 'auto' && today.open && now.minutes >= toMinutes(today.start) && now.minutes < toMinutes(today.end));
-      if (open) return { open:true, label:'目前營業中', detail:`今日營業時間 ${today.start} – ${today.end}` };
-      if (!today.open) return { open:false, label:'今日店休', detail:'今天沒有安排營業，歡迎改天再來。' };
-      return { open:false, label:now.minutes < toMinutes(today.start) ? '尚未營業' : '今日已打烊', detail:`今日營業時間 ${today.start} – ${today.end}` };
+      if (open) return { open:true, label:'目前營業中', kicker:'OPEN TODAY', detail:'歡迎來店享用今日義式冰淇淋。', today };
+      if (!today.open) return { open:false, label:'今日店休', kicker:'CLOSED TODAY', detail:'今天沒有安排營業，歡迎改天再來。', today };
+      return { open:false, label:now.minutes < toMinutes(today.start) ? '尚未營業' : '今日已打烊', kicker:'CLOSED FOR NOW', detail:`今日營業時間為 ${today.start} – ${today.end}`, today };
     }
-    function renderHours(hours) {
-      const nowKey = taipeiParts(new Date()).key;
-      const today = { ...defaultHours, ...(hours?.[nowKey] || {}) };
-      $('todayHours').textContent = `（今天）${dayNames[nowKey]} ${today.open === false ? '店休' : `${today.start} – ${today.end}`}`;
-      $('hoursList').innerHTML = dayKeys.map((key) => {
-        const day = { ...defaultHours, ...(hours?.[key] || {}) };
-        const isOpen = day.open !== false;
-        return `<div class="hours-row${key === nowKey ? ' today' : ''}${!isOpen ? ' closed-day' : ''}"><span>${dayNames[key]}${key === nowKey ? '（今天）' : ''}</span><span>${isOpen ? `${day.start} – ${day.end}` : '店休'}</span></div>`;
+    function renderSchedule(hours, nowKey) {
+      $('schedule').innerHTML = dayKeys.map((key) => {
+        const day = { ...defaultHours, ...(hours?.[key] || {}) }, open = day.open !== false;
+        return `<div class="schedule-row${key === nowKey ? ' today' : ''}${!open ? ' closed-day' : ''}"><span class="schedule-day">${dayNames[key]}${key === nowKey ? '・今天' : ''}</span><span class="schedule-bar"></span><span class="schedule-time">${open ? `${day.start} – ${day.end}` : '店休'}</span></div>`;
       }).join('');
-      $('todayText').textContent = `今天是${dayNames[nowKey]}`;
     }
-    function update(hours) {
-      const result = currentStatus(hours);
-      $('shopStatus').classList.toggle('closed', !result.open);
-      $('summaryStatusCard').classList.toggle('closed-summary', !result.open);
+    function render(hours) {
+      const nowKey = taipeiParts(new Date()).key, result = currentStatus(hours), today = result.today;
+      $('hero').classList.toggle('closed', !result.open);
+      $('heroKicker').textContent = result.kicker;
       $('statusLabel').textContent = result.label;
       $('statusDetail').textContent = result.detail;
-      $('summaryStatusLabel').textContent = result.label;
-      $('summaryStatusDetail').textContent = result.detail || '歡迎來店享用';
-      renderHours(hours);
+      $('todayHours').textContent = `${dayNames[nowKey]} · ${today.open === false ? '店休' : `${today.start} – ${today.end}`}`;
+      $('summaryDay').textContent = dayNames[nowKey];
+      $('summaryHours').textContent = today.open === false ? '店休' : `${today.start} – ${today.end}`;
+      renderSchedule(hours, nowKey);
     }
     function setSync(state, text) {
-      $('syncDot').className = `sync-dot ${state}`;
       $('syncText').textContent = text;
-      $('updatedAt').textContent = `最後同步：${new Date().toLocaleTimeString('zh-TW', { hour:'2-digit', minute:'2-digit' })}`;
+      document.querySelector('.live-dot i').style.background = state === 'online' ? 'var(--green)' : 'var(--coral)';
     }
-    function syncOnce() { onValue(ref(db, 'businessHours'), (snap) => { update(snap.val()); $('errorText').hidden = true; setSync('online', '即時同步'); }, () => { $('errorText').hidden = false; setSync('offline', '同步中斷'); }, { onlyOnce:true }); }
-
-    onValue(ref(db, 'businessHours'), (snap) => { update(snap.val()); $('errorText').hidden = true; setSync('online', '即時同步'); }, () => { $('errorText').hidden = false; setSync('offline', '同步中斷'); });
-    setInterval(syncOnce, 30000);
+    function bindOnce() {
+      onValue(ref(db, 'businessHours'), (snap) => { render(snap.val()); $('errorText').hidden = true; setSync('online', '即時同步'); }, () => { $('errorText').hidden = false; setSync('offline', '同步中斷'); }, { onlyOnce:true });
+    }
+    onValue(ref(db, 'businessHours'), (snap) => { render(snap.val()); $('errorText').hidden = true; setSync('online', '即時同步'); }, () => { $('errorText').hidden = false; setSync('offline', '同步中斷'); });
+    $('refreshButton').addEventListener('click', bindOnce);
+    setInterval(bindOnce, 30000);
   </script>
 </body>
 </html>
