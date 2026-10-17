@@ -1,5 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 64" role="img" aria-label="LINE Pay">
-  <rect width="96" height="64" rx="12" fill="#e7f6e9"/>
-  <rect x="10" y="14" width="76" height="36" rx="18" fill="#06c755"/>
-  <path d="M30 27h9v3h-5v2h4v3h-4v2h5v3h-9zM42 27h3l5 8v-8h3v13h-3l-5-8v8h-3zM57 27h8v3h-5v2h4v3h-4v2h5v3h-8z" fill="#fff"/>
-</svg>

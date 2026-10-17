@@ -37,7 +37,7 @@
     .today-hours { margin:0; color:var(--ink); font-size:16px; font-weight:800; letter-spacing:.1px; }
     .payment-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
     .payment-item { display:flex; align-items:center; gap:8px; padding:8px; border:1px solid var(--line); border-radius:10px; background:#fffdfb; }
-    .payment-item img { width:48px; height:32px; flex:none; }
+    .payment-item img { width:56px; height:auto; max-height:32px; flex:none; object-fit:contain; }
     .payment-item strong { display:block; font-size:11px; }
     .payment-item small { display:block; margin-top:2px; color:var(--muted); font-size:9px; }
     .section { margin-top:9px; padding:13px 12px 12px; border:1px solid var(--line); border-radius:14px; background:var(--card); box-shadow:0 5px 16px rgba(73,48,32,.045); }
@@ -87,7 +87,7 @@
       <div class="section-head"><h2>付款方式</h2><span>到店付款</span></div>
       <div class="payment-grid">
         <div class="payment-item"><img src="cash.svg" alt="現金" /><div><strong>現金</strong><small>到店付款</small></div></div>
-        <div class="payment-item"><img src="line-pay.svg" alt="LINE Pay" /><div><strong>LINE Pay</strong><small>快速付款</small></div></div>
+        <div class="payment-item"><img src="line-pay.png" alt="LINE Pay" /><div><strong>LINE Pay</strong><small>快速付款</small></div></div>
       </div>
     </section>
 
