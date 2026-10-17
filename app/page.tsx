@@ -268,6 +268,11 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    const tab = new URLSearchParams(window.location.search).get('tab');
+    if (tab === 'status') setActiveTab('status');
+  }, []);
+
+  useEffect(() => {
     let cancelled = false;
     const initLiff = async () => {
       setStatus('正在初始化...');
