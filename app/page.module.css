@@ -173,25 +173,3 @@
   border-radius: 20px;
   padding: 20px;
 }
-
-/* 營業狀況分頁 */
-.statusLargeDot { width: 13px; height: 13px; margin: 0 7px 8px 0; border-radius: 50%; background: #c9695b; box-shadow: 0 0 0 6px rgba(201,105,91,.12); }
-.statusLargeDotOpen { background: #6da267; box-shadow: 0 0 0 6px rgba(109,162,103,.14); }
-.businessStatusCard { display: flex; align-items: center; gap: 15px; padding: 21px 17px; border: 1px solid #f0d3cc; border-radius: 20px; background: #fbeeea; color: #8a5a4f; }
-.businessStatusOpen { border-color: #d5e5d2; background: #eaf3e7; color: #4f724b; }
-.businessStatusIcon { width: 44px; height: 44px; flex: 0 0 44px; display: grid; place-items: center; border-radius: 50%; background: rgba(201,105,91,.13); font-size: 22px; font-weight: 800; }
-.businessStatusOpen .businessStatusIcon { background: rgba(109,162,103,.15); }
-.businessStatusLabel { margin: 0 0 4px; font-size: 9px; font-weight: 800; letter-spacing: .12em; opacity: .75; }
-.businessStatusCard h2 { margin: 0 0 6px; font-size: 21px; letter-spacing: -.04em; }
-.businessStatusCard > div:last-child > p:last-child { margin: 0; font-size: 11px; line-height: 1.5; opacity: .9; }
-.hoursCard { margin-top: 13px; padding: 18px 15px 14px; border: 1px solid #eee4d7; border-radius: 20px; background: #fffdf8; }
-.hoursCardHeading { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 11px; }
-.hoursCardHeading h2 { margin: 0; font-size: 15px; }
-.hoursCardHeading span { color: var(--muted); font-size: 9px; }
-.hoursList { display: grid; gap: 6px; }
-.hoursRow { display: flex; align-items: center; justify-content: space-between; padding: 9px 10px; border-radius: 9px; color: #6b6259; font-size: 11px; }
-.hoursRowToday { background: #f4eadf; color: #6d4c38; font-weight: 800; }
-.hoursRow strong { color: var(--muted); font-size: 10px; font-weight: 600; }
-.hoursRowToday strong { color: #9a704f; }
-.statusAutoNote { margin: 13px 0 0; color: var(--muted); font-size: 9px; text-align: center; }
-.statusAutoNote span { display: inline-block; width: 6px; height: 6px; margin-right: 5px; border-radius: 50%; background: #6da267; }
