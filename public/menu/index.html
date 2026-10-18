@@ -1303,6 +1303,13 @@
             cursor: not-allowed;
         }
 
+        .customer-note-wrap { margin: 12px 0 14px; padding: 12px 13px; border: 1px solid var(--border-light); border-radius: 16px; background: var(--bg-card-hover); }
+        .customer-note-wrap label { display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; color: var(--text-primary); font-size: 13px; font-weight: 700; }
+        .customer-note-wrap label span { color: var(--text-muted); font-size: 11px; font-weight: 500; }
+        .customer-note-wrap textarea { display: block; width: 100%; min-height: 68px; resize: vertical; padding: 10px 11px; border: 1px solid var(--border-light); border-radius: 11px; background: var(--bg-card); color: var(--text-primary); font: inherit; font-size: 13px; line-height: 1.5; outline: none; }
+        .customer-note-wrap textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(176, 152, 136, .14); }
+        .customer-note-hint { margin-top: 6px; color: var(--text-muted); font-size: 10px; }
+        .customer-order-note { margin: 8px 0 0; padding: 9px 10px; border-radius: 10px; background: var(--summary-total-bg); color: var(--text-secondary); font-size: 11px; line-height: 1.5; }
         .pay-options { display: flex; flex-direction: column; gap: 10px; margin: 8px 0 4px; }
         .pay-option {
             display: grid;
@@ -1816,6 +1823,11 @@
                 <button class="modal-close" id="payModalClose">✕</button>
             </div>
             <div class="modal-sub" id="paySummary">請選擇付款方式</div>
+            <div class="customer-note-wrap">
+                <label for="customerNoteInput">給店家的備註 <span>選填</span></label>
+                <textarea id="customerNoteInput" maxlength="120" rows="3" placeholder="例如：請幫我分開裝、希望提早準備…"></textarea>
+                <div class="customer-note-hint">最多 120 字，店家接單時會一起看到</div>
+            </div>
             <div class="pay-options">
                 <button type="button" class="pay-option" data-pay="onsite_cash">
                     <span class="pay-option-icon pay-option-icon-cash" aria-hidden="true">現</span>
@@ -2174,6 +2186,9 @@
                 if (!items.length) itemList.appendChild(createOrderText('li', '', '品項明細請洽店家確認'));
                 card.appendChild(itemList);
                 card.appendChild(createOrderText('p', 'customer-order-total', `合計 $${Number(order.total || 0).toFixed(0)}`));
+                if (order.customerNote) {
+                    card.appendChild(createOrderText('p', 'customer-order-note', `給店家的備註：${order.customerNote}`));
+                }
 
                 const status = String(order.status || '').trim();
                 if (isCustomerOrderWaiting(order)) {
@@ -2491,10 +2506,12 @@
         const payModal = document.getElementById('payModal');
         const payError = document.getElementById('payError');
         const paySummary = document.getElementById('paySummary');
+        const customerNoteInput = document.getElementById('customerNoteInput');
         let pendingPickup = null;
 
         function openPayModal() {
             paySummary.textContent = `取餐時間：${pendingPickup.rel}`;
+            if (customerNoteInput) customerNoteInput.focus();
             payError.textContent = '';
             const linepayButton = payModal.querySelector('[data-pay="onsite_linepay"]');
             if (linepayButton) {
@@ -2539,7 +2556,8 @@
 
         function openOrderConfirm(method) {
             pendingPayMethod = method;
-            orderConfirmDetail.innerHTML = `<span>取餐時間</span><strong>${escapeHtml(pendingPickup?.rel || '尚未選擇')}</strong><span>付款方式</span><strong>${paymentLabel(method)}</strong>`;
+            const note = customerNoteInput?.value.trim() || '';
+            orderConfirmDetail.innerHTML = `<span>取餐時間</span><strong>${escapeHtml(pendingPickup?.rel || '尚未選擇')}</strong><span>付款方式</span><strong>${paymentLabel(method)}</strong><span>顧客備註</span><strong>${escapeHtml(note || '無')}</strong>`;
             orderConfirmError.textContent = '';
             orderConfirmModal.classList.add('open');
             document.body.style.overflow = 'hidden';
@@ -2966,7 +2984,7 @@
         }
 
                 // ---- 訂單文字產生 ----
-        function generateOrderText(pickupAbs, pickupRel) {
+        function generateOrderText(pickupAbs, pickupRel, customerNote = '') {
             const lines = [];
             let total = 0;
             let hasItem = false;
@@ -3035,7 +3053,7 @@
         lines.push(`🕐 取餐時間：${pickupRel}`);          // 顧客看得懂：明天 20:00
         lines.push(`🏪 店家參考：${pickupAbs}`);          // 店家對照用：2026/10/02 20:00
     }
-
+    if (customerNote) lines.push(`📝 顧客備註：${customerNote}`);
 
             lines.push('');
 
@@ -3070,7 +3088,8 @@
                 showToast('今天與明天都不營業，暫停線上點餐', '🔒');
                 return;
             }
-    const body = generateOrderText(pickupAbs, pickupRel);
+    const customerNote = (customerNoteInput?.value || '').trim().slice(0, 120);
+            const body = generateOrderText(pickupAbs, pickupRel, customerNote);
             if (body === '（尚未選取）') {
                 clearOrderSubmitLock();
                 setOrderSubmitting(false);
@@ -3114,6 +3133,8 @@
                     paymentMethod: payMethod === 'onsite_linepay' ? 'ONSITE_LINEPAY' : 'ONSITE_CASH',
                     paymentNote: payMethod === 'onsite_linepay' ? 'LINE Pay' : '現場付款',
                     remark: `取餐時間：${pickupRel}（${pickupAbs}）`,
+                    pickupRemark: `取餐時間：${pickupRel}（${pickupAbs}）`,
+                    customerNote,
                     source: window.liffUserId ? 'LIFF' : 'WEB_GUEST',
                     voided: false,
                     status: 'waiting_accept',
@@ -3148,6 +3169,7 @@
                             pickupDay,
                             pickupTime,
                             payMethod,
+                            customerNote,
                         }),
                     });
                     const result = await response.json().catch(() => ({}));
@@ -3159,6 +3181,7 @@
                     notificationWarning = error instanceof Error ? error.message : '通知服務暫時無法使用';
                 }
 
+                if (customerNoteInput) customerNoteInput.value = '';
                 clearAll(false);
 
                 showToast(

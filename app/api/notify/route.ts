@@ -61,6 +61,7 @@ export async function POST(request: Request) {
       total,
       pickupDay,
       pickupTime,
+      customerNote,
     } = body;
 
     const safeOrderText = orderText?.trim() || '';
@@ -147,6 +148,7 @@ export async function POST(request: Request) {
             { type: 'separator', margin: 'lg', color: '#DCE3EC' },
             ...itemRows,
             { type: 'separator', margin: 'lg', color: '#DCE3EC' },
+            ...(customerNote ? [{ type: 'text', text: `顧客備註：${String(customerNote).slice(0, 120)}`, size: 'sm', color: '#8B5E3C', wrap: true, margin: 'md' }] : []),
             {
               type: 'box',
               layout: 'horizontal',
