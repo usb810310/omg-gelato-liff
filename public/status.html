@@ -160,6 +160,24 @@
       $('syncText').textContent = text;
       document.querySelector('.live-dot i').style.background = state === 'online' ? 'var(--green)' : 'var(--coral)';
     }
+    function renderAnnouncement(data) {
+      const announcements = Object.values(data || {})
+        .filter((item) => item && typeof item === 'object' && item.active !== false)
+        .sort((a, b) => (Number(b.timestamp) || 0) - (Number(a.timestamp) || 0));
+      const latest = announcements[0];
+      $('announcementTitle').textContent = latest?.title || '目前沒有任何公告';
+      $('announcementDetail').textContent = latest
+        ? (latest.content || '若有臨時休息或特殊安排，會在這裡更新。')
+        : '若有臨時休息或特殊安排，會在這裡更新。';
+    }
+    onValue(ref(db, 'announcements'), (snap) => {
+      renderAnnouncement(snap.val());
+      $('errorText').hidden = true;
+    }, () => {
+      $('announcementTitle').textContent = '公告同步中斷';
+      $('announcementDetail').textContent = '目前無法同步最新公告，請稍後再試。';
+      $('errorText').hidden = false;
+    });
     function bindOnce() {
       onValue(ref(db, 'businessHours'), (snap) => { render(snap.val()); $('errorText').hidden = true; setSync('online', '即時同步'); }, () => { $('errorText').hidden = false; setSync('offline', '同步中斷'); }, { onlyOnce:true });
     }
