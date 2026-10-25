@@ -97,7 +97,7 @@
       <article class="info-card">
         <span class="info-label">今日營業</span>
         <strong class="info-value" id="infoTodayHours">星期六 · 14:00 – 20:00</strong>
-        <p class="info-note">歡迎來店享用義式冰淇淋</p>
+        <p class="info-note" id="infoTodayNote">歡迎來店享用義式冰淇淋</p>
       </article>
       <article class="info-card">
         <span class="info-label">付款方式</span>
@@ -131,11 +131,13 @@
     const $ = (id) => document.getElementById(id);
     const dayNames = { sun:'星期日', mon:'星期一', tue:'星期二', wed:'星期三', thu:'星期四', fri:'星期五', sat:'星期六' };
     const defaultHours = { open:true, start:'14:00', end:'20:00' };
+    let latestAnnouncement = null;
+    let currentHours = null;
 
     function taipeiParts(date) {
-      const parts = new Intl.DateTimeFormat('en-US', { timeZone:'Asia/Taipei', weekday:'short', hour:'2-digit', minute:'2-digit', hourCycle:'h23' }).formatToParts(date);
+      const parts = new Intl.DateTimeFormat('en-US', { timeZone:'Asia/Taipei', year:'numeric', month:'2-digit', day:'2-digit', weekday:'short', hour:'2-digit', minute:'2-digit', hourCycle:'h23' }).formatToParts(date);
       const get = (type) => parts.find((part) => part.type === type)?.value || '0';
-      return { key:get('weekday').toLowerCase().slice(0,3), minutes:Number(get('hour')) * 60 + Number(get('minute')) };
+      return { key:get('weekday').toLowerCase().slice(0,3), date:`${get('year')}-${get('month')}-${get('day')}`, minutes:Number(get('hour')) * 60 + Number(get('minute')) };
     }
     function toMinutes(value) { const [h, m] = String(value || '0:0').split(':').map(Number); return h * 60 + m; }
     function currentStatus(hours) {
@@ -148,13 +150,17 @@
     }
     function render(hours) {
       const nowKey = taipeiParts(new Date()).key, result = currentStatus(hours), today = result.today;
-      $('hero').classList.toggle('closed', !result.open);
-      $('heroKicker').textContent = result.kicker;
-      $('statusLabel').textContent = result.label;
-      $('statusDetail').textContent = result.detail;
-      const todayText = `${dayNames[nowKey]} · ${today.open === false ? '店休' : `${today.start} – ${today.end}`}`;
+      const isSoldOutToday = latestAnnouncement
+        && taipeiParts(new Date(Number(latestAnnouncement.timestamp) || 0)).date === taipeiParts(new Date()).date
+        && /售完|售罄|完售/.test(`${latestAnnouncement.title || ''} ${latestAnnouncement.content || ''}`);
+      $('hero').classList.toggle('closed', isSoldOutToday || !result.open);
+      $('heroKicker').textContent = isSoldOutToday ? 'SOLD OUT TODAY' : result.kicker;
+      $('statusLabel').textContent = isSoldOutToday ? '今日已售完' : result.label;
+      $('statusDetail').textContent = isSoldOutToday ? '今日商品已售完，今日不再供應。' : result.detail;
+      const todayText = isSoldOutToday ? '今日已售完 · 今日不再供應' : `${dayNames[nowKey]} · ${today.open === false ? '店休' : `${today.start} – ${today.end}`}`;
       $('todayHours').textContent = todayText;
-      $('infoTodayHours').textContent = `${dayNames[nowKey]} · ${today.open === false ? '店休' : `${today.start} – ${today.end}`}`;
+      $('infoTodayHours').textContent = todayText;
+      $('infoTodayNote').textContent = isSoldOutToday ? '今日商品已售完，歡迎明日再來。' : '歡迎來店享用義式冰淇淋';
     }
     function setSync(state, text) {
       $('syncText').textContent = text;
@@ -165,10 +171,12 @@
         .filter((item) => item && typeof item === 'object' && item.active !== false)
         .sort((a, b) => (Number(b.timestamp) || 0) - (Number(a.timestamp) || 0));
       const latest = announcements[0];
+      latestAnnouncement = latest || null;
       $('announcementTitle').textContent = latest?.title || '目前沒有任何公告';
       $('announcementDetail').textContent = latest
         ? (latest.content || '若有臨時休息或特殊安排，會在這裡更新。')
         : '若有臨時休息或特殊安排，會在這裡更新。';
+      render(currentHours);
     }
     onValue(ref(db, 'announcements'), (snap) => {
       renderAnnouncement(snap.val());
@@ -179,9 +187,9 @@
       $('errorText').hidden = false;
     });
     function bindOnce() {
-      onValue(ref(db, 'businessHours'), (snap) => { render(snap.val()); $('errorText').hidden = true; setSync('online', '即時同步'); }, () => { $('errorText').hidden = false; setSync('offline', '同步中斷'); }, { onlyOnce:true });
+      onValue(ref(db, 'businessHours'), (snap) => { currentHours = snap.val(); render(currentHours); $('errorText').hidden = true; setSync('online', '即時同步'); }, () => { $('errorText').hidden = false; setSync('offline', '同步中斷'); }, { onlyOnce:true });
     }
-    onValue(ref(db, 'businessHours'), (snap) => { render(snap.val()); $('errorText').hidden = true; setSync('online', '即時同步'); }, () => { $('errorText').hidden = false; setSync('offline', '同步中斷'); });
+    onValue(ref(db, 'businessHours'), (snap) => { currentHours = snap.val(); render(currentHours); $('errorText').hidden = true; setSync('online', '即時同步'); }, () => { $('errorText').hidden = false; setSync('offline', '同步中斷'); });
     $('refreshButton').addEventListener('click', bindOnce);
     setInterval(bindOnce, 30000);
   </script>
