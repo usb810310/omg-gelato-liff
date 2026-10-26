@@ -391,7 +391,7 @@ export default function Home() {
     if (!LINE_PAY_ENABLED || !order.orderNo || !profile?.userId || payingOrderNo) return;
     setPayingOrderNo(order.orderNo);
     try {
-      const response = await fetch('/api/linepay/request', {
+      const response = await fetch('https://omggelato.duckdns.org/linepay/request', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
