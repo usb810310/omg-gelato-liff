@@ -404,12 +404,16 @@ export default function Home() {
         }),
       });
       const result = await response.json().catch(() => ({}));
-      if (!response.ok || (!result.appPaymentUrl && !result.webPaymentUrl && !result.paymentUrl)) {
+      const paymentUrls = result.info?.paymentUrl || result.paymentUrl || {};
+      const appPaymentUrl = result.appPaymentUrl || paymentUrls.app;
+      const webPaymentUrl = result.webPaymentUrl || paymentUrls.web;
+      const fallbackPaymentUrl = result.paymentUrl || appPaymentUrl || webPaymentUrl;
+      if (!response.ok || (!appPaymentUrl && !webPaymentUrl && !fallbackPaymentUrl)) {
         throw new Error(result.error || 'LINE Pay 付款服務尚未完成設定');
       }
       const paymentUrl = liff.isInClient()
-        ? result.appPaymentUrl || result.webPaymentUrl || result.paymentUrl
-        : result.webPaymentUrl || result.appPaymentUrl || result.paymentUrl;
+        ? appPaymentUrl || webPaymentUrl || fallbackPaymentUrl
+        : webPaymentUrl || appPaymentUrl || fallbackPaymentUrl;
       window.location.href = paymentUrl;
     } catch (err) {
       console.error('LINE Pay 付款請求失敗:', err);
