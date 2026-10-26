@@ -220,8 +220,7 @@ function OrderDetailCard({
   );
 }
 
-// 線上 LINE Pay 待單一窗口申請完成後再開啟
-const LINE_PAY_ENABLED = false;
+const LINE_PAY_ENABLED = true;
 
 const firebaseConfig = {
   apiKey: 'AIzaSyDvzZKr2x3TGeOFZGisKKXjbYH00DLVhKg',
