@@ -1834,9 +1834,9 @@
                     <span class="pay-option-text"><b>現場付款</b><small>到店取餐時付款</small></span>
                     <span class="pay-option-arrow">›</span>
                 </button>
-                <button type="button" class="pay-option pay-option-linepay pay-option-disabled" data-pay="onsite_linepay" disabled aria-disabled="true">
+                <button type="button" class="pay-option pay-option-linepay" data-pay="onsite_linepay">
                     <span class="pay-option-icon pay-option-icon-line" aria-hidden="true">LINE</span>
-                    <span class="pay-option-text"><b>LINE Pay</b><small>即將推出</small></span>
+                    <span class="pay-option-text"><b>LINE Pay</b><small>線上付款</small></span>
                     <span class="pay-option-arrow" aria-hidden="true">›</span>
                 </button>
             </div>
@@ -2513,13 +2513,6 @@
             paySummary.textContent = `取餐時間：${pendingPickup.rel}`;
             if (customerNoteInput) customerNoteInput.focus();
             payError.textContent = '';
-            const linepayButton = payModal.querySelector('[data-pay="onsite_linepay"]');
-            if (linepayButton) {
-                // 線上 LINE Pay 待單一窗口申請完成後再開啟
-                linepayButton.disabled = true;
-                linepayButton.setAttribute('aria-disabled', 'true');
-                linepayButton.classList.add('pay-option-disabled');
-            }
             payModal.classList.add('open');
             document.body.style.overflow = 'hidden';
         }
