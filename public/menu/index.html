@@ -3075,6 +3075,12 @@
         }
 
         async function sendOrderToLine(pickupAbs, pickupRel, payMethod = 'onsite_cash') {
+            if (payMethod === 'onsite_linepay' && !window.liffUserId) {
+                clearOrderSubmitLock();
+                setOrderSubmitting(false);
+                showToast('請從 LINE 登入後使用 LINE Pay', '⚠️');
+                return;
+            }
             if (!shopIsOpen) {
                 clearOrderSubmitLock();
                 setOrderSubmitting(false);
@@ -3180,9 +3186,16 @@
                 showToast(
                     notificationWarning
                         ? `訂單已送出；LINE 通知失敗：${notificationWarning}`
-                        : '訂單已送出，請到 LINE 查看訂單小卡',
+                        : payMethod === 'onsite_linepay' ? '訂單已送出，正在前往 LINE Pay 付款' : '訂單已送出，請到 LINE 查看訂單小卡',
                     notificationWarning ? '⚠️' : '✅',
                 );
+
+                if (payMethod === 'onsite_linepay') {
+                    window.setTimeout(() => {
+                        window.location.assign(`/?orderNo=${encodeURIComponent(orderNo)}&action=pay`);
+                    }, 800);
+                    return;
+                }
 
                 // 回到 LINE 聊天室查看訂單小卡；非 LINE 內開啟則回首頁
                 window.setTimeout(() => {
