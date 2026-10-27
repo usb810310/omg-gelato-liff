@@ -52,6 +52,13 @@ export async function POST(request: Request) {
       },
     };
 
+    // Verify Firebase can record the in-flight state before creating a LINE Pay transaction.
+    await updateOrder(order, {
+      payment: '付款處理中',
+      paymentStatus: 'processing',
+      paymentProvider: 'LINE_PAY',
+    });
+
     const linePayResponse = await callLinePay<{ info?: { paymentUrl?: { web?: string; app?: string }; transactionId?: string | number } }>({
       method: 'POST',
       path: '/v4/payments/request',
@@ -62,13 +69,19 @@ export async function POST(request: Request) {
     const paymentUrl = info?.paymentUrl?.app || info?.paymentUrl?.web;
     if (!paymentUrl || !info?.transactionId) throw new Error('LINE Pay 未回傳付款網址或交易編號');
 
-    await updateOrder(order, {
-      payment: '付款處理中',
-      paymentStatus: 'processing',
-      paymentProvider: 'LINE_PAY',
-      linePayTransactionId: String(info.transactionId),
-      paymentRequestedAt: new Date().toISOString(),
-    });
+    try {
+      await updateOrder(order, {
+        linePayTransactionId: String(info.transactionId),
+        paymentRequestedAt: new Date().toISOString(),
+      });
+    } catch (error) {
+      // Keep the payment URL usable; the confirm callback can reconcile by order number.
+      console.error('LINE Pay request created but transaction details were not persisted:', {
+        orderNo: String(orderNo),
+        transactionId: String(info.transactionId),
+        error,
+      });
+    }
 
     return NextResponse.json({
       success: true,
