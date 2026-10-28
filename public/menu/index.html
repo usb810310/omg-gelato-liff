@@ -2127,6 +2127,16 @@
 
         function escapeHtml(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]); }
 
+        const CUSTOMER_ORDER_HISTORY_DAYS = 30;
+        const CUSTOMER_ORDER_HISTORY_MS = CUSTOMER_ORDER_HISTORY_DAYS * 24 * 60 * 60 * 1000;
+
+        function isRecentCustomerOrder(order) {
+            const rawDate = order.time || order.createdAt || order.date;
+            if (!rawDate) return true;
+            const timestamp = new Date(rawDate).getTime();
+            return Number.isNaN(timestamp) || Date.now() - timestamp <= CUSTOMER_ORDER_HISTORY_MS;
+        }
+
         function isCustomerOrderWaiting(order) {
             return !order.voided && !order.rejected && ['', 'waiting', 'pending', 'waiting_accept', '等待接單', '等待店家接單'].includes(String(order.status || '').trim());
         }
@@ -2220,13 +2230,16 @@
                 renderCustomerOrders([]);
                 return;
             }
-            customerOrdersHint.textContent = '店家接單後如需取消，請洽客服人員。';
+            customerOrdersHint.textContent = `顯示最近 ${CUSTOMER_ORDER_HISTORY_DAYS} 天訂單；店家接單後如需取消，請洽客服人員。`;
             customerOrdersList.replaceChildren(createOrderText('p', 'customer-orders-empty', '載入訂單中…'));
             try {
-                const ordersQuery = query(ref(db, 'orders'), orderByChild('userId'), equalTo(window.liffUserId), limitToLast(30));
+                const ordersQuery = query(ref(db, 'orders'), orderByChild('userId'), equalTo(window.liffUserId), limitToLast(100));
                 const snapshot = await get(ordersQuery);
                 const orders = [];
-                snapshot.forEach(child => orders.push({ id: child.key, ...child.val() }));
+                snapshot.forEach(child => {
+                    const order = { id: child.key, ...child.val() };
+                    if (isRecentCustomerOrder(order)) orders.push(order);
+                });
                 orders.sort((a, b) => new Date(b.time || 0).getTime() - new Date(a.time || 0).getTime());
                 if (requestedOrderNo) {
                     const requestedIndex = orders.findIndex(order => String(order.orderNo) === requestedOrderNo);

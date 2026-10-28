@@ -27,7 +27,7 @@ type Order = {
   id?: string; userId?: string;
   orderNo?: string | number; displayNo?: string | number;
   pickupCode?: string | number; pickupNo?: string | number; pickupNumber?: string | number;
-  total?: string | number; remark?: string; time?: string; date?: string;
+  total?: string | number; remark?: string; time?: string; date?: string; createdAt?: string;
   status?: string; payment?: string; paymentStatus?: string; refundStatus?: string;
   refunded?: boolean; refundedAt?: string; refundCompletedAt?: string; paymentRefundedAt?: string;
   channel?: string; source?: string; rejected?: boolean; voided?: boolean; cancelledBy?: string;
@@ -38,6 +38,16 @@ type OrderItem = { name?: string; price?: number; qty?: number; flavorDisplay?: 
 
 function getOrderKey(order: Order) {
   return String(order.orderNo ?? order.id ?? '');
+}
+
+const ORDER_HISTORY_DAYS = 30;
+const ORDER_HISTORY_MS = ORDER_HISTORY_DAYS * 24 * 60 * 60 * 1000;
+
+function isRecentOrder(order: Order) {
+  const rawDate = order.time || order.createdAt || order.date;
+  if (!rawDate) return true;
+  const timestamp = new Date(rawDate).getTime();
+  return Number.isNaN(timestamp) || Date.now() - timestamp <= ORDER_HISTORY_MS;
 }
 
 function getPaymentStatus(order: Order) {
@@ -299,7 +309,7 @@ export default function Home() {
       const userOrders: Order[] = [];
       snapshot.forEach((child) => {
         const order = { id: child.key ?? undefined, ...(child.val() as Order) };
-        if (order.userId === profile.userId) userOrders.push(order);
+        if (order.userId === profile.userId && isRecentOrder(order)) userOrders.push(order);
       });
       userOrders.sort((a, b) => new Date(b.time ?? 0).getTime() - new Date(a.time ?? 0).getTime());
       setOrders(userOrders);
@@ -331,7 +341,7 @@ export default function Home() {
       const userOrders: Order[] = [];
       snapshot.forEach((child) => {
         const order = child.val() as Order & { userId?: string };
-        if (order.userId === profile.userId) userOrders.push(order);
+        if (order.userId === profile.userId && isRecentOrder(order)) userOrders.push(order);
       });
       userOrders.sort((a, b) => new Date(b.time ?? 0).getTime() - new Date(a.time ?? 0).getTime());
       setOrders(userOrders);
