@@ -72,6 +72,13 @@ const statusSteps: Array<{ key: Exclude<OrderStatusKey, 'rejected'>; label: stri
 ];
 
 function getStatusMeta(order: Order) {
+  if (String(order.cancelledBy || '').trim().toLowerCase() === 'customer') {
+    return {
+      key: 'rejected' as const,
+      label: '您已取消訂單',
+      hint: isOrderRefunded(order) ? '此訂單由您取消，款項已退款。' : '此訂單由您自行取消。',
+    };
+  }
   if (isOrderCancelled(order)) {
     return {
       key: 'rejected' as const,
