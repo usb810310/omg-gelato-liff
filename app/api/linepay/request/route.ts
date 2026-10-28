@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { callLinePay, findOrderByNo, getLiffReturnUrl, getPublicSiteUrl, updateOrder } from '@/lib/linepay';
+import { getPaymentDisplayStatus, isOrderTerminal } from '@/lib/order-status';
 
 export const runtime = 'nodejs';
 
@@ -19,7 +20,7 @@ export async function POST(request: Request) {
     if (order.userId && order.userId !== userId) {
       return NextResponse.json({ success: false, error: '無權限操作這筆訂單' }, { status: 403 });
     }
-    if (order.voided || order.payment === '已付款') {
+    if (isOrderTerminal(order) || getPaymentDisplayStatus(order) === '已付款') {
       return NextResponse.json({ success: false, error: '這筆訂單目前無法付款' }, { status: 409 });
     }
 

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { callLinePay, findOrderByNo, getLiffReturnUrl, updateOrder } from '@/lib/linepay';
+import { getPaymentDisplayStatus, isOrderRefunded, isOrderTerminal } from '@/lib/order-status';
 
 export const runtime = 'nodejs';
 
@@ -23,7 +24,13 @@ export async function GET(request: Request) {
       returnUrl.searchParams.set('message', '找不到對應訂單');
       return NextResponse.redirect(returnUrl);
     }
-    if (order.payment === '已付款') {
+    // 顧客取消、店家拒單或退款完成後，即使舊的 LINE Pay 回呼晚到，也不能再寫回 paid。
+    if (isOrderTerminal(order)) {
+      returnUrl.searchParams.set('payment', isOrderRefunded(order) ? 'refunded' : 'cancelled');
+      returnUrl.searchParams.set('message', isOrderRefunded(order) ? '訂單已退款，無法完成付款' : '訂單已取消，無法完成付款');
+      return NextResponse.redirect(returnUrl);
+    }
+    if (getPaymentDisplayStatus(order) === '已付款') {
       returnUrl.searchParams.set('payment', 'success');
       return NextResponse.redirect(returnUrl);
     }
@@ -50,7 +57,7 @@ export async function GET(request: Request) {
     if (orderNo) {
       try {
         const failedOrder = await findOrderByNo(orderNo);
-        if (failedOrder && failedOrder.payment !== '已付款') {
+        if (failedOrder && !isOrderTerminal(failedOrder) && getPaymentDisplayStatus(failedOrder) !== '已付款') {
           await updateOrder(failedOrder, {
             payment: '付款失敗',
             paymentStatus: 'failed',

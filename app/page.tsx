@@ -6,6 +6,7 @@ import liff from '@line/liff';
 import { getApp, getApps, initializeApp } from 'firebase/app';
 import { getDatabase, get, limitToLast, onValue, push, query, ref, set } from 'firebase/database';
 import { getShopStatus, type BusinessHours } from '@/lib/business-hours';
+import { getPaymentDisplayStatus, isOrderCancelled, isOrderRefunded, isOrderRejected, isOrderTerminal } from '@/lib/order-status';
 import styles from './page.module.css';
 
 // ====== 每日動態主題與按鈕設定 ======
@@ -27,7 +28,8 @@ type Order = {
   orderNo?: string | number; displayNo?: string | number;
   pickupCode?: string | number; pickupNo?: string | number; pickupNumber?: string | number;
   total?: string | number; remark?: string; time?: string; date?: string;
-  status?: string; payment?: string; paymentStatus?: string;
+  status?: string; payment?: string; paymentStatus?: string; refundStatus?: string;
+  refunded?: boolean; refundedAt?: string; refundCompletedAt?: string; paymentRefundedAt?: string;
   channel?: string; source?: string; rejected?: boolean; voided?: boolean; cancelledBy?: string;
   items?: OrderItem[];
 };
@@ -39,11 +41,7 @@ function getOrderKey(order: Order) {
 }
 
 function getPaymentStatus(order: Order) {
-  if (order.voided || order.payment === '已取消') return '已取消';
-  if (order.paymentStatus === 'paid' || order.payment === '已付款' || order.payment === 'paid' || order.payment === '已確認') return '已付款';
-  if (order.paymentStatus === 'processing' || order.payment === '付款處理中' || order.payment === 'processing') return '付款處理中';
-  if (order.paymentStatus === 'failed' || order.payment === '付款失敗' || order.payment === 'failed') return '付款失敗';
-  return '尚未付款';
+  return getPaymentDisplayStatus(order);
 }
 
 function getOrderStatus(order: Order) {
@@ -52,7 +50,7 @@ function getOrderStatus(order: Order) {
 
 function isWaitingForShop(order: Order) {
   const status = String(order.status || '').trim();
-  return !order.voided && !order.rejected && ['', 'waiting', 'pending', 'waiting_accept', '等待接單', '等待店家接單'].includes(status);
+  return !isOrderTerminal(order) && ['', 'waiting', 'pending', 'waiting_accept', '等待接單', '等待店家接單'].includes(status);
 }
 
 type OrderStatusKey = 'waiting' | 'accepted' | 'preparing' | 'ready' | 'completed' | 'rejected';
@@ -64,11 +62,19 @@ const statusSteps: Array<{ key: Exclude<OrderStatusKey, 'rejected'>; label: stri
 ];
 
 function getStatusMeta(order: Order) {
-  if (order.cancelledBy === 'customer') {
-    return { key: 'rejected' as const, label: '訂單已取消', hint: '此訂單已由您取消。' };
+  if (isOrderCancelled(order)) {
+    return {
+      key: 'rejected' as const,
+      label: '訂單已取消',
+      hint: isOrderRefunded(order) ? '此訂單已取消，款項已退款。' : '此訂單已取消。',
+    };
   }
-  if (order.voided || order.rejected || ['cancelled', 'rejected', '已取消', '拒單'].includes(order.status || '')) {
-    return { key: 'rejected' as const, label: '店家無法接單', hint: '若已付款，退款會依付款服務流程處理。' };
+  if (isOrderRejected(order)) {
+    return {
+      key: 'rejected' as const,
+      label: '店家無法接單',
+      hint: isOrderRefunded(order) ? '店家無法接單，款項已退款。' : '若已付款，退款會依付款服務流程處理。',
+    };
   }
   const status = order.status || '';
   if (['completed', '已完成'].includes(status)) return { key: 'completed' as const, label: '訂單已完成', hint: '謝謝你的光臨，期待下次見。' };
@@ -121,7 +127,7 @@ function formatOrderItems(items?: OrderItem[]) {
 function OrderListItem({ order, onSelect }: { order: Order; onSelect: () => void }) {
   const items = formatOrderItems(order.items);
   const previewText = items.length > 1 ? `${items[0]} 等 ${items.length} 項` : items[0];
-  const cancelled = order.voided || order.rejected;
+  const cancelled = isOrderCancelled(order) || isOrderRejected(order);
   return (
     <button type="button" className={styles.orderListItem} onClick={onSelect} aria-label={`查看訂單 ${getOrderKey(order)}`}>
       <div className={styles.orderTopline}>
@@ -159,8 +165,8 @@ function OrderDetailCard({
 }) {
   const paymentStatus = getPaymentStatus(order);
   const isOnsitePayment = order.payment === '現場付款';
-  const canPay = LINE_PAY_ENABLED && !order.voided && !isOnsitePayment && ['尚未付款', '付款失敗', '付款處理中'].includes(paymentStatus);
-  const cancelled = order.voided || order.rejected;
+  const canPay = LINE_PAY_ENABLED && !isOrderTerminal(order) && !isOnsitePayment && ['尚未付款', '付款失敗', '付款處理中'].includes(paymentStatus);
+  const cancelled = isOrderCancelled(order) || isOrderRejected(order);
   const waitingForShop = isWaitingForShop(order);
   const paymentNeedsSupport = ['已付款', '付款處理中'].includes(paymentStatus);
 
@@ -254,12 +260,7 @@ export default function Home() {
   const [businessHours, setBusinessHours] = useState<BusinessHours | null>(null);
   const [clock, setClock] = useState(() => Date.now());
 
-  const [todayContent, setTodayContent] = useState(dailyData[0]);
-
-  useEffect(() => {
-    const todayIndex = new Date().getDay();
-    setTodayContent(dailyData[todayIndex]);
-  }, []);
+  const [todayContent] = useState(() => dailyData[new Date().getDay()]);
 
   useEffect(() => {
     let cancelled = false;

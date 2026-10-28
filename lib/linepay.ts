@@ -1,4 +1,5 @@
 import { createHmac, randomUUID } from 'node:crypto';
+import { getPaymentDisplayStatus, isOrderTerminal } from '@/lib/order-status';
 
 type LinePayConfig = {
   channelId: string;
@@ -12,6 +13,17 @@ type FirebaseOrder = {
   orderNo?: string | number;
   userId?: string | null;
   total?: number | string;
+  status?: string;
+  payment?: string;
+  paymentStatus?: string;
+  refundStatus?: string;
+  refunded?: boolean;
+  refundedAt?: string;
+  refundCompletedAt?: string;
+  paymentRefundedAt?: string;
+  voided?: boolean;
+  rejected?: boolean;
+  cancelledBy?: string;
   items?: Array<{ name?: string; price?: number; qty?: number; flavorDisplay?: string }>;
   [key: string]: unknown;
 };
@@ -153,16 +165,15 @@ export async function cancelWaitingOrder(orderNo: string, userId: string) {
   if (!etag) throw new Error('無法確認訂單最新狀態');
 
   const status = String(order.status || '').trim();
-  if (order.voided || order.rejected || !['', 'waiting', 'pending', 'waiting_accept', '等待接單', '等待店家接單'].includes(status)) {
+  if (isOrderTerminal(order) || !['', 'waiting', 'pending', 'waiting_accept', '等待接單', '等待店家接單'].includes(status)) {
     throw new OrderCancellationError('店家已接單或訂單已處理，請洽客服人員協助取消', 409);
   }
 
-  const paymentStatus = String(order.paymentStatus || '');
-  const payment = String(order.payment || '');
-  if (paymentStatus === 'paid' || ['已付款', 'paid', '已確認'].includes(payment)) {
+  const paymentStatus = getPaymentDisplayStatus(order);
+  if (paymentStatus === '已付款') {
     throw new OrderCancellationError('此訂單已付款，請洽客服人員辦理取消與退款', 409);
   }
-  if (paymentStatus === 'processing' || ['付款處理中', 'processing'].includes(payment)) {
+  if (paymentStatus === '付款處理中') {
     throw new OrderCancellationError('此訂單付款處理中，請洽客服人員協助取消', 409);
   }
 
