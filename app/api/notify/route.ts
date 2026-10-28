@@ -3,6 +3,8 @@ import { getLiffReturnUrl } from '@/lib/linepay';
 
 const allowedOrigins = new Set([
   'https://my-liff-app-xi.vercel.app',
+  'https://omg-gelato-omg-liff.vercel.app',
+  'https://omg-gelato-git-main-omg-liff.vercel.app',
   'https://omg-gelato79.pages.dev',
 ]);
 
@@ -63,6 +65,7 @@ export async function POST(request: Request) {
       pickupTime,
       customerNote,
     } = body;
+    const recipientUserId = typeof userId === 'string' ? userId.trim() : '';
 
     const safeOrderText = orderText?.trim() || '';
     const customerPickupNumber = pickupNumber || pickupNo || '待分配';
@@ -180,14 +183,21 @@ export async function POST(request: Request) {
 
     let customerError: string | null = null;
 
-    if (userId) {
+    if (!recipientUserId) {
+      return NextResponse.json(
+        { success: true, notified: false, warning: '找不到 LINE userId，無法傳送聊天室小卡；請從 LINE 重新開啟訂購頁。' },
+        { headers: corsHeaders },
+      );
+    }
+
+    if (recipientUserId) {
       const res = await fetch('https://api.line.me/v2/bot/message/push', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}`,
         },
-        body: JSON.stringify({ to: userId, messages: [customerCard] }),
+        body: JSON.stringify({ to: recipientUserId, messages: [customerCard] }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -196,7 +206,7 @@ export async function POST(request: Request) {
       }
     }
 
-    return NextResponse.json({ success: true, warning: customerError }, { headers: corsHeaders });
+    return NextResponse.json({ success: !customerError, notified: !customerError, warning: customerError }, { headers: corsHeaders, status: customerError ? 502 : 200 });
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : '未知錯誤';
     return NextResponse.json(
