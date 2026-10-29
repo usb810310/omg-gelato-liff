@@ -3159,38 +3159,40 @@
                     pictureUrl: memberProfile.pictureUrl || null,
                 });
                 
-                const pickupDay = pickupRel.includes('明天') ? 'tomorrow' : 'today';
-                const pickupTime = pickupRel.replace(/今天|明天/g, '').trim();
                 let notificationWarning = '';
-                try {
-                    const response = await fetch('https://omg-gelato-omg-liff.vercel.app/api/notify', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            orderText: body,
-                            orderNo,
-                            pickupNo,
-                            pickupNumber: pickupNo,
-                            memberNo: memberProfile.memberNo,
-                            phone: memberProfile.phone || null,
-                            userId: memberProfile.lineUserId || null,
-                            displayName: memberProfile.displayName || null,
-                            pictureUrl: window.liffPictureUrl || null,
-                            items: itemsForFirebase,
-                            total,
-                            pickupDay,
-                            pickupTime,
-                            payMethod,
-                            customerNote,
-                        }),
-                    });
-                    const result = await response.json().catch(() => ({}));
-                    if (!response.ok || result.success === false || result.warning) {
-                        throw new Error(result.error || result.warning || `通知失敗（HTTP ${response.status}）`);
+                if (payMethod !== 'onsite_linepay') {
+                    const pickupDay = pickupRel.includes('明天') ? 'tomorrow' : 'today';
+                    const pickupTime = pickupRel.replace(/今天|明天/g, '').trim();
+                    try {
+                        const response = await fetch('https://omg-gelato-omg-liff.vercel.app/api/notify', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                orderText: body,
+                                orderNo,
+                                pickupNo,
+                                pickupNumber: pickupNo,
+                                memberNo: memberProfile.memberNo,
+                                phone: memberProfile.phone || null,
+                                userId: memberProfile.lineUserId || null,
+                                displayName: memberProfile.displayName || null,
+                                pictureUrl: window.liffPictureUrl || null,
+                                items: itemsForFirebase,
+                                total,
+                                pickupDay,
+                                pickupTime,
+                                payMethod,
+                                customerNote,
+                            }),
+                        });
+                        const result = await response.json().catch(() => ({}));
+                        if (!response.ok || result.success === false || result.warning) {
+                            throw new Error(result.error || result.warning || `通知失敗（HTTP ${response.status}）`);
+                        }
+                    } catch (error) {
+                        console.error('訂單已建立，但 LINE 通知失敗:', error);
+                        notificationWarning = error instanceof Error ? error.message : '通知服務暫時無法使用';
                     }
-                } catch (error) {
-                    console.error('訂單已建立，但 LINE 通知失敗:', error);
-                    notificationWarning = error instanceof Error ? error.message : '通知服務暫時無法使用';
                 }
 
                 if (customerNoteInput) customerNoteInput.value = '';
