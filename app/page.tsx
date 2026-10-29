@@ -226,6 +226,11 @@ function OrderDetailCard({
           </button>
         )}
       </div>
+      {payingOrderNo === order.orderNo && (
+        <p className={styles.paymentProcessingNotice} role="status" aria-live="polite">
+          正在準備 LINE Pay 付款，請稍候；請勿重複點擊或關閉頁面。
+        </p>
+      )}
       {waitingForShop && !paymentNeedsSupport && order.orderNo && (
         <button
           type="button"

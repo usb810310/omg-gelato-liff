@@ -70,6 +70,7 @@
 .cancelOrderButton:active { background: #ffefeb; }
 .cancelOrderButton:disabled { opacity: .55; cursor: wait; }
 .cancelOrderNotice { margin: 10px 0 0; color: #9a4c3d; font-size: 11px; line-height: 1.55; }
+.paymentProcessingNotice { margin: 10px 0 0; padding: 9px 11px; border: 1px solid #cfe9d4; border-radius: 12px; background: #f1fbf3; color: #397347; font-size: 11px; line-height: 1.55; }
 
 /* 即時訂單狀態時間軸 */
 .statusPanel { margin-top: 14px; padding: 16px 15px 15px; border: 1px solid #eee4d7; border-radius: 18px; background: linear-gradient(145deg, #fffdf8, #f8f2e9); box-shadow: 0 7px 18px rgba(92,68,42,.05); }
