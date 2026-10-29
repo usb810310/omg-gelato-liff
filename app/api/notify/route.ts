@@ -63,9 +63,11 @@ export async function POST(request: Request) {
       total,
       pickupDay,
       pickupTime,
+      payMethod,
       customerNote,
     } = body;
     const recipientUserId = typeof userId === 'string' ? userId.trim() : '';
+    const isLinePayPending = payMethod === 'onsite_linepay';
 
     const safeOrderText = orderText?.trim() || '';
     const customerPickupNumber = pickupNumber || pickupNo || '待分配';
@@ -132,9 +134,9 @@ export async function POST(request: Request) {
               backgroundColor: '#F2F6FC',
               cornerRadius: '12px',
               contents: [
-                { type: 'text', text: 'ORDER RECEIVED', size: 'xs', weight: 'bold', color: '#66758A', wrap: false },
-                { type: 'text', text: '您已送出訂單', size: 'lg', weight: 'bold', color: '#202938', wrap: false, margin: 'sm' },
-                { type: 'text', text: pickupTimeText, size: 'md', weight: 'bold', color: '#2F5BEA', wrap: false, margin: 'sm' },
+                { type: 'text', text: isLinePayPending ? 'ORDER CREATED · PAYMENT PENDING' : 'ORDER RECEIVED', size: 'xs', weight: 'bold', color: '#66758A', wrap: false },
+                { type: 'text', text: isLinePayPending ? '訂單已建立，請完成付款' : '您已送出訂單', size: 'lg', weight: 'bold', color: '#202938', wrap: false, margin: 'sm' },
+                { type: 'text', text: isLinePayPending ? '請依照頁面完成 LINE Pay 付款' : pickupTimeText, size: 'md', weight: 'bold', color: '#2F5BEA', wrap: true, margin: 'sm' },
               ],
             },
             { type: 'text', text: `線上訂單編號：${orderNo || '—'}`, size: 'xs', color: '#667085', wrap: false, margin: 'lg' },

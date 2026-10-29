@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { callLinePay, findOrderByNo, getLiffReturnUrl, updateOrder } from '@/lib/linepay';
 import { getPaymentDisplayStatus, isOrderRefunded, isOrderTerminal } from '@/lib/order-status';
+import { buildPaymentSuccessCard, pushLineMessage } from '@/lib/line-notify';
 
 export const runtime = 'nodejs';
 
@@ -9,7 +10,19 @@ export async function GET(request: Request) {
   const orderNo = incomingUrl.searchParams.get('orderId');
   const transactionId = incomingUrl.searchParams.get('transactionId');
   const returnUrl = new URL(getLiffReturnUrl());
+  returnUrl.searchParams.set('orderNo', orderNo || '');
   returnUrl.searchParams.set('orderId', orderNo || '');
+
+  async function notifyPaymentSuccess(order: Awaited<ReturnType<typeof findOrderByNo>>) {
+    const recipientUserId = typeof order?.userId === 'string' ? order.userId.trim() : '';
+    if (!recipientUserId || order?.paymentSuccessNotifiedAt) return;
+    try {
+      await pushLineMessage(recipientUserId, buildPaymentSuccessCard(order || {}));
+      await updateOrder(order!, { paymentSuccessNotifiedAt: new Date().toISOString() });
+    } catch (notificationError) {
+      console.error('LINE Pay 已成功，但付款成功小卡推送失敗:', notificationError);
+    }
+  }
 
   try {
     if (!orderNo || !transactionId) {
@@ -32,6 +45,7 @@ export async function GET(request: Request) {
     }
     if (getPaymentDisplayStatus(order) === '已付款') {
       returnUrl.searchParams.set('payment', 'success');
+      await notifyPaymentSuccess(order);
       return NextResponse.redirect(returnUrl);
     }
 
@@ -50,6 +64,7 @@ export async function GET(request: Request) {
       linePayConfirmedAt: new Date().toISOString(),
       linePayResult: linePayResponse.info?.payInfo || null,
     });
+    await notifyPaymentSuccess({ ...order, payment: '已付款', paymentStatus: 'paid' });
     returnUrl.searchParams.set('payment', 'success');
     return NextResponse.redirect(returnUrl);
   } catch (error) {
