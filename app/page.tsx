@@ -2,6 +2,7 @@
 
 import { startTransition, useEffect, useEffectEvent, useRef, useState } from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import liff from '@line/liff';
 import { getApp, getApps, initializeApp } from 'firebase/app';
 import { getDatabase, get, equalTo, onValue, orderByChild, push, query, ref, set } from 'firebase/database';
@@ -266,6 +267,7 @@ function getGelatoDatabase() {
 }
 
 export default function Home() {
+  const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [status, setStatus] = useState('正在初始化...');
   const [activeTab, setActiveTab] = useState<'home' | 'orders' | 'member'>('home');
@@ -405,6 +407,10 @@ export default function Home() {
     }
   };
 
+  const openMenu = () => {
+    router.push('/menu/');
+  };
+
   const retryLiff = () => {
     setProfile(null);
     setInitAttempt((attempt) => attempt + 1);
@@ -540,6 +546,7 @@ export default function Home() {
           <div className={styles.homeView}>
             <section className={styles.heroCard}>
               <div className={styles.heroCopy}>
+                <p className={styles.heroKicker}>TODAY&apos;S SCOOP · 每日新鮮製作</p>
                 <h1>{todayContent.title}</h1>
                 <p className={styles.heroDescription}>{todayContent.desc}</p>
                 <button type="button" className={styles.primaryButton} onClick={handleMainButtonClick}>
@@ -569,7 +576,7 @@ export default function Home() {
             {!shopStatus.isOpen && <div className={styles.closedNotice}><b>{shopStatus.label}</b><span>{shopStatus.detail}</span></div>}
 
             <div className={styles.quickGrid}>
-              <a href="/menu/" className={`${styles.quickCard} ${styles.greenCard}`}><span className={styles.quickIcon}>✦</span><span><b>今日口味</b><small>{shopStatus.isOpen ? '立即點餐' : shopStatus.canOrder ? '預約點餐' : '瀏覽口味・暫停點餐'}</small></span><strong>↗</strong></a>
+              <button type="button" onClick={openMenu} className={`${styles.quickCard} ${styles.greenCard}`}><span className={styles.quickIcon}>✦</span><span><b>點餐／今日口味</b><small>{shopStatus.isOpen ? '立即點餐' : shopStatus.canOrder ? '預約點餐' : '瀏覽口味・暫停點餐'}</small></span><strong>↗</strong></button>
               <button onClick={() => switchTab('orders')} className={`${styles.quickCard} ${styles.creamCard}`}><span className={styles.quickIcon}>▤</span><span><b>我的訂單</b><small>查看取餐進度</small></span><strong>›</strong></button>
             </div>
 
@@ -623,7 +630,7 @@ export default function Home() {
                   <span className={styles.emptyEmoji}>○</span>
                   <h3>還沒有訂單</h3>
                   <p>今天就選一個喜歡的口味吧！</p>
-                  <a href="/menu/" className={styles.secondaryButton}>{shopStatus.isOpen ? '前往今日口味' : '瀏覽今日口味'}</a>
+                  <button type="button" onClick={openMenu} className={styles.secondaryButton}>{shopStatus.isOpen ? '前往點餐頁' : '瀏覽今日口味'}</button>
                 </div>
               ) : (
                 <div className={styles.orderList}>
@@ -661,10 +668,16 @@ export default function Home() {
       </section>
 
       <nav className={styles.bottomNav} aria-label="主要導覽">
-        {([['home', '⌂', '首頁'], ['orders', '▤', '訂單'], ['member', '○', '會員']] as const).map(([tab, icon, label]) => (
-          <button key={tab} onClick={() => switchTab(tab)} className={activeTab === tab ? styles.activeNav : ''}>
-            <span>{icon}</span><small>{label}</small>
-          </button>
+        {([['home', '⌂', '首頁'], ['menu', '✦', '點餐'], ['orders', '▤', '訂單'], ['member', '○', '會員']] as const).map(([tab, icon, label]) => (
+          tab === 'menu' ? (
+            <button key={tab} type="button" onClick={openMenu} className={styles.menuNavButton}>
+              <span>{icon}</span><small>{label}</small>
+            </button>
+          ) : (
+            <button key={tab} type="button" onClick={() => switchTab(tab)} className={activeTab === tab ? styles.activeNav : ''}>
+              <span>{icon}</span><small>{label}</small>
+            </button>
+          )
         ))}
       </nav>
     </main>
