@@ -4,7 +4,7 @@ import { startTransition, useEffect, useEffectEvent, useRef, useState } from 're
 import Image from 'next/image';
 import liff from '@line/liff';
 import { getApp, getApps, initializeApp } from 'firebase/app';
-import { getDatabase, get, limitToLast, onValue, push, query, ref, set } from 'firebase/database';
+import { getDatabase, get, equalTo, onValue, orderByChild, push, query, ref, set } from 'firebase/database';
 import { getShopStatus, type BusinessHours } from '@/lib/business-hours';
 import { getPaymentDisplayStatus, isOrderCancelled, isOrderRefunded, isOrderRejected, isOrderTerminal } from '@/lib/order-status';
 import styles from './page.module.css';
@@ -316,7 +316,7 @@ export default function Home() {
 
   useEffect(() => {
     if (!profile?.userId) return;
-    const ordersQuery = query(ref(getGelatoDatabase(), 'orders'), limitToLast(20));
+    const ordersQuery = query(ref(getGelatoDatabase(), 'orders'), orderByChild('userId'), equalTo(profile.userId));
     return onValue(ordersQuery, (snapshot) => {
       const userOrders: Order[] = [];
       snapshot.forEach((child) => {
@@ -349,10 +349,10 @@ export default function Home() {
     if (!profile?.userId) return;
     setIsLoadingOrders(true);
     try {
-      const snapshot = await get(query(ref(getGelatoDatabase(), 'orders'), limitToLast(20)));
+      const snapshot = await get(query(ref(getGelatoDatabase(), 'orders'), orderByChild('userId'), equalTo(profile.userId)));
       const userOrders: Order[] = [];
       snapshot.forEach((child) => {
-        const order = child.val() as Order & { userId?: string };
+        const order = { id: child.key ?? undefined, ...(child.val() as Order & { userId?: string }) };
         if (order.userId === profile.userId && isRecentOrder(order)) userOrders.push(order);
       });
       userOrders.sort((a, b) => new Date(b.time ?? 0).getTime() - new Date(a.time ?? 0).getTime());
