@@ -27,7 +27,7 @@ type Profile = { userId: string; displayName: string; pictureUrl?: string };
 type MemberPointsAccount = {
   balance?: number;
   updatedAt?: number;
-  entries?: Record<string, { delta?: number; sourceLabel?: string; createdAt?: number; orderNo?: string }>;
+  entries?: Record<string, { delta?: number; type?: string; sourceLabel?: string; createdAt?: number; orderNo?: string }>;
 };
 
 type Order = {
@@ -545,8 +545,9 @@ export default function Home() {
     : null;
   const pointsBalance = Math.max(0, Number(memberPoints.balance || 0));
   const stampCount = pointsBalance % 10;
-  const pointsToReward = stampCount === 0 ? 10 : 10 - stampCount;
-  const rewardsEarned = Math.floor(pointsBalance / 10);
+  const pointsToReward = pointsBalance >= 10 ? 0 : (stampCount === 0 ? 10 : 10 - stampCount);
+  const availableRewards = Math.floor(pointsBalance / 10);
+  const rewardsEarned = Object.values(memberPoints.entries || {}).filter((entry) => entry.type === 'reward_redemption').length;
 
   return (
     <main className={styles.appShell}>
@@ -679,12 +680,12 @@ export default function Home() {
             </div>
             <section className={styles.lineStampCard} aria-label="OMG 集點卡">
               <div className={styles.stampCardTop}>
-                <div className={styles.stampBrand}><Image src="/logo-new.png" alt="OMG" width={48} height={48} /><span>On My Gelato<small>義式冰淇淋</small></span></div>
+                <div className={styles.stampBrand}><span className={styles.stampMark}><i>◒</i><b>OMG</b></span><span>On My Gelato<small>義式冰淇淋</small></span></div>
                 <span className={styles.stampMore}>⋮</span>
               </div>
               <h2>OMG！集點拿好禮！</h2>
               <p className={styles.stampExpiry}>無使用期限</p>
-              <div className={styles.stampRewardHint}><span>✦ 獎勵</span><b>再 {pointsToReward} 點可得獎勵</b><span>⌃</span></div>
+              <div className={styles.stampRewardHint}><span>✦ 獎勵</span><b>{availableRewards > 0 ? `可兌換 ${availableRewards} 份獎勵` : `再 ${pointsToReward} 點可得獎勵`}</b><span>⌃</span></div>
               <div className={styles.stampGrid} aria-label={`目前 ${stampCount} 格集點`}>
                 {Array.from({ length: 10 }, (_, index) => <span key={index} className={`${styles.stampDot} ${index < stampCount ? styles.stampDotFilled : ''}`}>{index < stampCount ? 'STAMP' : index === 9 ? '★' : 'STAMP'}</span>)}
               </div>
@@ -695,11 +696,11 @@ export default function Home() {
               <button type="button" role="tab" aria-selected={rewardTab === 'earned'} onClick={() => setRewardTab('earned')} className={rewardTab === 'earned' ? styles.rewardTabActive : ''}>已獲得的獎勵{rewardsEarned > 0 ? ` (${rewardsEarned})` : ''}</button>
             </div>
             {rewardTab === 'available' ? (
-              <div className={styles.rewardItem}><div className={styles.rewardThumb}><Image src="/logo-new.png" alt="OMG 獎勵" width={78} height={78} /></div><div><h3>獨享杯／雙重奏兌換券</h3><p>再集 {pointsToReward} 點即可兌換</p></div></div>
+              <div className={styles.rewardItem}><div className={styles.rewardThumb}><span className={styles.rewardBadge}>10<small>POINTS</small></span></div><div><h3>獨享杯／雙重奏兌換券</h3><p>{availableRewards > 0 ? '請於店內向店員兌換' : `再集 ${pointsToReward} 點即可兌換`}</p></div></div>
             ) : (
               <div className={styles.earnedReward}><span>✦</span><div><h3>已獲得 {rewardsEarned} 份獎勵</h3><p>請於店內向店員出示兌換資格</p></div></div>
             )}
-            <div className={styles.stampHowTo}><strong>使用說明</strong><span>▣　掃描行動條碼</span><p>* 集點方式以現場人員說明為主<br />* 滿點禮以領取集點卡時公告為主</p></div>
+            <div className={styles.stampHowTo}><strong>獎勵兌換規則</strong><p>* 獨享杯／雙重奏每杯自動累積 1 點<br />* 集滿 10 點後，請向店員出示會員頁兌換<br />* 兌換時由店家扣除 10 點，完整保留異動紀錄</p></div>
             <a href="https://lin.ee/sB558niE" target="_blank" rel="noopener noreferrer" className={styles.lineButton}><span>LINE</span> 加入好友，接收最新口味 <b>↗</b></a>
             <div className={styles.wishCard}>
               <div className={styles.wishHeading}><span>✦</span><div><p className={styles.kicker}>TASTE LAB</p><h2>口味許願池</h2></div></div>
