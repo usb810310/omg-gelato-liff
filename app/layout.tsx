@@ -3,7 +3,7 @@ import "./globals.css";
 import { LIFFProvider } from "../providers/liff-providers";
 
 export const metadata: Metadata = {
-  title: "On My Gelato｜會員與點餐",
+  title: "OMG Gelato LINE會員首頁",
   description: "On My Gelato 義式冰淇淋會員與線上點餐",
   icons: {
     icon: "/favicon.ico",
