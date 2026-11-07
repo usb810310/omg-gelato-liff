@@ -291,8 +291,8 @@ export default function Home() {
   const [businessHours, setBusinessHours] = useState<BusinessHours | null>(null);
   const [clock, setClock] = useState(() => Date.now());
   const [memberPoints, setMemberPoints] = useState<MemberPointsAccount>({ balance: 0, entries: {} });
-  const [rewardTab, setRewardTab] = useState<'available' | 'earned'>('available');
   const [memberQrDataUrl, setMemberQrDataUrl] = useState('');
+  const [memberQrOpen, setMemberQrOpen] = useState(false);
 
   const [todayContent] = useState(() => dailyData[new Date().getDay()]);
 
@@ -575,7 +575,9 @@ export default function Home() {
   const stampCount = pointsBalance % 10;
   const pointsToReward = pointsBalance >= 10 ? 0 : (stampCount === 0 ? 10 : 10 - stampCount);
   const availableRewards = Math.floor(pointsBalance / 10);
-  const rewardsEarned = Object.values(memberPoints.entries || {}).filter((entry) => entry.type === 'reward_redemption').length;
+  const recentPointEntries = Object.entries(memberPoints.entries || {})
+    .sort(([, a], [, b]) => Number(b.createdAt || 0) - Number(a.createdAt || 0))
+    .slice(0, 3);
 
   return (
     <main className={styles.appShell}>
@@ -699,41 +701,54 @@ export default function Home() {
         )}
 
         {activeTab === 'member' && (
-          <section className={styles.pageView}>
-            <div className={styles.memberHero}>
-              <div className={styles.memberAvatar}>{profile?.pictureUrl ? <Image src={profile.pictureUrl} alt="會員頭像" width={96} height={96} /> : <span>OG</span>}</div>
-              <p className={styles.kicker}>GELATO CLUB MEMBER</p>
-              <h1>{profile?.displayName || 'Gelato Lover'}</h1>
-              <p className={styles.memberId}>ID · {profile?.userId?.slice(-8) || 'WELCOME'}</p>
-            </div>
-            <section className={styles.lineStampCard} aria-label="OMG 集點卡">
-              <div className={styles.stampCardTop}>
-                <div className={styles.stampBrand}><span className={styles.stampMark}><i>◒</i><b>OMG</b></span><span>On My Gelato<small>義式冰淇淋</small></span></div>
-                <span className={styles.stampMore}>⋮</span>
+          <section className={styles.memberPageView}>
+            <header className={styles.memberPageHeader}>
+              <div>
+                <p className={styles.kicker}>GELATO CLUB</p>
+                <h1>我的會員中心</h1>
+                <p>每一口喜歡的味道，都替下一份獎勵靠近一點。</p>
               </div>
-              <h2>OMG！集點拿好禮！</h2>
-              <p className={styles.stampExpiry}>無使用期限</p>
-              <div className={styles.stampRewardHint}><span>✦ 獎勵</span><b>{availableRewards > 0 ? `可兌換 ${availableRewards} 份獎勵` : `再 ${pointsToReward} 點可得獎勵`}</b><span>⌃</span></div>
-              <div className={styles.stampGrid} aria-label={`目前 ${stampCount} 格集點`}>
-                {Array.from({ length: 10 }, (_, index) => <span key={index} className={`${styles.stampDot} ${index < stampCount ? styles.stampDotFilled : ''}`}>{index < stampCount ? 'STAMP' : index === 9 ? '★' : 'STAMP'}</span>)}
+              <div className={styles.memberMiniAvatar}>{profile?.pictureUrl ? <Image src={profile.pictureUrl} alt="會員頭像" width={52} height={52} /> : <span>OG</span>}</div>
+            </header>
+
+            <section className={styles.pointsOverview} aria-label="目前集點進度">
+              <div className={styles.pointsOverviewTop}><span>目前點數</span><span className={styles.pointsLive}><i />即時同步</span></div>
+              <div className={styles.pointsNumber}>{pointsBalance}<small> 點</small></div>
+              <div className={styles.pointsGoalRow}><span>{availableRewards > 0 ? `已有 ${availableRewards} 份兌換資格` : `再 ${pointsToReward} 點可兌換`}</span><b>集滿 10 點</b></div>
+              <div className={styles.pointsProgress}><span style={{ width: `${Math.min(100, (stampCount / 10) * 100)}%` }} /></div>
+              <div className={styles.pointsMeta}><span>{stampCount}/10 本輪進度</span><span>無使用期限</span></div>
+            </section>
+
+            <section className={styles.memberActionCard} aria-label="到店集點">
+              <div className={styles.actionCardHeading}><span className={styles.actionIcon}>⌁</span><div><p className={styles.kicker}>到店集點</p><h2>結帳前，出示會員條碼</h2></div></div>
+              <p className={styles.actionCardDescription}>讓店員掃描一次，購買「獨享杯／雙重奏」就會自動累積 1 點。</p>
+              <button type="button" className={styles.qrActionButton} onClick={() => setMemberQrOpen((open) => !open)} aria-expanded={memberQrOpen}>
+                <span>{memberQrOpen ? '收起會員 QR Code' : '出示會員 QR Code'}</span><b>{memberQrOpen ? '⌃' : '↗'}</b>
+              </button>
+              {memberQrOpen && <div className={styles.qrReveal}>
+                {memberQrDataUrl ? <Image className={styles.memberQrImage} src={memberQrDataUrl} alt="會員 QR Code" width={210} height={210} unoptimized /> : <div className={styles.memberQrLoading}>正在準備會員條碼…</div>}
+                <p>請將此畫面交給店員掃描<br />條碼只供本次會員驗證使用</p>
+              </div>}
+            </section>
+
+            <section className={styles.howToCollect} aria-label="集點使用步驟">
+              <div className={styles.subsectionHeading}><div><p className={styles.kicker}>HOW IT WORKS</p><h2>三步完成集點</h2></div><span>簡單、即時、不漏點</span></div>
+              <div className={styles.stepList}>
+                <div className={styles.stepItem}><span>01</span><div><b>打開會員 QR</b><small>到店結帳前進入會員頁</small></div></div>
+                <div className={styles.stepItem}><span>02</span><div><b>讓店員掃描</b><small>確認會員名稱與目前點數</small></div></div>
+                <div className={styles.stepItem}><span>03</span><div><b>購買指定品項</b><small>獨享杯／雙重奏每杯 1 點</small></div></div>
               </div>
-              <div className={styles.stampProgressLine}><span>目前 {pointsBalance} 點</span><span>集滿 10 點可兌換</span></div>
             </section>
-            <section className={styles.memberQrCard} aria-label="出示會員 QR Code">
-              <div className={styles.memberQrCopy}><p className={styles.kicker}>STORE CHECK-IN</p><h2>到店出示會員</h2><p>結帳前請讓店員掃描此 QR Code，符合規則的獨享杯／雙重奏會自動累積點數。</p></div>
-              {memberQrDataUrl ? <Image className={styles.memberQrImage} src={memberQrDataUrl} alt="會員 QR Code" width={190} height={190} unoptimized /> : <div className={styles.memberQrLoading}>正在準備會員條碼…</div>}
-              <small className={styles.memberQrSecurity}>此條碼只供本次 LINE 會員驗證使用，請勿轉傳。</small>
+
+            <section className={styles.memberHistoryCard} aria-label="最近點數紀錄">
+              <div className={styles.subsectionHeading}><div><p className={styles.kicker}>POINT ACTIVITY</p><h2>最近點數紀錄</h2></div><span>{recentPointEntries.length ? '最新 3 筆' : '尚無紀錄'}</span></div>
+              {recentPointEntries.length ? <div className={styles.pointActivityList}>{recentPointEntries.map(([entryId, entry]) => <div className={styles.pointActivityItem} key={entryId}><span className={styles.activityMark}>✦</span><div><b>{entry.sourceLabel || (entry.type === 'reward_redemption' ? '獎勵兌換' : '點數異動')}</b><small>{entry.orderNo ? `訂單 #${entry.orderNo} · ` : ''}{entry.createdAt ? new Intl.DateTimeFormat('zh-TW', { month: 'numeric', day: 'numeric' }).format(new Date(entry.createdAt)) : '最近更新'}</small></div><strong className={Number(entry.delta || 0) >= 0 ? styles.activityPlus : styles.activityMinus}>{Number(entry.delta || 0) >= 0 ? '+' : ''}{entry.delta || 0}</strong></div>)}</div> : <div className={styles.noActivity}><span>○</span><p>完成第一次指定品項消費後<br />點數紀錄會顯示在這裡。</p></div>}
             </section>
-            <div className={styles.rewardTabs} role="tablist">
-              <button type="button" role="tab" aria-selected={rewardTab === 'available'} onClick={() => setRewardTab('available')} className={rewardTab === 'available' ? styles.rewardTabActive : ''}>尚未獲得的獎勵</button>
-              <button type="button" role="tab" aria-selected={rewardTab === 'earned'} onClick={() => setRewardTab('earned')} className={rewardTab === 'earned' ? styles.rewardTabActive : ''}>已獲得的獎勵{rewardsEarned > 0 ? ` (${rewardsEarned})` : ''}</button>
-            </div>
-            {rewardTab === 'available' ? (
-              <div className={styles.rewardItem}><div className={styles.rewardThumb}><span className={styles.rewardBadge}>10<small>POINTS</small></span></div><div><h3>獨享杯／雙重奏兌換券</h3><p>{availableRewards > 0 ? '請於店內向店員兌換' : `再集 ${pointsToReward} 點即可兌換`}</p></div></div>
-            ) : (
-              <div className={styles.earnedReward}><span>✦</span><div><h3>已獲得 {rewardsEarned} 份獎勵</h3><p>請於店內向店員出示兌換資格</p></div></div>
-            )}
-            <div className={styles.stampHowTo}><strong>獎勵兌換規則</strong><p>* 獨享杯／雙重奏每杯自動累積 1 點<br />* 集滿 10 點後，請向店員出示會員頁兌換<br />* 兌換時由店家扣除 10 點，完整保留異動紀錄</p></div>
+
+            <section className={styles.rewardGuideCard} aria-label="獎勵兌換說明">
+              <div className={styles.rewardGuideBadge}>10</div><div><p className={styles.kicker}>REWARD GUIDE</p><h2>集滿 10 點，兌換一份指定獎勵</h2><p>{availableRewards > 0 ? '你已有可兌換資格，請到店向店員出示會員頁。' : `目前還差 ${pointsToReward} 點，慢慢集就好。`}</p></div>
+            </section>
+
             <a href="https://lin.ee/sB558niE" target="_blank" rel="noopener noreferrer" className={styles.lineButton}><span>LINE</span> 加入好友，接收最新口味 <b>↗</b></a>
             <div className={styles.wishCard}>
               <div className={styles.wishHeading}><span>✦</span><div><p className={styles.kicker}>TASTE LAB</p><h2>口味許願池</h2></div></div>
