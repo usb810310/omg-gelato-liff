@@ -612,11 +612,7 @@ export default function Home() {
             <p className={styles.brandName}><span>今日</span>想吃什麼？</p>
           </div>
         </div>
-        <div className={styles.headerActions}>
-          <button type="button" className={`${styles.headerQuickButton} ${activeTab === 'orders' ? styles.headerQuickActive : ''}`} onClick={() => switchTab('orders')} aria-label="開啟訂單足跡"><span>◷</span><small>訂單</small></button>
-          <button type="button" className={`${styles.headerQuickButton} ${activeTab === 'member' ? styles.headerQuickActive : ''}`} onClick={() => switchTab('member')} aria-label="開啟會員中心"><span>◒</span><small>會員</small></button>
-          <button type="button" className={`${styles.livePill} ${shopStatus.isOpen ? '' : styles.livePillClosed}`} onClick={() => switchTab('member')} aria-label="查看營業狀態"><i /> {shopStatus.label}<b>›</b></button>
-        </div>
+        <div className={`${styles.livePill} ${shopStatus.isOpen ? '' : styles.livePillClosed}`}><i /> {shopStatus.label}</div>
       </header>
 
       <section className={styles.content}>

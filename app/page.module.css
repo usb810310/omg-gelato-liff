@@ -349,3 +349,16 @@
 .menuFrameVisible { visibility:visible; opacity:1; pointer-events:auto; }.menuFrameHidden { visibility:hidden; opacity:0; pointer-events:none; }
 .appDock .dockOrderActive { color:#fff; background:linear-gradient(145deg,#e78f69,#c76851); box-shadow:0 9px 16px rgba(193,93,70,.25); }.appDock .dockOrderActive small { color:#fff; }
 @media (orientation: landscape) and (max-height:600px) { .menuFrame { top:62px; bottom:57px; } }
+
+/* 2026 compact app navigation: one navigation surface, more room for content. */
+.topbar { height:64px; padding:9px 18px; }
+.brandLogo { width:36px; height:36px; }.brandLockup { gap:8px; }.eyebrow { font-size:8px; }.brandName { font-size:16px; }
+.livePill { padding:7px 10px; font-size:9px; }
+.content { height:calc(100dvh - 124px); padding:7px 16px 22px; }
+.appDock { left:50%; bottom:max(10px, env(safe-area-inset-bottom)); width:min(100% - 28px, 440px); height:60px; padding:5px 8px; border:1px solid rgba(227,216,202,.94); border-radius:23px; background:rgba(255,253,248,.9); box-shadow:0 10px 28px rgba(72,52,39,.16), 0 1px 0 rgba(255,255,255,.8) inset; backdrop-filter:blur(20px); }
+.appDock button { height:48px; border-radius:16px; gap:2px; }.appDock button span { font-size:19px; line-height:20px; }.appDock button small { font-size:8px; }
+.appDock .dockOrderButton { flex:1; height:48px; margin:0; border:0; border-radius:16px; color:#c87958; background:transparent; box-shadow:none; }
+.appDock .dockOrderButton small { color:#b66b51; }.appDock .dockOrderActive { height:52px; margin-top:-7px; border:4px solid var(--paper); border-radius:18px; color:#fff; background:linear-gradient(145deg,#e78f69,#c76851); box-shadow:0 8px 16px rgba(193,93,70,.24); }.appDock .dockOrderActive small { color:#fff; }
+.appDock .dockActive { color:#c96851; background:#fff0e6; }.appDock .dockActive::after { content:''; position:absolute; bottom:3px; width:4px; height:4px; border-radius:50%; background:#c96851; }
+.menuFrame { top:64px; bottom:80px; }
+@media (orientation: landscape) and (max-height:600px) { .topbar { height:54px; padding-top:6px; padding-bottom:6px; }.content { height:calc(100dvh - 111px); }.menuFrame { top:54px; bottom:70px; }.appDock { bottom:7px; height:54px; }.appDock button { height:42px; }.appDock .dockOrderButton { height:42px; }.appDock .dockOrderActive { height:47px; } }
