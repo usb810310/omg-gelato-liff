@@ -1928,6 +1928,40 @@
         onload="window.dispatchEvent(new Event('liff-sdk-ready'))"
         onerror="window.dispatchEvent(new Event('liff-sdk-error'))"
     ></script>
+    <!-- Fast REST fallback: LINE WebView should show today's flavors even if the Firebase module/live listener is slow. -->
+    <script>
+      (() => {
+        const grid = document.getElementById('todayGrid');
+        if (!grid) return;
+        const databaseUrl = 'https://omg-menu-5761a-default-rtdb.asia-southeast1.firebasedatabase.app';
+        const escapeText = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char]));
+        const renderRescue = (data) => {
+          const items = Object.values(data || {}).sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+          if (!items.length) return;
+          const colors = ['#d9b86c', '#e58d79', '#a8bb83', '#c79d78', '#7e9bb7', '#d1a6c9'];
+          grid.innerHTML = items.map((item, index) => {
+            const sold = item.soldOut === true;
+            return `<div class="today-card ${sold ? 'sold-out' : ''}" data-flavor="${escapeText(item.name)}" data-sold="${sold}">${sold ? '<span class="sold-tag">售完</span>' : ''}<div class="color-tag" style="background:${colors[index % colors.length]};"></div><div class="today-name">${escapeText(item.name)}</div>${item.desc ? `<div class="today-desc">${escapeText(item.desc)}</div>` : ''}</div>`;
+          }).join('');
+          const syncText = document.getElementById('syncText');
+          const updateTime = document.getElementById('updateTimeDisplay');
+          const dot = document.getElementById('indicatorDot');
+          if (syncText) syncText.textContent = '已同步';
+          if (updateTime) updateTime.textContent = '更新於 ' + new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
+          if (dot) dot.className = 'indicator online';
+        };
+        window.setTimeout(async () => {
+          if (grid.querySelector('.today-card') || !grid.querySelector('.loading')) return;
+          try {
+            const response = await fetch(`${databaseUrl}/todayFlavors.json?fallback=${Date.now()}`, { cache: 'no-store' });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            renderRescue(await response.json());
+          } catch (error) {
+            console.warn('快速口味備援讀取失敗', error);
+          }
+        }, 1200);
+      })();
+    </script>
     <script type="module">
         // 初始化 LIFF，取得 User ID
         const liff = await new Promise((resolve, reject) => {
