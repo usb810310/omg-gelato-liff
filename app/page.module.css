@@ -1,5 +1,61 @@
 
 
+/* Member center redesign */
+.memberPageView { padding-top: 12px; padding-bottom: 24px; }
+.memberPageHeader { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; padding: 8px 2px 20px; }
+.memberPageHeader h1 { margin: 7px 0 7px; font-family: Georgia, serif; font-size: 35px; font-weight: 500; letter-spacing: -.07em; }
+.memberPageHeader > div:first-child > p:last-child { margin:0; max-width:270px; color:var(--muted); font-size:11px; line-height:1.6; }
+.memberMiniAvatar { flex:0 0 52px; width:52px; height:52px; display:grid; place-items:center; overflow:hidden; border:3px solid #fff; border-radius:50%; background:#dfb887; color:#fff; font-size:14px; font-weight:800; box-shadow:0 5px 16px rgba(92,68,42,.12); }
+.memberMiniAvatar img { width:100%; height:100%; object-fit:cover; }
+.pointsOverview { margin:0 -2px 13px; padding:20px 20px 17px; border-radius:23px; color:#fff; background:linear-gradient(140deg,#3d302b 0%,#654f43 57%,#8d6b54 100%); box-shadow:0 13px 25px rgba(59,43,34,.18); }
+.pointsOverviewTop,.pointsGoalRow,.pointsMeta { display:flex; align-items:center; justify-content:space-between; }
+.pointsOverviewTop { color:#dfd3ca; font-size:11px; font-weight:700; }
+.pointsLive { display:flex; align-items:center; gap:5px; color:#b9dec4; font-size:9px; font-weight:700; }
+.pointsLive i { width:6px; height:6px; border-radius:50%; background:#7bd094; box-shadow:0 0 0 3px rgba(123,208,148,.16); }
+.pointsNumber { margin:8px 0 12px; font-size:52px; line-height:1; font-weight:800; letter-spacing:-.08em; }
+.pointsNumber small { margin-left:5px; color:#dfd3ca; font-size:13px; letter-spacing:0; }
+.pointsGoalRow { margin-bottom:9px; color:#f8eee6; font-size:11px; }
+.pointsGoalRow b { color:#f5c798; font-size:10px; }
+.pointsProgress { height:8px; overflow:hidden; border-radius:99px; background:rgba(255,255,255,.17); }
+.pointsProgress span { display:block; height:100%; min-width:3px; border-radius:inherit; background:linear-gradient(90deg,#f2a66f,#f9d28a); transition:width .4s ease; }
+.pointsMeta { margin-top:8px; color:#c4b4a9; font-size:9px; }
+.memberActionCard { margin-bottom:13px; padding:19px; border:1px solid #f0dfcc; border-radius:22px; background:#fffaf3; box-shadow:0 8px 19px rgba(92,68,42,.055); }
+.actionCardHeading { display:flex; align-items:center; gap:11px; }
+.actionIcon { display:grid; width:39px; height:39px; place-items:center; border-radius:13px; color:#fff; background:#de895e; font-size:24px; transform:rotate(-12deg); }
+.actionCardHeading h2 { margin:4px 0 0; font-size:19px; letter-spacing:-.04em; }
+.actionCardDescription { margin:15px 0 13px; color:var(--muted); font-size:11px; line-height:1.7; }
+.qrActionButton { width:100%; display:flex; align-items:center; justify-content:space-between; border:0; border-radius:15px; padding:14px 16px; background:var(--ink); color:#fff; font:inherit; font-size:12px; font-weight:800; cursor:pointer; }
+.qrActionButton b { color:#f2b477; font-size:18px; line-height:1; }
+.qrReveal { display:flex; flex-direction:column; align-items:center; margin-top:15px; padding:15px 10px 4px; border-top:1px dashed #ead9c8; }
+.qrReveal .memberQrImage,.qrReveal .memberQrLoading { width:210px; height:210px; }
+.qrReveal p { margin:10px 0 0; color:var(--muted); font-size:10px; line-height:1.7; text-align:center; }
+.howToCollect,.memberHistoryCard { margin-bottom:13px; padding:18px 17px; border-radius:21px; background:#f3f7ee; }
+.subsectionHeading { display:flex; align-items:flex-end; justify-content:space-between; gap:10px; margin-bottom:13px; }
+.subsectionHeading h2 { margin:5px 0 0; font-size:20px; letter-spacing:-.05em; }
+.subsectionHeading > span { color:#7a9675; font-size:9px; white-space:nowrap; }
+.stepList { display:grid; gap:0; }
+.stepItem { display:flex; align-items:center; gap:12px; padding:11px 0; border-top:1px solid #dfe9d9; }
+.stepItem:first-child { border-top:0; padding-top:2px; }
+.stepItem > span { display:grid; width:30px; height:30px; place-items:center; border-radius:50%; color:#60825b; background:#dfead9; font-size:9px; font-weight:800; }
+.stepItem div { display:grid; gap:3px; }
+.stepItem b { font-size:12px; }
+.stepItem small { color:var(--muted); font-size:10px; }
+.memberHistoryCard { background:#fff; border:1px solid #ece7df; }
+.pointActivityList { display:grid; gap:0; }
+.pointActivityItem { display:flex; align-items:center; gap:10px; padding:12px 0; border-top:1px solid #f0ece6; }
+.pointActivityItem:first-child { border-top:0; padding-top:2px; }
+.activityMark { display:grid; width:31px; height:31px; place-items:center; border-radius:50%; color:#d47b4f; background:#fff0e5; font-size:14px; }
+.pointActivityItem div { display:grid; flex:1; gap:3px; }
+.pointActivityItem b { font-size:11px; }
+.pointActivityItem small { color:var(--muted); font-size:9px; }
+.pointActivityItem strong { font-size:15px; }
+.activityPlus { color:#5d9861; }.activityMinus { color:#bd6659; }
+.noActivity { padding:15px 0 4px; text-align:center; color:var(--muted); }.noActivity span { color:#e2b178; font-size:27px; }.noActivity p { margin:7px 0 0; font-size:10px; line-height:1.7; }
+.rewardGuideCard { display:flex; align-items:center; gap:14px; margin-bottom:13px; padding:17px; border-radius:20px; background:#f7eee2; }
+.rewardGuideBadge { display:grid; flex:0 0 54px; width:54px; height:54px; place-items:center; border:2px solid #a16b4d; border-radius:50%; color:#8c5a40; font-size:25px; font-weight:900; transform:rotate(-8deg); }
+.rewardGuideCard h2 { margin:5px 0 6px; font-size:15px; line-height:1.3; }.rewardGuideCard > div:last-child > p:last-child { margin:0; color:var(--muted); font-size:10px; line-height:1.6; }
+@media (max-width:360px) { .memberPageHeader h1 { font-size:30px; }.pointsNumber { font-size:46px; }.subsectionHeading > span { display:none; } }
+
 /* Landscape phone safety layout: keep the LIFF usable when the device is rotated. */
 @media (orientation: landscape) and (max-height: 600px) {
   .topbar { width:100%; max-width:760px; height:62px; box-sizing:border-box; padding:8px 22px; }
