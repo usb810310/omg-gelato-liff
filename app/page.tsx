@@ -673,7 +673,7 @@ export default function Home() {
               <p className={styles.memberId}>ID · {profile?.userId?.slice(-8) || 'WELCOME'}</p>
             </div>
             <div className={styles.pointsCard}>
-              <div><p className={styles.kicker}>GELATO POINTS</p><strong>{Number(memberPoints.balance || 0)}<small> 點</small></strong><span>每杯獨享杯／雙重奏自動集 2 點</span></div>
+              <div><p className={styles.kicker}>GELATO POINTS</p><strong>{Number(memberPoints.balance || 0)}<small> 點</small></strong><span>會員點數功能準備中，暫未發放點數</span></div>
               <span className={styles.pointsIcon}>✦</span>
             </div>
             <a href="https://lin.ee/sB558niE" target="_blank" rel="noopener noreferrer" className={styles.lineButton}><span>LINE</span> 加入好友，接收最新口味 <b>↗</b></a>

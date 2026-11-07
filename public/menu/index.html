@@ -1953,6 +1953,8 @@
         };
         const firebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig);
         const db = getDatabase(firebaseApp);
+        // 點數功能先保留資料結構與 POS 管理介面，但暫停所有自動發點。
+        const POINTS_REWARDS_ENABLED = false;
 
         // DOM
         const todayGrid = document.getElementById('todayGrid'),
@@ -2091,6 +2093,7 @@
         }
 
         async function awardOrderPoints({ memberProfile, orderId, orderNo, items }) {
+            if (!POINTS_REWARDS_ENABLED) return 0;
             const points = getOrderRewardPoints(items);
             if (!points || !memberProfile?.memberKey || !orderId) return 0;
             const accountRef = ref(db, `memberPoints/${memberProfile.memberKey}`);
@@ -3208,11 +3211,11 @@
                     userId: memberProfile.lineUserId || null,
                     displayName: memberProfile.displayName || null,
                     pictureUrl: memberProfile.pictureUrl || null,
-                    pointsAwardStatus: rewardPoints ? 'pending' : 'not_applicable',
+                    pointsAwardStatus: POINTS_REWARDS_ENABLED && rewardPoints ? 'pending' : 'disabled',
                 });
 
                 let pointsWarning = '';
-                if (rewardPoints) {
+                if (POINTS_REWARDS_ENABLED && rewardPoints) {
                     try {
                         await awardOrderPoints({ memberProfile, orderId: orderRef.key, orderNo, items: itemsForFirebase });
                         await set(ref(db, `orders/${orderRef.key}/pointsAwardStatus`), 'awarded');
