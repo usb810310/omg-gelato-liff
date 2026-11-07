@@ -3,7 +3,8 @@ import "./globals.css";
 import { LIFFProvider } from "../providers/liff-providers";
 
 export const metadata: Metadata = {
-  title: "omg-gelato79",
+  title: "On My Gelato｜會員與點餐",
+  description: "On My Gelato 義式冰淇淋會員與線上點餐",
   icons: {
     icon: "/favicon.ico",
   },
@@ -20,7 +21,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="zh-TW">
       <body>
         <LIFFProvider>{children}</LIFFProvider>
       </body>
