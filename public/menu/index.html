@@ -13,6 +13,9 @@
         }
     </script>
     <script>
+        if (new URLSearchParams(window.location.search).get('embedded') === '1') {
+            document.documentElement.classList.add('embedded-menu');
+        }
         (function() {
             const stored = localStorage.getItem('omg-theme') || 'light';
             if (stored === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
@@ -1637,6 +1640,10 @@
         .app-dock a span { font-size: 21px; line-height: 21px; }.app-dock a small { font-size: 9px; }.app-dock a.active { color: #c96851; }.app-dock a.active::after { content: ''; position: absolute; bottom: 1px; width: 5px; height: 5px; border-radius: 50%; background: #c96851; }
         .app-dock a.dock-order { flex: 0 0 62px; height: 62px; margin-top: -18px; border: 5px solid var(--bg-page, #f8f5ee); border-radius: 21px; color: #fff; background: linear-gradient(145deg,#e78f69,#c76851); box-shadow: 0 8px 15px rgba(193,93,70,.25); }.app-dock a.dock-order small { color: #fff; }.app-dock a.dock-order.active::after { display: none; }
         @media (max-width: 380px) { .app-dock { height: 66px; }.app-dock a { height: 49px; }.app-dock a.dock-order { height: 58px; } }
+
+        html.embedded-menu body { padding-top: 0 !important; padding-bottom: 0 !important; }
+        html.embedded-menu .brand, html.embedded-menu .control-bar, html.embedded-menu .app-dock { display: none !important; }
+        html.embedded-menu .container { padding-top: 8px; }
     </style>
 </head>
 <body>

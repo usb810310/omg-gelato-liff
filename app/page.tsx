@@ -277,11 +277,12 @@ export default function Home() {
   const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [status, setStatus] = useState('正在初始化...');
-  const [activeTab, setActiveTab] = useState<'home' | 'orders' | 'member'>(() => {
+  const [activeTab, setActiveTab] = useState<'home' | 'menu' | 'orders' | 'member'>(() => {
     if (typeof window === 'undefined') return 'home';
     const requestedTab = new URLSearchParams(window.location.search).get('tab');
-    return requestedTab === 'orders' || requestedTab === 'member' ? requestedTab : 'home';
+    return requestedTab === 'menu' || requestedTab === 'orders' || requestedTab === 'member' ? requestedTab : 'home';
   });
+  const [menuLoaded, setMenuLoaded] = useState(() => typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('tab') === 'menu');
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoadingOrders, setIsLoadingOrders] = useState(false);
   const [wishText, setWishText] = useState('');
@@ -441,15 +442,16 @@ export default function Home() {
     }
   };
 
-  const switchTab = (tab: 'home' | 'orders' | 'member') => {
+  const switchTab = (tab: 'home' | 'menu' | 'orders' | 'member') => {
     setActiveTab(tab);
     setSelectedOrderNo(null); // 切換分頁時回到訂單列表
+    if (tab === 'menu') setMenuLoaded(true);
     if (tab === 'orders') loadOrders();
     router.replace(tab === 'home' ? '/' : `/?tab=${tab}`, { scroll: false });
   };
 
   const openMenu = () => {
-    router.push('/menu/');
+    switchTab('menu');
   };
 
   const retryLiff = () => {
@@ -591,8 +593,10 @@ export default function Home() {
         </div>
       </header>
 
-      <section className={styles.content} key={activeTab}>
+      <section className={styles.content}>
         {status && !profile && <div className={styles.errorBanner}>{status}</div>}
+
+        {menuLoaded && <div className={`${styles.menuFrame} ${activeTab === 'menu' ? styles.menuFrameVisible : styles.menuFrameHidden}`} aria-hidden={activeTab !== 'menu'}><iframe title="On My Gelato 線上點餐" src="/menu/?embedded=1" /></div>}
 
         {activeTab === 'home' && (
           <div className={styles.homeView}>
@@ -704,7 +708,7 @@ export default function Home() {
 
       <nav className={styles.appDock} aria-label="主要導覽">
         <button type="button" onClick={() => switchTab('home')} className={activeTab === 'home' ? styles.dockActive : ''}><span>⌂</span><small>今日</small></button>
-        <button type="button" onClick={openMenu} className={styles.dockOrderButton}><span>✦</span><small>點餐</small></button>
+        <button type="button" onClick={openMenu} className={`${styles.dockOrderButton} ${activeTab === 'menu' ? styles.dockOrderActive : ''}`}><span>✦</span><small>點餐</small></button>
         <button type="button" onClick={() => switchTab('orders')} className={activeTab === 'orders' ? styles.dockActive : ''}><span>◷</span><small>足跡</small></button>
         <button type="button" onClick={() => switchTab('member')} className={activeTab === 'member' ? styles.dockActive : ''}><span>◒</span><small>俱樂部</small></button>
       </nav>
