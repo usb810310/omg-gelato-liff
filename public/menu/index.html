@@ -1644,7 +1644,16 @@
         html.embedded-menu body { padding-top: 0 !important; padding-bottom: 0 !important; }
         html.embedded-menu .brand, html.embedded-menu .control-bar, html.embedded-menu .app-dock { display: none !important; }
         html.embedded-menu .container { padding-top: 8px; }
-    </style>
+    
+        /* Unified floating segmented dock for the standalone fallback page. */
+        .app-dock { left:50%; bottom:max(10px, env(safe-area-inset-bottom)); width:min(calc(100% - 28px), 440px); height:60px; padding:5px 8px; border:1px solid rgba(227,216,202,.94); border-radius:23px; background:rgba(255,253,248,.9); box-shadow:0 10px 28px rgba(72,52,39,.16), 0 1px 0 rgba(255,255,255,.8) inset; backdrop-filter:blur(20px); }
+        .app-dock a { height:48px; border-radius:16px; gap:2px; }.app-dock a span { font-size:19px; line-height:20px; }.app-dock a small { font-size:8px; }
+        .app-dock a.active { color:#c96851; background:#fff0e6; }.app-dock a.active::after { display:none; }
+        .app-dock a.dock-order { flex:1; height:48px; margin:0; border:0; border-radius:16px; color:#c87958; background:transparent; box-shadow:none; }
+        .app-dock a.dock-order.active { height:52px; margin-top:-7px; border:4px solid var(--bg-page, #f8f5ee); border-radius:18px; color:#fff; background:linear-gradient(145deg,#e78f69,#c76851); box-shadow:0 8px 16px rgba(193,93,70,.24); }
+        .app-dock a.dock-order.active small { color:#fff; }
+        @media (max-width:380px) { .app-dock { height:56px; }.app-dock a { height:44px; }.app-dock a.dock-order { height:44px; }.app-dock a.dock-order.active { height:48px; } }
+</style>
 </head>
 <body>
     <div id="floatingToast" class="floating-toast"><span class="icon">🍨</span><span id="toastMessage">訊息</span></div>
@@ -1939,7 +1948,9 @@
         if (liff) {
             try {
                 await liff.init({ liffId: '2011536222-v4OvTSup' });
-                if (liff.isLoggedIn()) {
+                if (liff.isInClient() && new URLSearchParams(window.location.search).get('embedded') !== '1') {
+                    window.location.replace('/?tab=menu');
+                } else if (liff.isLoggedIn()) {
                     const profile = await liff.getProfile();
                     window.liffUserId = profile.userId;
                     window.liffDisplayName = profile.displayName;
@@ -3637,7 +3648,7 @@ s0.parentNode.insertBefore(s1,s0);
         <a href="../?tab=home"><span>⌂</span><small>今日</small></a>
         <a class="dock-order active" href="./"><span>✦</span><small>點餐</small></a>
         <a href="../?tab=orders"><span>◷</span><small>足跡</small></a>
-        <a href="../?tab=member"><span>◒</span><small>俱樂部</small></a>
+        <a href="../?tab=member"><span>◒</span><small>會員</small></a>
     </nav>
 </body>
 </html>
