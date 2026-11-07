@@ -282,7 +282,6 @@ export default function Home() {
     const requestedTab = new URLSearchParams(window.location.search).get('tab');
     return requestedTab === 'menu' || requestedTab === 'orders' || requestedTab === 'member' ? requestedTab : 'home';
   });
-  const [menuLoaded, setMenuLoaded] = useState(() => typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('tab') === 'menu');
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoadingOrders, setIsLoadingOrders] = useState(false);
   const [wishText, setWishText] = useState('');
@@ -449,15 +448,18 @@ export default function Home() {
   };
 
   const switchTab = (tab: 'home' | 'menu' | 'orders' | 'member') => {
+    if (tab === 'menu') {
+      window.location.assign('/menu/index.html');
+      return;
+    }
     setActiveTab(tab);
     setSelectedOrderNo(null); // 切換分頁時回到訂單列表
-    if (tab === 'menu') setMenuLoaded(true);
     if (tab === 'orders') loadOrders();
     router.replace(tab === 'home' ? '/' : `/?tab=${tab}`, { scroll: false });
   };
 
   const openMenu = () => {
-    switchTab('menu');
+    window.location.assign('/menu/index.html');
   };
 
   const retryLiff = () => {
@@ -616,8 +618,6 @@ export default function Home() {
 
       <section className={styles.content}>
         {status && !profile && <div className={styles.errorBanner}>{status}</div>}
-
-        {menuLoaded && <div className={`${styles.menuFrame} ${activeTab === 'menu' ? styles.menuFrameVisible : styles.menuFrameHidden}`} aria-hidden={activeTab !== 'menu'}><iframe title="On My Gelato 線上點餐" src="/menu/?embedded=1" /></div>}
 
         {activeTab === 'home' && (
           <div className={styles.homeView}>

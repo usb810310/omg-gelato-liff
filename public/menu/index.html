@@ -1653,6 +1653,95 @@
         .app-dock a.dock-order.active { height:52px; margin-top:-7px; border:4px solid var(--bg-page, #f8f5ee); border-radius:18px; color:#fff; background:linear-gradient(145deg,#e78f69,#c76851); box-shadow:0 8px 16px rgba(193,93,70,.24); }
         .app-dock a.dock-order.active small { color:#fff; }
         @media (max-width:380px) { .app-dock { height:56px; }.app-dock a { height:44px; }.app-dock a.dock-order { height:44px; }.app-dock a.dock-order.active { height:48px; } }
+
+        /* ===== LIFF App 視覺融合：保留原始點餐流程，統一目前 App 的紙感與膠囊語言 ===== */
+        :root {
+            --bg-body: #f8f5ee;
+            --bg-card: #fffdf8;
+            --bg-card-hover: #fff0e6;
+            --bg-sold: #f1ece5;
+            --text-primary: #292521;
+            --text-secondary: #897c70;
+            --text-muted: #b7a99d;
+            --border-light: #e8ded1;
+            --border-hover: #d89a7d;
+            --accent: #c96851;
+            --accent-light: #f4d5c1;
+            --gradient-primary: linear-gradient(135deg, #e78f69, #c76851);
+            --summary-total-bg: #fff5e8;
+            --bg-page: #f8f5ee;
+            --shadow-card: 0 10px 26px rgba(72, 52, 39, .08);
+            --shadow-hover: 0 12px 24px rgba(72, 52, 39, .13);
+            --shadow-item: 0 3px 10px rgba(72, 52, 39, .06);
+        }
+        [data-theme="dark"] {
+            --bg-body: #1f1b18;
+            --bg-card: #2b2724;
+            --bg-card-hover: #3a2e2a;
+            --bg-sold: #25211e;
+            --text-primary: #f2ebe3;
+            --text-secondary: #b8ada4;
+            --text-muted: #9a8e84;
+            --border-light: #443a34;
+            --border-hover: #a86f5d;
+            --accent: #e09276;
+            --accent-light: #5b3c35;
+            --summary-total-bg: #342820;
+            --bg-page: #1f1b18;
+            --shadow-card: 0 10px 26px rgba(0, 0, 0, .28);
+            --shadow-hover: 0 12px 24px rgba(0, 0, 0, .4);
+        }
+        body { padding-top: max(72px, calc(64px + env(safe-area-inset-top))); padding-bottom: max(88px, calc(78px + env(safe-area-inset-bottom))); font-family: -apple-system, BlinkMacSystemFont, "Noto Sans TC", Arial, sans-serif; }
+        .container { max-width: 520px; }
+        .brand { padding: 13px 3px 11px; text-align: left; }
+        .brand-inner { align-items: flex-start; }
+        .brand-logo-wrapper, .brand-divider, .brand-tagline { display: none; }
+        .brand-title-box { align-items: flex-start; gap: 0; }
+        .brand-title-box::before { content: 'ONLINE ORDER · 線上點餐'; color: var(--text-secondary); font-size: 8px; font-weight: 800; letter-spacing: .18em; line-height: 1.1; }
+        .brand-title { margin-top: 4px; color: var(--text-primary); font-size: 20px; font-weight: 850; letter-spacing: -.04em; line-height: 1.15; }
+        .brand-title span { color: var(--text-primary); }
+        .brand-title span::after { display: none; }
+        .control-bar { top: 0; width: 100%; max-width: 520px; justify-content: flex-end; gap: 3px; margin: 0 auto; padding: max(8px, env(safe-area-inset-top)) 12px 8px; border: 0; border-bottom: 1px solid rgba(227,216,202,.94); border-radius: 0 0 20px 20px; background: rgba(255,253,248,.9); box-shadow: 0 8px 22px rgba(72,52,39,.08); backdrop-filter: blur(20px); }
+        [data-theme="dark"] .control-bar { border-color: rgba(78,65,57,.9); background: rgba(43,39,36,.92); }
+        .control-divider { display: none; }
+        .control-item, .wish-btn-inline, .theme-toggle-btn, .sync-badge, .my-orders-btn { min-height: 34px; padding: 6px 9px; border-radius: 12px; font-size: 10px; }
+        .control-item .label, .wish-btn-inline .label, .theme-toggle-btn .label, .sync-badge .sync-label { font-size: 9px; font-weight: 800; }
+        .control-item:hover, .wish-btn-inline:hover, .theme-toggle-btn:hover { background: var(--bg-card-hover); }
+        .my-orders-btn { border-color: var(--border-light); background: var(--bg-card); font-size: 10px; }
+        .shop-status-bar { margin: 3px 0 11px; padding: 9px 3px 10px; border-bottom-color: var(--border-light); color: #66745f; }
+        .flow-step-label { margin: 18px 2px 9px; font-size: 14px; letter-spacing: -.02em; }
+        .flow-step-label .flow-step-number { width: 29px; height: 29px; border-color: #ead1be; color: #b66b51; background: #fffaf3; }
+        .flow-step-label small { color: var(--text-muted); }
+        .order-panel, .summary-section, .today-section { border-radius: 22px; border-color: var(--border-light); background: var(--bg-card); box-shadow: var(--shadow-card); }
+        .order-panel { padding: 18px 14px 16px; }
+        .panel-header { color: var(--text-secondary); }
+        .container-option { min-height: 145px; border-color: var(--border-light); border-radius: 18px; background: var(--bg-card); box-shadow: var(--shadow-item); }
+        .container-option:hover, .container-option.active { border-color: var(--accent); }
+        .container-option.active { background: linear-gradient(145deg, #fff7ec, var(--accent-light)); box-shadow: 0 8px 18px rgba(201,104,81,.14); }
+        .container-option strong { color: var(--accent); }
+        .panel-status { border-radius: 14px; background: #f8f2e9; }
+        [data-theme="dark"] .panel-status { background: #342d28; }
+        .today-section { padding: 18px 14px 16px; }
+        .today-section::after { color: rgba(223,138,81,.1); }
+        .today-card { border-color: var(--border-light); border-radius: 18px; background: var(--bg-card); box-shadow: var(--shadow-item); }
+        .today-card:hover:not(.sold-out), .today-card.taste-focus { border-color: var(--accent); box-shadow: var(--shadow-hover); }
+        .summary-section { padding: 17px 14px 14px; }
+        .summary-total { border-top-color: #d19a68; }
+        .summary-actions .primary-btn { background: linear-gradient(135deg, #08c85a, #06a94a); box-shadow: 0 7px 16px rgba(6,169,74,.18); }
+        .modal-overlay { background: rgba(41,37,33,.42); backdrop-filter: blur(5px); }
+        .modal-box { border: 1px solid var(--border-light); border-radius: 26px; background: var(--bg-card); box-shadow: 0 18px 50px rgba(45,31,20,.2); }
+        .modal-header h3 { color: var(--text-primary); letter-spacing: -.04em; }
+        .modal-close, .btn-cancel { border-radius: 14px; }
+        .app-dock { background: rgba(255,253,248,.9); }
+        [data-theme="dark"] .app-dock { border-color: rgba(78,65,57,.9); background: rgba(43,39,36,.92); }
+        @media (max-width: 480px) {
+            body { padding-top: max(68px, calc(60px + env(safe-area-inset-top))); }
+            .brand { padding-top: 11px; }
+            .control-bar { border-radius: 0 0 17px 17px; padding-left: 8px; padding-right: 8px; overflow-x: auto; justify-content: flex-start; }
+            .control-item, .wish-btn-inline, .theme-toggle-btn, .sync-badge, .my-orders-btn { flex-shrink: 0; }
+            .container-options { gap: 7px; }
+            .container-option { min-height: 132px; padding-left: 4px; padding-right: 4px; }
+        }
 </style>
 </head>
 <body>
@@ -1982,9 +2071,7 @@
         if (liff) {
             try {
                 await liff.init({ liffId: '2011536222-v4OvTSup' });
-                if (liff.isInClient() && new URLSearchParams(window.location.search).get('embedded') !== '1') {
-                    window.location.replace('/?tab=menu');
-                } else if (liff.isLoggedIn()) {
+                if (liff.isLoggedIn()) {
                     const profile = await liff.getProfile();
                     window.liffUserId = profile.userId;
                     window.liffDisplayName = profile.displayName;
