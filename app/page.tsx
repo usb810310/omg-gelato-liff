@@ -443,16 +443,6 @@ export default function Home() {
     if (tab === 'orders') loadOrders();
   };
 
-  const handleMainButtonClick = () => {
-    if (todayContent.btnAction === 'wish') {
-      switchTab('member');
-    } else if (todayContent.btnAction === 'menu') {
-      window.location.href = '/menu/';
-    } else if (todayContent.btnAction === 'inquiry') {
-      window.alert('☕ 店休中！客服小幫手正在趕來的路上。\n\n未來這裡會開啟 24/7 線上文字對話功能，敬請期待！');
-    }
-  };
-
   const openMenu = () => {
     router.push('/menu/');
   };
@@ -585,11 +575,11 @@ export default function Home() {
         <div className={styles.brandLockup}>
           <Image src="/logo-new.png" alt="On My Gelato" width={42} height={42} className={styles.brandLogo} />
           <div>
-            <p className={styles.eyebrow}>ARTISAN GELATO</p>
-            <p className={styles.brandName}><span>On</span> My <b>Gelato</b></p>
+            <p className={styles.eyebrow}>ON MY GELATO · CLUB</p>
+            <p className={styles.brandName}><span>今日</span>想吃什麼？</p>
           </div>
         </div>
-        <span className={`${styles.livePill} ${shopStatus.isOpen ? '' : styles.livePillClosed}`}><i /> {shopStatus.label}</span>
+        <button type="button" className={`${styles.livePill} ${shopStatus.isOpen ? '' : styles.livePillClosed}`} onClick={() => switchTab('member')}><i /> {shopStatus.label}<b>›</b></button>
       </header>
 
       <section className={styles.content} key={activeTab}>
@@ -597,105 +587,47 @@ export default function Home() {
 
         {activeTab === 'home' && (
           <div className={styles.homeView}>
-            <section className={styles.heroCard}>
-              <div className={styles.heroCopy}>
-                <p className={styles.heroKicker}>TODAY&apos;S SCOOP · 每日新鮮製作</p>
-                <h1>{todayContent.title}</h1>
-                <p className={styles.heroDescription}>{todayContent.desc}</p>
-                <button type="button" className={styles.primaryButton} onClick={handleMainButtonClick}>
-                  {todayContent.btnText}<span>↗</span>
-                </button>
-              </div>
-              <div className={styles.heroArt} aria-hidden="true">
-                <div className={styles.sunShape} />
-                <div className={`${styles.scoop} ${styles.scoopPistachio}`} />
-                <div className={`${styles.scoop} ${styles.scoopStrawberry}`} />
-                <div className={styles.cone}><span /></div>
-                <span className={styles.artLabel}>FRESH<br />EVERY DAY</span>
-              </div>
-            </section>
-
-            <section className={styles.welcomeRow}>
-              <div className={styles.avatarWrap}>
-                {profile?.pictureUrl ? <Image src={profile.pictureUrl} alt="會員頭像" width={42} height={42} /> : <span>OG</span>}
-              </div>
-              <div>
-                <p className={styles.miniLabel}>WELCOME BACK</p>
-                <h2>{profile ? `${profile.displayName}，歡迎回來` : '歡迎來到 On My Gelato'}</h2>
-              </div>
-              <span className={styles.sparkle}>✦</span>
+            <section className={styles.appHero}>
+              <div className={styles.appHeroGlow} />
+              <div className={styles.appHeroTop}><span className={styles.heroTag}>TODAY&apos;S SCOOP</span><span className={styles.heroDate}>{new Intl.DateTimeFormat('zh-TW', { month: 'numeric', day: 'numeric', weekday: 'short' }).format(new Date(clock))}</span></div>
+              <p className={styles.appHeroKicker}>{shopStatus.isOpen ? '今天，值得一球好冰淇淋' : shopStatus.label}</p>
+              <h1>{todayContent.title}</h1>
+              <p className={styles.appHeroDescription}>{todayContent.desc}</p>
+              <button type="button" className={styles.heroOrderButton} onClick={openMenu}><span>探索今日口味</span><b>↗</b></button>
+              <div className={styles.heroScoopArt} aria-hidden="true"><span className={styles.heroScoopOne} /><span className={styles.heroScoopTwo} /><span className={styles.heroScoopThree} /><i /></div>
             </section>
 
             {!shopStatus.isOpen && <div className={styles.closedNotice}><b>{shopStatus.label}</b><span>{shopStatus.detail}</span></div>}
 
-            <div className={styles.quickGrid}>
-              <button type="button" onClick={openMenu} className={`${styles.quickCard} ${styles.greenCard}`}><span className={styles.quickIcon}>✦</span><span><b>點餐／今日口味</b><small>{shopStatus.isOpen ? '立即點餐' : shopStatus.canOrder ? '預約點餐' : '瀏覽口味・暫停點餐'}</small></span><strong>↗</strong></button>
-              <button onClick={() => switchTab('orders')} className={`${styles.quickCard} ${styles.creamCard}`}><span className={styles.quickIcon}>▤</span><span><b>我的訂單</b><small>查看取餐進度</small></span><strong>›</strong></button>
-            </div>
+            <section className={styles.homeWelcomeCard}>
+              <div className={styles.homeWelcomeAvatar}>{profile?.pictureUrl ? <Image src={profile.pictureUrl} alt="會員頭像" width={46} height={46} /> : <span>OG</span>}</div>
+              <div><p className={styles.kicker}>WELCOME BACK</p><h2>{profile?.displayName || 'Gelato Lover'}</h2><span>今天也為自己留一點甜。</span></div>
+              <button type="button" onClick={() => switchTab('member')} aria-label="開啟會員中心">↗</button>
+            </section>
 
-            <section className={styles.noteCard}>
-              <span className={styles.noteMark}>“</span>
-              <p>真正的義式冰淇淋，<br /><b>不只是一種甜。</b></p>
-              <span className={styles.noteCaption}>— MADE WITH PASSION</span>
+            <div className={styles.homeSectionLabel}><div><p className={styles.kicker}>YOUR SHORTCUTS</p><h2>現在想做什麼？</h2></div><span>Swipe less · enjoy more</span></div>
+            <section className={styles.homeActionGrid}>
+              <button type="button" className={`${styles.homeActionCard} ${styles.homeActionPrimary}`} onClick={openMenu}><span className={styles.actionCardIcon}>✦</span><div><b>開始點餐</b><small>挑一個今天的口味</small></div><strong>↗</strong></button>
+              <button type="button" className={styles.homeActionCard} onClick={() => switchTab('orders')}><span className={styles.actionCardIcon}>◷</span><div><b>追蹤訂單</b><small>{orders.length ? `最近有 ${orders.length} 筆紀錄` : '查看取餐進度'}</small></div><strong>›</strong></button>
+            </section>
+
+            <section className={styles.homeFeatureCard}>
+              <div><p className={styles.kicker}>GELATO NOTE</p><h2>真正的義式冰淇淋，<br /><em>不只是一種甜。</em></h2><p>每天少量製作，把季節與心情一起放進冰櫃。</p></div><span className={styles.featureMark}>✦</span>
             </section>
           </div>
         )}
 
         {activeTab === 'orders' && (
           selectedOrder ? (
-            /* ====== 單張訂單詳情頁 ====== */
             <section className={styles.pageView}>
-              <button
-                type="button"
-                className={styles.backButton}
-                onClick={() => setSelectedOrderNo(null)}
-              >
-                <span>‹</span> 返回訂單列表
-              </button>
-              <OrderDetailCard
-                order={selectedOrder}
-                payingOrderNo={payingOrderNo}
-                onPay={startLinePay}
-                cancellingOrderNo={cancellingOrderNo}
-                onCancel={cancelOrder}
-              />
+              <button type="button" className={styles.backButton} onClick={() => setSelectedOrderNo(null)}><span>‹</span> 返回訂單足跡</button>
+              <OrderDetailCard order={selectedOrder} payingOrderNo={payingOrderNo} onPay={startLinePay} cancellingOrderNo={cancellingOrderNo} onCancel={cancelOrder} />
             </section>
           ) : (
-            /* ====== 訂單列表 ====== */
-            <section className={styles.pageView}>
-              <div className={styles.sectionHeading}>
-                <div>
-                  <p className={styles.kicker}>YOUR SWEET MOMENTS</p>
-                  <h1>我的訂單</h1>
-                </div>
-                <button type="button" className={styles.refreshButton} onClick={loadOrders} disabled={isLoadingOrders} aria-label="重新整理訂單">
-                  {isLoadingOrders ? '…' : '↻'}
-                </button>
-              </div>
-
-              {isLoadingOrders ? (
-                <div className={styles.emptyState}>
-                  <span className={styles.loadingDot} />
-                  <p>正在找回你的甜蜜紀錄…</p>
-                </div>
-              ) : orders.length === 0 ? (
-                <div className={styles.emptyState}>
-                  <span className={styles.emptyEmoji}>○</span>
-                  <h3>還沒有訂單</h3>
-                  <p>今天就選一個喜歡的口味吧！</p>
-                  <button type="button" onClick={openMenu} className={styles.secondaryButton}>{shopStatus.isOpen ? '前往點餐頁' : '瀏覽今日口味'}</button>
-                </div>
-              ) : (
-                <div className={styles.orderList}>
-                  {orders.map((order, index) => (
-                    <OrderListItem
-                      key={`${getOrderKey(order)}-${index}`}
-                      order={order}
-                      onSelect={() => setSelectedOrderNo(getOrderKey(order))}
-                    />
-                  ))}
-                </div>
-              )}
+            <section className={styles.ordersPageView}>
+              <header className={styles.ordersHero}><div><p className={styles.kicker}>ORDER JOURNEY</p><h1>訂單足跡</h1><p>從送出訂單，到準備好見面。</p></div><button type="button" className={styles.refreshButton} onClick={loadOrders} disabled={isLoadingOrders} aria-label="重新整理訂單">{isLoadingOrders ? '…' : '↻'}</button></header>
+              <div className={styles.orderSummaryBar}><span><b>{orders.length}</b> 筆最近訂單</span><button type="button" onClick={openMenu}>再點一份 ↗</button></div>
+              {isLoadingOrders ? <div className={styles.emptyState}><span className={styles.loadingDot} /><p>正在找回你的甜蜜紀錄…</p></div> : orders.length === 0 ? <div className={styles.ordersEmpty}><span>◌</span><h3>還沒有訂單足跡</h3><p>今天就挑一個喜歡的口味，<br />留下第一個甜蜜紀錄。</p><button type="button" onClick={openMenu} className={styles.secondaryButton}>開始第一次點餐</button></div> : <div className={styles.orderList}>{orders.map((order, index) => <OrderListItem key={`${getOrderKey(order)}-${index}`} order={order} onSelect={() => setSelectedOrderNo(getOrderKey(order))} />)}</div>}
             </section>
           )
         )}
@@ -761,18 +693,11 @@ export default function Home() {
         )}
       </section>
 
-      <nav className={styles.bottomNav} aria-label="主要導覽">
-        {([['home', '⌂', '首頁'], ['menu', '✦', '點餐'], ['orders', '▤', '訂單'], ['member', '○', '會員']] as const).map(([tab, icon, label]) => (
-          tab === 'menu' ? (
-            <button key={tab} type="button" onClick={openMenu} className={styles.menuNavButton}>
-              <span>{icon}</span><small>{label}</small>
-            </button>
-          ) : (
-            <button key={tab} type="button" onClick={() => switchTab(tab)} className={activeTab === tab ? styles.activeNav : ''}>
-              <span>{icon}</span><small>{label}</small>
-            </button>
-          )
-        ))}
+      <nav className={styles.appDock} aria-label="主要導覽">
+        <button type="button" onClick={() => switchTab('home')} className={activeTab === 'home' ? styles.dockActive : ''}><span>⌂</span><small>今日</small></button>
+        <button type="button" onClick={openMenu} className={styles.dockOrderButton}><span>✦</span><small>點餐</small></button>
+        <button type="button" onClick={() => switchTab('orders')} className={activeTab === 'orders' ? styles.dockActive : ''}><span>◷</span><small>足跡</small></button>
+        <button type="button" onClick={() => switchTab('member')} className={activeTab === 'member' ? styles.dockActive : ''}><span>◒</span><small>俱樂部</small></button>
       </nav>
     </main>
   );
