@@ -298,6 +298,8 @@ export default function Home() {
   const [memberPoints, setMemberPoints] = useState<MemberPointsAccount>({ balance: 0, entries: {} });
   const [memberQrDataUrl, setMemberQrDataUrl] = useState('');
   const [memberQrOpen, setMemberQrOpen] = useState(false);
+  const [legacyQrDataUrl, setLegacyQrDataUrl] = useState('');
+  const [legacyQrOpen, setLegacyQrOpen] = useState(false);
   const ordersRef = useRef<Order[]>([]);
 
   const [todayContent] = useState(() => dailyData[new Date().getDay()]);
@@ -372,16 +374,15 @@ export default function Home() {
       try {
         const accessToken = liff.getAccessToken();
         if (!accessToken) throw new Error('找不到 LINE 登入 Token');
-        const dataUrl = await QRCode.toDataURL(`gelato-member-token:${accessToken}`, {
-          errorCorrectionLevel: 'M',
-          margin: 2,
-          width: 320,
-          color: { dark: '#2d1f14', light: '#fffdf9' },
-        });
+        const qrOptions = { errorCorrectionLevel: 'M' as const, margin: 2, width: 320, color: { dark: '#2d1f14', light: '#fffdf9' } };
+        const dataUrl = await QRCode.toDataURL(`gelato-member-token:${accessToken}`, qrOptions);
         if (!cancelled) setMemberQrDataUrl(dataUrl);
+        const legacyDataUrl = await QRCode.toDataURL(`gelato-legacy-migration:${accessToken}`, qrOptions);
+        if (!cancelled) setLegacyQrDataUrl(legacyDataUrl);
       } catch (error) {
         console.error('會員 QR Code 產生失敗:', error);
         if (!cancelled) setMemberQrDataUrl('');
+        if (!cancelled) setLegacyQrDataUrl('');
       }
     };
     void createMemberQr();
@@ -601,16 +602,14 @@ export default function Home() {
   const recentPointEntries = Object.entries(memberPoints.entries || {})
     .sort(([, a], [, b]) => Number(b.createdAt || 0) - Number(a.createdAt || 0))
     .slice(0, 3);
+  const pageTitle = activeTab === 'menu' ? '線上點餐' : activeTab === 'orders' ? (selectedOrder ? '訂單詳情' : '訂單足跡') : activeTab === 'member' ? '會員與點數' : '今日首頁';
 
   return (
     <main className={styles.appShell}>
       <header className={styles.topbar}>
         <div className={styles.brandLockup}>
-          <Image src="/logo-new.png" alt="On My Gelato" width={42} height={42} className={styles.brandLogo} />
-          <div>
-            <p className={styles.eyebrow}>ON MY GELATO · CLUB</p>
-            <p className={styles.brandName}><span>今日</span>想吃什麼？</p>
-          </div>
+          <p className={styles.pageEyebrow}>ON MY GELATO · CLUB</p>
+          <p className={styles.pageTitle}>{pageTitle}</p>
         </div>
         <div className={`${styles.livePill} ${shopStatus.isOpen ? '' : styles.livePillClosed}`}><i /> {shopStatus.label}</div>
       </header>
@@ -695,6 +694,13 @@ export default function Home() {
               {memberQrOpen && <div className={styles.qrReveal}>
                 {memberQrDataUrl ? <Image className={styles.memberQrImage} src={memberQrDataUrl} alt="會員 QR Code" width={210} height={210} unoptimized /> : <div className={styles.memberQrLoading}>正在準備會員條碼…</div>}
                 <p>請將此畫面交給店員掃描<br />條碼只供本次會員驗證使用</p>
+              </div>}
+              <button type="button" className={styles.secondaryButton} onClick={() => setLegacyQrOpen((open) => !open)} aria-expanded={legacyQrOpen}>
+                {legacyQrOpen ? '收起舊點卡轉移 QR' : '我要轉入舊集點卡'}
+              </button>
+              {legacyQrOpen && <div className={styles.qrReveal}>
+                {legacyQrDataUrl ? <Image className={styles.memberQrImage} src={legacyQrDataUrl} alt="舊點卡轉移 QR Code" width={210} height={210} unoptimized /> : <div className={styles.memberQrLoading}>正在準備轉移條碼…</div>}
+                <p>請先向店員出示 LINE 官方集點卡的舊點數<br />再讓店員掃描此「舊點卡轉移」條碼</p>
               </div>}
             </section>
 
