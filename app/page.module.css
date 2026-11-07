@@ -335,3 +335,10 @@
 .headerQuickButton span { font-size:16px; line-height:15px; }.headerQuickButton small { margin-top:2px; font-size:7px; font-weight:800; }
 .headerActions .livePill { height:35px; padding:0 9px; border-radius:12px; font-size:9px; }
 @media (max-width:380px) { .headerQuickButton { width:31px; }.headerActions .livePill { max-width:70px; overflow:hidden; white-space:nowrap; }.topbar { padding-left:15px; padding-right:15px; } }
+
+/* Active state refinement: the order CTA is prominent, but only the current page is highlighted. */
+.appDock .dockOrderButton { color:#c87958; background:#fff8ed; border-color:var(--paper); box-shadow:0 6px 14px rgba(145,96,67,.1); }
+.appDock .dockOrderButton small { color:#b66b51; }.headerQuickActive { color:#c96851; border-color:#e7b59f; background:#fff0e6; box-shadow:0 4px 10px rgba(201,104,81,.1); }
+.content { animation: appPageIn .22s ease-out; }
+@keyframes appPageIn { from { opacity:.58; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
+@media (prefers-reduced-motion: reduce) { .content { animation:none; } }
