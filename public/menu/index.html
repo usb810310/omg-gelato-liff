@@ -1953,8 +1953,10 @@
         };
         const firebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig);
         const db = getDatabase(firebaseApp);
-        // 點數功能先保留資料結構與 POS 管理介面，但暫停所有自動發點。
-        const POINTS_REWARDS_ENABLED = false;
+        // 一般獨享杯／雙重奏每杯 1 點；活動日每筆符合品項訂單額外加 2 點。
+        const POINTS_REWARDS_ENABLED = true;
+        const BASE_REWARD_POINTS_PER_CUP = 1;
+        const CAMPAIGN_BONUS_POINTS = 2;
 
         // DOM
         const todayGrid = document.getElementById('todayGrid'),
@@ -2084,18 +2086,35 @@
             return updated;
         }
 
-        function getOrderRewardPoints(items) {
-            return (Array.isArray(items) ? items : []).reduce((total, item) => {
+        function getOrderRewardPoints(items, campaignBonus = 0) {
+            const basePoints = (Array.isArray(items) ? items : []).reduce((total, item) => {
                 const name = String(item?.name || '');
                 const qty = Math.max(0, Number(item?.qty || 0));
-                return total + (/獨享杯|雙重奏/.test(name) ? qty * 2 : 0);
+                return total + (/獨享杯|雙重奏/.test(name) ? qty * BASE_REWARD_POINTS_PER_CUP : 0);
             }, 0);
+            return basePoints > 0 ? basePoints + Math.max(0, Number(campaignBonus || 0)) : 0;
         }
 
-        async function awardOrderPoints({ memberProfile, orderId, orderNo, items }) {
+        function getPickupDateKey(pickupAbs) {
+            return String(pickupAbs || '').slice(0, 10).replaceAll('/', '-');
+        }
+
+        async function getPointCampaignForDate(dateKey) {
+            if (!dateKey) return null;
+            try {
+                const snapshot = await get(ref(db, 'pointCampaigns'));
+                const campaigns = snapshot.val() || {};
+                return Object.entries(campaigns).map(([id, campaign]) => ({ id, ...(campaign || {}) })).find(campaign => campaign.active !== false && campaign.date === dateKey) || null;
+            } catch (error) {
+                console.warn('活動點數設定讀取失敗，將只計算基本點數:', error);
+                return null;
+            }
+        }
+
+        async function awardOrderPoints({ memberProfile, orderId, orderNo, items, points, campaign }) {
             if (!POINTS_REWARDS_ENABLED) return 0;
-            const points = getOrderRewardPoints(items);
-            if (!points || !memberProfile?.memberKey || !orderId) return 0;
+            const totalPoints = Number(points || getOrderRewardPoints(items, campaign?.bonusPoints ?? CAMPAIGN_BONUS_POINTS));
+            if (!totalPoints || !memberProfile?.memberKey || !orderId) return 0;
             const accountRef = ref(db, `memberPoints/${memberProfile.memberKey}`);
             const result = await runTransaction(accountRef, (current) => {
                 const account = current && typeof current === 'object' ? current : {};
@@ -2104,16 +2123,20 @@
                 if (entries[awardKey]) return;
                 return {
                     ...account,
-                    balance: Number(account.balance || 0) + points,
+                    balance: Number(account.balance || 0) + totalPoints,
                     updatedAt: Date.now(),
                     entries: {
                         ...entries,
                         [awardKey]: {
                             id: awardKey,
-                            delta: points,
+                            delta: totalPoints,
                             type: 'order_reward',
                             source: 'order',
-                            sourceLabel: '訂單自動集點',
+                            sourceLabel: campaign ? `訂單集點・${campaign.name || '活動日'}` : '訂單自動集點',
+                            basePoints: getOrderRewardPoints(items, 0),
+                            campaignBonusPoints: Math.max(0, Number(campaign?.bonusPoints ?? CAMPAIGN_BONUS_POINTS)),
+                            campaignId: campaign?.id || null,
+                            campaignName: campaign?.name || null,
                             orderId,
                             orderNo: String(orderNo || ''),
                             itemSummary: (items || []).filter((item) => /獨享杯|雙重奏/.test(String(item?.name || ''))).map((item) => `${item.name} × ${item.qty || 0}`).join('、'),
@@ -2128,7 +2151,7 @@
                 const updatedProfile = { ...memberProfile, pointsBalance: awardedBalance, updatedAt: Date.now() };
                 await set(ref(db, `members/${memberProfile.memberKey}`), updatedProfile);
                 currentMember = updatedProfile;
-                return points;
+                return totalPoints;
             }
             return 0;
         }
@@ -3177,7 +3200,11 @@
                 });
 
                 const total = itemsForFirebase.reduce((sum, item) => sum + item.price * item.qty, 0);
-                const rewardPoints = getOrderRewardPoints(itemsForFirebase);
+                const pickupDateKey = getPickupDateKey(pickupAbs);
+                const pointCampaign = await getPointCampaignForDate(pickupDateKey);
+                const baseRewardPoints = getOrderRewardPoints(itemsForFirebase, 0);
+                const campaignBonusPoints = baseRewardPoints > 0 ? Math.max(0, Number(pointCampaign?.bonusPoints ?? CAMPAIGN_BONUS_POINTS)) : 0;
+                const rewardPoints = POINTS_REWARDS_ENABLED ? baseRewardPoints + campaignBonusPoints : 0;
                 const orderNo = 'WEB-' + Date.now().toString(36).slice(-7).toUpperCase();
                 const pickupNo = await getNextPickupNo();
                 const orderRef = push(ref(db, 'orders'));
@@ -3194,6 +3221,10 @@
                     items: itemsForFirebase,
                     total,
                     rewardPoints,
+                    baseRewardPoints,
+                    campaignBonusPoints,
+                    pointCampaignId: pointCampaign?.id || null,
+                    pointCampaignName: pointCampaign?.name || null,
                     payment: payMethod === 'onsite_linepay' ? 'LINE Pay' : '現場付款',
                     paymentStatus: 'unpaid',
                     paymentMethod: payMethod === 'onsite_linepay' ? 'ONSITE_LINEPAY' : 'ONSITE_CASH',
@@ -3217,7 +3248,7 @@
                 let pointsWarning = '';
                 if (POINTS_REWARDS_ENABLED && rewardPoints) {
                     try {
-                        await awardOrderPoints({ memberProfile, orderId: orderRef.key, orderNo, items: itemsForFirebase });
+                        await awardOrderPoints({ memberProfile, orderId: orderRef.key, orderNo, items: itemsForFirebase, points: rewardPoints, campaign: pointCampaign });
                         await set(ref(db, `orders/${orderRef.key}/pointsAwardStatus`), 'awarded');
                     } catch (error) {
                         console.error('訂單已建立，但點數入帳失敗:', error);
