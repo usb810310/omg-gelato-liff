@@ -290,6 +290,7 @@ export default function Home() {
   const [businessHours, setBusinessHours] = useState<BusinessHours | null>(null);
   const [clock, setClock] = useState(() => Date.now());
   const [memberPoints, setMemberPoints] = useState<MemberPointsAccount>({ balance: 0, entries: {} });
+  const [rewardTab, setRewardTab] = useState<'available' | 'earned'>('available');
 
   const [todayContent] = useState(() => dailyData[new Date().getDay()]);
 
@@ -542,6 +543,10 @@ export default function Home() {
   const selectedOrder = selectedOrderNo
     ? orders.find((order) => getOrderKey(order) === selectedOrderNo) ?? null
     : null;
+  const pointsBalance = Math.max(0, Number(memberPoints.balance || 0));
+  const stampCount = pointsBalance % 10;
+  const pointsToReward = stampCount === 0 ? 10 : 10 - stampCount;
+  const rewardsEarned = Math.floor(pointsBalance / 10);
 
   return (
     <main className={styles.appShell}>
@@ -672,10 +677,29 @@ export default function Home() {
               <h1>{profile?.displayName || 'Gelato Lover'}</h1>
               <p className={styles.memberId}>ID · {profile?.userId?.slice(-8) || 'WELCOME'}</p>
             </div>
-            <div className={styles.pointsCard}>
-              <div><p className={styles.kicker}>GELATO POINTS</p><strong>{Number(memberPoints.balance || 0)}<small> 點</small></strong><span>每杯 1 點，活動日每筆訂單額外加 2 點</span></div>
-              <span className={styles.pointsIcon}>✦</span>
+            <section className={styles.lineStampCard} aria-label="OMG 集點卡">
+              <div className={styles.stampCardTop}>
+                <div className={styles.stampBrand}><Image src="/logo-new.png" alt="OMG" width={48} height={48} /><span>On My Gelato<small>義式冰淇淋</small></span></div>
+                <span className={styles.stampMore}>⋮</span>
+              </div>
+              <h2>OMG！集點拿好禮！</h2>
+              <p className={styles.stampExpiry}>無使用期限</p>
+              <div className={styles.stampRewardHint}><span>✦ 獎勵</span><b>再 {pointsToReward} 點可得獎勵</b><span>⌃</span></div>
+              <div className={styles.stampGrid} aria-label={`目前 ${stampCount} 格集點`}>
+                {Array.from({ length: 10 }, (_, index) => <span key={index} className={`${styles.stampDot} ${index < stampCount ? styles.stampDotFilled : ''}`}>{index < stampCount ? 'STAMP' : index === 9 ? '★' : 'STAMP'}</span>)}
+              </div>
+              <div className={styles.stampProgressLine}><span>目前 {pointsBalance} 點</span><span>集滿 10 點可兌換</span></div>
+            </section>
+            <div className={styles.rewardTabs} role="tablist">
+              <button type="button" role="tab" aria-selected={rewardTab === 'available'} onClick={() => setRewardTab('available')} className={rewardTab === 'available' ? styles.rewardTabActive : ''}>尚未獲得的獎勵</button>
+              <button type="button" role="tab" aria-selected={rewardTab === 'earned'} onClick={() => setRewardTab('earned')} className={rewardTab === 'earned' ? styles.rewardTabActive : ''}>已獲得的獎勵{rewardsEarned > 0 ? ` (${rewardsEarned})` : ''}</button>
             </div>
+            {rewardTab === 'available' ? (
+              <div className={styles.rewardItem}><div className={styles.rewardThumb}><Image src="/logo-new.png" alt="OMG 獎勵" width={78} height={78} /></div><div><h3>獨享杯／雙重奏兌換券</h3><p>再集 {pointsToReward} 點即可兌換</p></div></div>
+            ) : (
+              <div className={styles.earnedReward}><span>✦</span><div><h3>已獲得 {rewardsEarned} 份獎勵</h3><p>請於店內向店員出示兌換資格</p></div></div>
+            )}
+            <div className={styles.stampHowTo}><strong>使用說明</strong><span>▣　掃描行動條碼</span><p>* 集點方式以現場人員說明為主<br />* 滿點禮以領取集點卡時公告為主</p></div>
             <a href="https://lin.ee/sB558niE" target="_blank" rel="noopener noreferrer" className={styles.lineButton}><span>LINE</span> 加入好友，接收最新口味 <b>↗</b></a>
             <div className={styles.wishCard}>
               <div className={styles.wishHeading}><span>✦</span><div><p className={styles.kicker}>TASTE LAB</p><h2>口味許願池</h2></div></div>
