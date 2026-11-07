@@ -4,6 +4,7 @@ import { startTransition, useEffect, useEffectEvent, useRef, useState } from 're
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import liff from '@line/liff';
+import QRCode from 'qrcode';
 import { getApp, getApps, initializeApp } from 'firebase/app';
 import { getDatabase, get, equalTo, onValue, orderByChild, push, query, ref, set } from 'firebase/database';
 import { getShopStatus, type BusinessHours } from '@/lib/business-hours';
@@ -291,6 +292,7 @@ export default function Home() {
   const [clock, setClock] = useState(() => Date.now());
   const [memberPoints, setMemberPoints] = useState<MemberPointsAccount>({ balance: 0, entries: {} });
   const [rewardTab, setRewardTab] = useState<'available' | 'earned'>('available');
+  const [memberQrDataUrl, setMemberQrDataUrl] = useState('');
 
   const [todayContent] = useState(() => dailyData[new Date().getDay()]);
 
@@ -348,6 +350,32 @@ export default function Home() {
     }, (error) => {
       console.error('會員點數同步失敗:', error);
     });
+  }, [profile?.userId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const createMemberQr = async () => {
+      if (!profile?.userId) {
+        setMemberQrDataUrl('');
+        return;
+      }
+      try {
+        const accessToken = liff.getAccessToken();
+        if (!accessToken) throw new Error('找不到 LINE 登入 Token');
+        const dataUrl = await QRCode.toDataURL(`gelato-member-token:${accessToken}`, {
+          errorCorrectionLevel: 'M',
+          margin: 2,
+          width: 320,
+          color: { dark: '#2d1f14', light: '#fffdf9' },
+        });
+        if (!cancelled) setMemberQrDataUrl(dataUrl);
+      } catch (error) {
+        console.error('會員 QR Code 產生失敗:', error);
+        if (!cancelled) setMemberQrDataUrl('');
+      }
+    };
+    void createMemberQr();
+    return () => { cancelled = true; };
   }, [profile?.userId]);
 
   useEffect(() => {
@@ -690,6 +718,11 @@ export default function Home() {
                 {Array.from({ length: 10 }, (_, index) => <span key={index} className={`${styles.stampDot} ${index < stampCount ? styles.stampDotFilled : ''}`}>{index < stampCount ? 'STAMP' : index === 9 ? '★' : 'STAMP'}</span>)}
               </div>
               <div className={styles.stampProgressLine}><span>目前 {pointsBalance} 點</span><span>集滿 10 點可兌換</span></div>
+            </section>
+            <section className={styles.memberQrCard} aria-label="出示會員 QR Code">
+              <div className={styles.memberQrCopy}><p className={styles.kicker}>STORE CHECK-IN</p><h2>到店出示會員</h2><p>結帳前請讓店員掃描此 QR Code，符合規則的獨享杯／雙重奏會自動累積點數。</p></div>
+              {memberQrDataUrl ? <Image className={styles.memberQrImage} src={memberQrDataUrl} alt="會員 QR Code" width={190} height={190} unoptimized /> : <div className={styles.memberQrLoading}>正在準備會員條碼…</div>}
+              <small className={styles.memberQrSecurity}>此條碼只供本次 LINE 會員驗證使用，請勿轉傳。</small>
             </section>
             <div className={styles.rewardTabs} role="tablist">
               <button type="button" role="tab" aria-selected={rewardTab === 'available'} onClick={() => setRewardTab('available')} className={rewardTab === 'available' ? styles.rewardTabActive : ''}>尚未獲得的獎勵</button>
