@@ -1629,6 +1629,14 @@
         .pickup-immediate { grid-column: 1 / -1; border-color: #6c9b68; background: #e8f2e5; color: #477245; }
         .pickup-immediate.selected { background: #cfe4c9; border-color: #477245; }
         @media (max-width: 480px) { body { padding-top: 70px; } .control-bar { width: 100%; border-radius: 0 0 16px 16px; } .container-option img { width: 46px; height: 46px; } .container-option-name { font-size: 13px; } }
+
+        /* ===== LIFF app dock ===== */
+        body { padding-bottom: 88px; }
+        .app-dock { position: fixed; z-index: 10000; left: 50%; bottom: 0; transform: translateX(-50%); display: flex; align-items: center; justify-content: space-around; width: min(100%, 500px); height: 72px; padding: 7px 16px max(7px, env(safe-area-inset-bottom)); box-sizing: border-box; border: 1px solid rgba(227,216,202,.92); border-bottom: 0; border-radius: 25px 25px 0 0; background: rgba(255,253,248,.94); box-shadow: 0 -8px 22px rgba(72,52,39,.1); backdrop-filter: blur(16px); }
+        .app-dock a { position: relative; flex: 1; height: 54px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; border-radius: 15px; color: #a99d91; text-decoration: none; font-weight: 700; }
+        .app-dock a span { font-size: 21px; line-height: 21px; }.app-dock a small { font-size: 9px; }.app-dock a.active { color: #c96851; }.app-dock a.active::after { content: ''; position: absolute; bottom: 1px; width: 5px; height: 5px; border-radius: 50%; background: #c96851; }
+        .app-dock a.dock-order { flex: 0 0 62px; height: 62px; margin-top: -18px; border: 5px solid var(--bg-page, #f8f5ee); border-radius: 21px; color: #fff; background: linear-gradient(145deg,#e78f69,#c76851); box-shadow: 0 8px 15px rgba(193,93,70,.25); }.app-dock a.dock-order small { color: #fff; }.app-dock a.dock-order.active::after { display: none; }
+        @media (max-width: 380px) { .app-dock { height: 66px; }.app-dock a { height: 49px; }.app-dock a.dock-order { height: 58px; } }
     </style>
 </head>
 <body>
@@ -3613,5 +3621,12 @@ s0.parentNode.insertBefore(s1,s0);
 })();
 </script>
 <!--End of Tawk.to Script-->
+
+    <nav class="app-dock" aria-label="主要導覽">
+        <a href="../?tab=home"><span>⌂</span><small>今日</small></a>
+        <a class="dock-order active" href="./"><span>✦</span><small>點餐</small></a>
+        <a href="../?tab=orders"><span>◷</span><small>足跡</small></a>
+        <a href="../?tab=member"><span>◒</span><small>俱樂部</small></a>
+    </nav>
 </body>
 </html>

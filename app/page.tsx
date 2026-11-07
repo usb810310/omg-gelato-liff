@@ -277,7 +277,11 @@ export default function Home() {
   const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [status, setStatus] = useState('正在初始化...');
-  const [activeTab, setActiveTab] = useState<'home' | 'orders' | 'member'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'orders' | 'member'>(() => {
+    if (typeof window === 'undefined') return 'home';
+    const requestedTab = new URLSearchParams(window.location.search).get('tab');
+    return requestedTab === 'orders' || requestedTab === 'member' ? requestedTab : 'home';
+  });
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoadingOrders, setIsLoadingOrders] = useState(false);
   const [wishText, setWishText] = useState('');
@@ -441,6 +445,7 @@ export default function Home() {
     setActiveTab(tab);
     setSelectedOrderNo(null); // 切換分頁時回到訂單列表
     if (tab === 'orders') loadOrders();
+    router.replace(tab === 'home' ? '/' : `/?tab=${tab}`, { scroll: false });
   };
 
   const openMenu = () => {
