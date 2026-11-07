@@ -298,6 +298,7 @@ export default function Home() {
   const [memberPoints, setMemberPoints] = useState<MemberPointsAccount>({ balance: 0, entries: {} });
   const [memberQrDataUrl, setMemberQrDataUrl] = useState('');
   const [memberQrOpen, setMemberQrOpen] = useState(false);
+  const ordersRef = useRef<Order[]>([]);
 
   const [todayContent] = useState(() => dailyData[new Date().getDay()]);
 
@@ -356,6 +357,10 @@ export default function Home() {
       console.error('會員點數同步失敗:', error);
     });
   }, [profile?.userId]);
+
+  useEffect(() => {
+    ordersRef.current = orders;
+  }, [orders]);
 
   useEffect(() => {
     let cancelled = false;
@@ -539,6 +544,27 @@ export default function Home() {
     if (!targetOrder) return;
     handleOrderReturn(targetOrder, action);
   }, [profile?.userId, orders]);
+
+  useEffect(() => {
+    const handleEmbeddedPaymentStart = (event: MessageEvent<{ type?: string; orderNo?: string }>) => {
+      if (event.origin !== window.location.origin || event.data?.type !== 'OMG_LINEPAY_START' || !event.data.orderNo) return;
+      const orderNo = event.data.orderNo;
+      setActiveTab('orders');
+      setSelectedOrderNo(orderNo);
+      let attempts = 0;
+      const startWhenOrderIsReady = () => {
+        const targetOrder = ordersRef.current.find((order) => String(order.orderNo) === orderNo);
+        if (targetOrder) {
+          void startLinePay(targetOrder);
+          return;
+        }
+        if (attempts++ < 12) window.setTimeout(startWhenOrderIsReady, 250);
+      };
+      startWhenOrderIsReady();
+    };
+    window.addEventListener('message', handleEmbeddedPaymentStart);
+    return () => window.removeEventListener('message', handleEmbeddedPaymentStart);
+  }, [orders, startLinePay]);
 
   if (!profile && (status.includes('正在初始化') || status === '載入中...')) {
     return (
