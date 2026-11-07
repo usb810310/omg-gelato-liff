@@ -3400,8 +3400,7 @@
             }
         });
 
-        onValue(ref(db, 'todayFlavors'), (s) => {
-            const data = s.val();
+        function renderTodayFlavors(data) {
             if (!data) { todayGrid.innerHTML = '<div class="today-empty">今天還沒有特別推薦 🍽️</div>';
                 setSyncStatus('online', '同步中');
                 checkScrollable(); return; }
@@ -3419,8 +3418,25 @@
             todayGrid.innerHTML = html;
             setSyncStatus('online', '同步中');
             setTimeout(checkScrollable, 400);
-        }, () => { todayGrid.innerHTML = '<div class="today-empty">連線服務中斷⋯口味無法同步,請至門市直接洽詢</div>';
-            setSyncStatus('offline', '離線'); });
+        }
+
+        async function loadTodayFlavorsFallback() {
+            try {
+                const response = await fetch(`${firebaseConfig.databaseURL}/todayFlavors.json`, { cache: 'no-store' });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                renderTodayFlavors(await response.json());
+                setSyncStatus('online', '同步中');
+            } catch (error) {
+                console.warn('口味 REST 備援讀取失敗:', error);
+                todayGrid.innerHTML = '<div class="today-empty">連線服務中斷⋯口味無法同步，請重新整理或至門市洽詢</div>';
+                setSyncStatus('offline', '離線');
+            }
+        }
+
+        onValue(ref(db, 'todayFlavors'), (s) => {
+            renderTodayFlavors(s.val());
+        }, () => { void loadTodayFlavorsFallback(); });
+        void loadTodayFlavorsFallback();
 
         // ---- siteConfig ----
         function loadSiteConfig() {
