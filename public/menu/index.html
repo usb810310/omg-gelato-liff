@@ -2021,7 +2021,7 @@
 
         let selectedDate = 'today';
         let selectedSlot = null;
-        let currentMember = { memberNo: null, phone: null, memberKey: null, memberType: null };
+        let currentMember = { memberNo: null, phone: null, memberKey: null, memberType: null, pointsBalance: 0 };
 
         function createMemberNo() {
             const stamp = Date.now().toString(36).toUpperCase();
@@ -2062,6 +2062,7 @@
                 displayName: window.liffDisplayName || existing?.displayName || null,
                 pictureUrl: window.liffPictureUrl || existing?.pictureUrl || null,
                 phone: existing?.phone || null,
+                pointsBalance: Number(existing?.pointsBalance || 0),
                 createdAt: existing?.createdAt || Date.now(),
                 updatedAt: Date.now(),
             };
@@ -2079,6 +2080,54 @@
             await set(ref(db, `members/${profile.memberKey}`), updated);
             currentMember = updated;
             return updated;
+        }
+
+        function getOrderRewardPoints(items) {
+            return (Array.isArray(items) ? items : []).reduce((total, item) => {
+                const name = String(item?.name || '');
+                const qty = Math.max(0, Number(item?.qty || 0));
+                return total + (/獨享杯|雙重奏/.test(name) ? qty * 2 : 0);
+            }, 0);
+        }
+
+        async function awardOrderPoints({ memberProfile, orderId, orderNo, items }) {
+            const points = getOrderRewardPoints(items);
+            if (!points || !memberProfile?.memberKey || !orderId) return 0;
+            const accountRef = ref(db, `memberPoints/${memberProfile.memberKey}`);
+            const result = await runTransaction(accountRef, (current) => {
+                const account = current && typeof current === 'object' ? current : {};
+                const entries = account.entries && typeof account.entries === 'object' ? account.entries : {};
+                const awardKey = `order_${orderId}`;
+                if (entries[awardKey]) return;
+                return {
+                    ...account,
+                    balance: Number(account.balance || 0) + points,
+                    updatedAt: Date.now(),
+                    entries: {
+                        ...entries,
+                        [awardKey]: {
+                            id: awardKey,
+                            delta: points,
+                            type: 'order_reward',
+                            source: 'order',
+                            sourceLabel: '訂單自動集點',
+                            orderId,
+                            orderNo: String(orderNo || ''),
+                            itemSummary: (items || []).filter((item) => /獨享杯|雙重奏/.test(String(item?.name || ''))).map((item) => `${item.name} × ${item.qty || 0}`).join('、'),
+                            createdAt: Date.now(),
+                            createdBy: 'system',
+                        },
+                    },
+                };
+            });
+            if (result.committed) {
+                const awardedBalance = Number(result.snapshot.val()?.balance || 0);
+                const updatedProfile = { ...memberProfile, pointsBalance: awardedBalance, updatedAt: Date.now() };
+                await set(ref(db, `members/${memberProfile.memberKey}`), updatedProfile);
+                currentMember = updatedProfile;
+                return points;
+            }
+            return 0;
         }
         let isSubmittingOrder = false;
         const ORDER_SUBMIT_LOCK_KEY = 'omg-order-submit-lock';
@@ -3125,6 +3174,7 @@
                 });
 
                 const total = itemsForFirebase.reduce((sum, item) => sum + item.price * item.qty, 0);
+                const rewardPoints = getOrderRewardPoints(itemsForFirebase);
                 const orderNo = 'WEB-' + Date.now().toString(36).slice(-7).toUpperCase();
                 const pickupNo = await getNextPickupNo();
                 const orderRef = push(ref(db, 'orders'));
@@ -3140,6 +3190,7 @@
                     date: new Date().toISOString().split('T')[0],
                     items: itemsForFirebase,
                     total,
+                    rewardPoints,
                     payment: payMethod === 'onsite_linepay' ? 'LINE Pay' : '現場付款',
                     paymentStatus: 'unpaid',
                     paymentMethod: payMethod === 'onsite_linepay' ? 'ONSITE_LINEPAY' : 'ONSITE_CASH',
@@ -3157,8 +3208,19 @@
                     userId: memberProfile.lineUserId || null,
                     displayName: memberProfile.displayName || null,
                     pictureUrl: memberProfile.pictureUrl || null,
+                    pointsAwardStatus: rewardPoints ? 'pending' : 'not_applicable',
                 });
-                
+
+                let pointsWarning = '';
+                if (rewardPoints) {
+                    try {
+                        await awardOrderPoints({ memberProfile, orderId: orderRef.key, orderNo, items: itemsForFirebase });
+                        await set(ref(db, `orders/${orderRef.key}/pointsAwardStatus`), 'awarded');
+                    } catch (error) {
+                        console.error('訂單已建立，但點數入帳失敗:', error);
+                        pointsWarning = '點數稍後由店家補登';
+                    }
+                }
                 let notificationWarning = '';
                 if (payMethod !== 'onsite_linepay') {
                     const pickupDay = pickupRel.includes('明天') ? 'tomorrow' : 'today';
@@ -3201,6 +3263,7 @@
                 showToast(
                     notificationWarning
                         ? `訂單已送出；LINE 通知失敗：${notificationWarning}`
+                        : pointsWarning ? `訂單已送出，${pointsWarning}`
                         : payMethod === 'onsite_linepay' ? '訂單已送出，正在前往 LINE Pay 付款' : '訂單已送出，請到 LINE 查看訂單小卡',
                     notificationWarning ? '⚠️' : '✅',
                 );

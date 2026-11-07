@@ -24,6 +24,12 @@ const dailyData = [
 
 type Profile = { userId: string; displayName: string; pictureUrl?: string };
 
+type MemberPointsAccount = {
+  balance?: number;
+  updatedAt?: number;
+  entries?: Record<string, { delta?: number; sourceLabel?: string; createdAt?: number; orderNo?: string }>;
+};
+
 type Order = {
   id?: string; userId?: string;
   orderNo?: string | number; displayNo?: string | number;
@@ -283,6 +289,7 @@ export default function Home() {
   const autoPayStarted = useRef(false);
   const [businessHours, setBusinessHours] = useState<BusinessHours | null>(null);
   const [clock, setClock] = useState(() => Date.now());
+  const [memberPoints, setMemberPoints] = useState<MemberPointsAccount>({ balance: 0, entries: {} });
 
   const [todayContent] = useState(() => dailyData[new Date().getDay()]);
 
@@ -329,6 +336,16 @@ export default function Home() {
       setOrders(userOrders);
     }, (error) => {
       console.error('訂單即時同步失敗:', error);
+    });
+  }, [profile?.userId]);
+
+  useEffect(() => {
+    if (!profile?.userId) return;
+    const memberKey = `line_${profile.userId.replace(/[^A-Za-z0-9_-]/g, '')}`;
+    return onValue(ref(getGelatoDatabase(), `memberPoints/${memberKey}`), (snapshot) => {
+      setMemberPoints((snapshot.val() as MemberPointsAccount | null) ?? { balance: 0, entries: {} });
+    }, (error) => {
+      console.error('會員點數同步失敗:', error);
     });
   }, [profile?.userId]);
 
@@ -654,6 +671,10 @@ export default function Home() {
               <p className={styles.kicker}>GELATO CLUB MEMBER</p>
               <h1>{profile?.displayName || 'Gelato Lover'}</h1>
               <p className={styles.memberId}>ID · {profile?.userId?.slice(-8) || 'WELCOME'}</p>
+            </div>
+            <div className={styles.pointsCard}>
+              <div><p className={styles.kicker}>GELATO POINTS</p><strong>{Number(memberPoints.balance || 0)}<small> 點</small></strong><span>每杯獨享杯／雙重奏自動集 2 點</span></div>
+              <span className={styles.pointsIcon}>✦</span>
             </div>
             <a href="https://lin.ee/sB558niE" target="_blank" rel="noopener noreferrer" className={styles.lineButton}><span>LINE</span> 加入好友，接收最新口味 <b>↗</b></a>
             <div className={styles.wishCard}>
