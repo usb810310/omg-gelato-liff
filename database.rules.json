@@ -1,0 +1,59 @@
+{
+  "rules": {
+    "todayFlavors": {
+      ".read": true,
+      ".write": true
+    },
+    "menu": {
+      ".read": true,
+      ".write": true
+    },
+    "siteConfig": {
+      ".read": true,
+      ".write": true
+    },
+    "globalOverlay": {
+      ".read": true,
+      ".write": true
+    },
+    "announcements": {
+      ".read": true,
+      ".write": true
+    },
+    "orders": {
+      ".read": true,
+      ".write": true,
+      ".indexOn": [
+        "userId",
+        "memberNo",
+        "date",
+        "time"
+      ]
+    },
+    "businessHours": {
+      ".read": true,
+      ".write": "auth != null"
+    },
+    "dailyPickupCounters": {
+      ".read": true,
+      ".write": true
+    },
+    "members": {
+      ".read": true,
+      ".write": true,
+      ".indexOn": [
+        "lineUserId",
+        "phone",
+        "memberNo"
+      ]
+    },
+    "wishlist": {
+      ".read": true,
+      ".write": true
+    },
+    "$other": {
+      ".read": false,
+      ".write": false
+    }
+  }
+}
