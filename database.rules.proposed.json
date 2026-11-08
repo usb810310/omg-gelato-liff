@@ -1,0 +1,67 @@
+{
+  "rules": {
+    "todayFlavors": {
+      ".read": true,
+      ".write": "auth != null && (auth.token.posStaff == true || auth.token.posAdmin == true)"
+    },
+    "menu": {
+      ".read": true,
+      ".write": "auth != null && auth.token.posAdmin == true"
+    },
+    "siteConfig": {
+      ".read": true,
+      ".write": "auth != null && auth.token.posAdmin == true"
+    },
+    "globalOverlay": {
+      ".read": true,
+      ".write": "auth != null && auth.token.posAdmin == true"
+    },
+    "announcements": {
+      ".read": true,
+      ".write": "auth != null && auth.token.posStaff == true"
+    },
+    "orders": {
+      ".read": "auth != null && auth.token.posStaff == true",
+      ".write": "auth != null && auth.token.posStaff == true",
+      ".indexOn": [
+        "userId",
+        "memberNo",
+        "date",
+        "time"
+      ]
+    },
+    "businessHours": {
+      ".read": true,
+      ".write": "auth != null && auth.token.posStaff == true"
+    },
+    "dailyPickupCounters": {
+      ".read": false,
+      ".write": false
+    },
+    "members": {
+      ".read": "auth != null && auth.token.posStaff == true",
+      ".write": "auth != null && auth.token.posAdmin == true",
+      ".indexOn": [
+        "lineUserId",
+        "phone",
+        "memberNo"
+      ]
+    },
+    "wishlist": {
+      ".read": "auth != null && auth.token.posStaff == true",
+      ".write": false
+    },
+    "memberPoints": {
+      ".read": false,
+      ".write": false
+    },
+    "pointCampaigns": {
+      ".read": true,
+      ".write": "auth != null && auth.token.posAdmin == true"
+    },
+    "$other": {
+      ".read": false,
+      ".write": false
+    }
+  }
+}
