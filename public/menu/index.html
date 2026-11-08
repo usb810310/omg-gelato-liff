@@ -2086,7 +2086,7 @@
         }
 
         import { initializeApp, getApp, getApps } from 'firebase/app';
-        import { getDatabase, ref, onValue, push, set, get, query, orderByChild, equalTo, limitToLast } from 'firebase/database';
+        import { getDatabase, ref, onValue, get, query, orderByChild, equalTo, limitToLast } from 'firebase/database';
 
         const firebaseConfig = {
             apiKey: "AIzaSyDvzZKr2x3TGeOFZGisKKXjbYH00DLVhKg",
@@ -2199,26 +2199,20 @@
 
         async function ensureMemberProfile() {
             const memberKey = getSafeMemberKey();
-            const memberRef = ref(db, `members/${memberKey}`);
-            const snapshot = await get(memberRef);
-            const existing = snapshot.exists() ? snapshot.val() : null;
-            const memberNo = existing?.memberNo || createMemberNo();
-            const memberType = window.liffUserId ? 'line' : 'guest';
-            const profile = {
-                memberNo,
-                memberKey,
-                memberType,
-                lineUserId: window.liffUserId || null,
-                displayName: window.liffDisplayName || existing?.displayName || null,
-                pictureUrl: window.liffPictureUrl || existing?.pictureUrl || null,
-                phone: existing?.phone || null,
-                pointsBalance: Number(existing?.pointsBalance || 0),
-                createdAt: existing?.createdAt || Date.now(),
-                updatedAt: Date.now(),
-            };
-            await set(memberRef, profile);
-            currentMember = profile;
-            return profile;
+            const response = await fetch('/api/member/profile', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    accessToken: window.liffAccessToken || '',
+                    memberKey,
+                    displayName: window.liffDisplayName || '',
+                    pictureUrl: window.liffPictureUrl || '',
+                }),
+            });
+            const result = await response.json().catch(() => ({}));
+            if (!response.ok || !result.success) throw new Error(result.error || '會員資料載入失敗');
+            currentMember = result.profile;
+            return result.profile;
         }
 
         async function ensureGuestPhone(profile) {
@@ -2227,9 +2221,15 @@
             const phone = normalizePhone(input);
             if (!phone) throw new Error('請輸入正確的手機號碼');
             const updated = { ...profile, phone, updatedAt: Date.now() };
-            await set(ref(db, `members/${profile.memberKey}`), updated);
-            currentMember = updated;
-            return updated;
+            const response = await fetch('/api/member/profile', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ accessToken: window.liffAccessToken || '', memberKey: profile.memberKey, phone }),
+            });
+            const result = await response.json().catch(() => ({}));
+            if (!response.ok || !result.success) throw new Error(result.error || '會員資料更新失敗');
+            currentMember = result.profile || updated;
+            return currentMember;
         }
 
         function getOrderRewardPoints(items, campaignBonus = 0) {
@@ -2812,26 +2812,17 @@
 
         function syncPendingWishes() {
             const pending = JSON.parse(localStorage.getItem('pendingWishes') || '[]');
-            if (pending.length === 0) return;
-            const wishRef = ref(db, 'wishlist');
-            let successCount = 0;
-            pending.forEach((item, index) => {
-                const newRef = push(wishRef);
-                set(newRef, {
-                    flavor: item.flavor,
-                    timestamp: item.timestamp,
-                    date: item.date || new Date().toISOString().split('T')[0],
-                    status: 'pending'
-                }).then(() => {
-                    successCount++;
-                    if (successCount === pending.length) {
-                        localStorage.removeItem('pendingWishes');
-                        showToast(`✅ 已同步 ${successCount} 筆願望`, '📡');
-                    }
-                }).catch(err => {
-                    console.warn('同步本機願望失敗', err);
+            if (pending.length === 0 || !window.liffAccessToken) return;
+            Promise.all(pending.map(async (item) => {
+                const response = await fetch('/api/wishlist', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ accessToken: window.liffAccessToken, wishText: item.flavor }),
                 });
-            });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            })).then(() => {
+                localStorage.removeItem('pendingWishes');
+                showToast(`✅ 已同步 ${pending.length} 筆願望`, '📡');
+            }).catch(err => console.warn('同步本機願望失敗', err));
         }
 
         // ===== ★ 許願池（含送出特效） =====
@@ -2852,10 +2843,14 @@
                 status: 'pending'
             };
 
-            const wishRef = ref(db, 'wishlist');
-            const newWishRef = push(wishRef);
-            set(newWishRef, wishData)
-                .then(() => {
+            fetch('/api/wishlist', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ accessToken: window.liffAccessToken, wishText: val }),
+            })
+                .then(async (response) => {
+                    const result = await response.json().catch(() => ({}));
+                    if (!response.ok || !result.success) throw new Error(result.error || '許願失敗');
                     // ✅ 送出成功 → 觸發特效
                     showWishSuccessEffect(val);
                     // 關閉 Modal（延遲，讓特效先出現）
@@ -3246,25 +3241,6 @@
             return lines.join('\n');
         }
 
-        async function getNextPickupNo() {
-            const dateKey = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei' }).format(new Date()).replaceAll('-', '');
-            const usedCodesPath = `dailyPickupCodes/${dateKey}`;
-            try {
-                for (let attempt = 0; attempt < 30; attempt += 1) {
-                    const code = String(Math.floor(100 + Math.random() * 900));
-                    const codeRef = ref(db, `${usedCodesPath}/${code}`);
-                    const result = await runTransaction(codeRef, (current) => current || {
-                        createdAt: new Date().toISOString(),
-                    });
-                    if (result.committed) return code;
-                }
-                throw new Error('今日可用取餐號碼不足');
-            } catch (error) {
-                console.warn('隨機取餐號碼記錄無法使用，改用隨機備援編號:', error);
-                return String(Math.floor(100 + Math.random() * 900));
-            }
-        }
-
         async function sendOrderToLine(pickupAbs, pickupRel, payMethod = 'onsite_cash') {
             if (payMethod === 'onsite_linepay' && !window.liffUserId) {
                 clearOrderSubmitLock();
@@ -3309,14 +3285,12 @@
                 const campaignBonusPoints = 0;
                 const rewardPoints = POINTS_REWARDS_ENABLED ? baseRewardPoints + campaignBonusPoints : 0;
                 const orderNo = 'WEB-' + Date.now().toString(36).slice(-7).toUpperCase();
-                const pickupNo = await getNextPickupNo();
-                const orderRef = push(ref(db, 'orders'));
-                await set(orderRef, {
+                const orderPayload = {
                     orderNo,
                     channel: 'online',
-                    pickupNo,
-                    pickupNumber: pickupNo,
-                    pickupCode: pickupNo,
+                    pickupNo: null,
+                    pickupNumber: null,
+                    pickupCode: null,
                     userId: window.liffUserId || null,
                     displayName: window.liffDisplayName || null,
                     time: new Date().toISOString(),
@@ -3346,7 +3320,15 @@
                     displayName: memberProfile.displayName || null,
                     pictureUrl: memberProfile.pictureUrl || null,
                     pointsAwardStatus: POINTS_REWARDS_ENABLED && rewardPoints ? 'pending' : 'disabled',
+                };
+                const createOrderResponse = await fetch('/api/orders/create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ accessToken: window.liffAccessToken || '', order: orderPayload }),
                 });
+                const createdOrder = await createOrderResponse.json().catch(() => ({}));
+                if (!createOrderResponse.ok || !createdOrder.success) throw new Error(createdOrder.error || '建立訂單失敗');
+                const pickupNo = createdOrder.pickupNo;
 
                 let pointsWarning = '';
                 if (POINTS_REWARDS_ENABLED && rewardPoints && window.liffAccessToken) {

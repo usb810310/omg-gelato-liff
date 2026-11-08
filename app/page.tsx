@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import liff from '@line/liff';
 import QRCode from 'qrcode';
 import { getApp, getApps, initializeApp } from 'firebase/app';
-import { getDatabase, get, equalTo, onValue, orderByChild, push, query, ref, set } from 'firebase/database';
+import { getDatabase, get, equalTo, onValue, orderByChild, query, ref } from 'firebase/database';
 import { getShopStatus, type BusinessHours } from '@/lib/business-hours';
 import { getPaymentDisplayStatus, isOrderCancelled, isOrderRefunded, isOrderRejected, isOrderTerminal } from '@/lib/order-status';
 import styles from './page.module.css';
@@ -452,15 +452,14 @@ export default function Home() {
     if (!wishText.trim() || !profile) return;
     setIsSubmittingWish(true);
     try {
-      const wishRef = push(ref(getGelatoDatabase(), 'wishlist'));
-      await set(wishRef, {
-        userId: profile.userId,
-        displayName: profile.displayName,
-        wishText: wishText.trim(),
-        flavor: wishText.trim(),
-        timestamp: Date.now(),
-        status: 'pending',
+      const accessToken = liff.getAccessToken();
+      const response = await fetch('/api/wishlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accessToken, wishText: wishText.trim() }),
       });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.success) throw new Error(result.error || '許願失敗');
       setWishSuccess(true);
       setWishText('');
       window.setTimeout(() => setWishSuccess(false), 3000);
