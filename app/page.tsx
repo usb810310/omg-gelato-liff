@@ -686,7 +686,7 @@ export default function Home() {
             </section>
 
             <section className={styles.memberActionCard} aria-label="門市消費專用QR Code">
-              <div className={styles.actionCardHeading}><span className={styles.actionIcon}>⌁</span><div><p className={styles.kicker}>門市消費專用QR Code</p><h2>結帳前，請出示給店家掃描會員條碼</h2></div></div>
+              <div className={styles.actionCardHeading}><span className={styles.actionIcon}>⌁</span><div><p className={styles.kicker}>門市消費專用QR Code</p><h2>結帳前，請出示會員條碼</h2></div></div>
               <p className={styles.actionCardDescription}>購買「獨享杯／雙重奏」系統自動結算發放點數。</p>
               <button type="button" className={styles.qrActionButton} onClick={() => setMemberQrOpen((open) => !open)} aria-expanded={memberQrOpen}>
                 <span>{memberQrOpen ? '收起會員 QR Code' : '出示會員 QR Code'}</span><b>{memberQrOpen ? '⌃' : '↗'}</b>
