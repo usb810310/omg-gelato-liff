@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { findOrderByNo, getLiffReturnUrl, updateOrder } from '@/lib/linepay';
+import { reverseOrderPoints } from '@/lib/member-points';
 
 export const runtime = 'nodejs';
 
@@ -21,6 +22,11 @@ export async function GET(request: Request) {
           linePayTransactionId: transactionId || order.linePayTransactionId || null,
           paymentCancelledAt: new Date().toISOString(),
         });
+        try {
+          await reverseOrderPoints(String(order.orderNo || orderNo));
+        } catch (reverseError) {
+          console.error('LINE Pay 取消後撤銷點數失敗:', reverseError);
+        }
       }
     }
   } catch (error) {

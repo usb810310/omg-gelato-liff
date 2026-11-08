@@ -2102,7 +2102,7 @@
         // 一般獨享杯／雙重奏每杯 1 點；活動日每筆符合品項訂單額外加 2 點。
         const POINTS_REWARDS_ENABLED = true;
         const BASE_REWARD_POINTS_PER_CUP = 1;
-        const CAMPAIGN_BONUS_POINTS = 2;
+        const CAMPAIGN_BONUS_POINTS = 0;
 
         // DOM
         const todayGrid = document.getElementById('todayGrid'),
@@ -2238,7 +2238,8 @@
                 const qty = Math.max(0, Number(item?.qty || 0));
                 return total + (/獨享杯|雙重奏/.test(name) ? qty * BASE_REWARD_POINTS_PER_CUP : 0);
             }, 0);
-            return basePoints > 0 ? basePoints + Math.max(0, Number(campaignBonus || 0)) : 0;
+            // 集點規則固定：只有獨享杯／雙重奏，且每件 1 點；不再疊加活動加點。
+            return basePoints > 0 ? basePoints : 0;
         }
 
         function getPickupDateKey(pickupAbs) {
@@ -3349,7 +3350,7 @@
                 const pickupDateKey = getPickupDateKey(pickupAbs);
                 const pointCampaign = await getPointCampaignForDate(pickupDateKey);
                 const baseRewardPoints = getOrderRewardPoints(itemsForFirebase, 0);
-                const campaignBonusPoints = baseRewardPoints > 0 ? Math.max(0, Number(pointCampaign?.bonusPoints ?? CAMPAIGN_BONUS_POINTS)) : 0;
+                const campaignBonusPoints = 0;
                 const rewardPoints = POINTS_REWARDS_ENABLED ? baseRewardPoints + campaignBonusPoints : 0;
                 const orderNo = 'WEB-' + Date.now().toString(36).slice(-7).toUpperCase();
                 const pickupNo = await getNextPickupNo();

@@ -6,11 +6,11 @@ const ELIGIBLE_PRODUCTS = new Set(['OMG獨享杯', 'OMG雙重奏']);
 export type LineMember = { userId: string; displayName: string; pictureUrl?: string };
 export type MemberPointEntry = {
   delta: number;
-  type: 'pos_purchase';
+  type: 'pos_purchase' | 'order_reward' | 'legacy_line_reward_migration' | 'order_reward_reversal';
   sourceLabel: string;
   createdAt: number;
   orderNo: string;
-  channel: 'pos';
+  channel: 'pos' | 'pos_migration';
   idempotencyKey: string;
 };
 export type MemberPointsAccount = {
@@ -146,6 +146,90 @@ export async function earnPosPoints({ accessToken, orderNo }: { accessToken: str
     if (response.status === 412) continue;
     if (!response.ok) throw new Error(`Firebase 點數寫入失敗（${response.status}）`);
     return { member, points, balance: next.balance, alreadyProcessed: false };
+  }
+  throw new Error('會員點數正在被其他交易更新，請重新操作一次');
+}
+
+export async function reverseOrderPoints(orderNo: string) {
+  const order = await findOrderByNo(String(orderNo));
+  if (!order) throw new Error('找不到要撤銷點數的訂單');
+  const status = String(order.status || '').toLowerCase();
+  const refund = String(order.refundStatus || '').toLowerCase();
+  const terminal = order.cancelled || order.rejected || order.voided || order.refunded
+    || ['cancelled', 'canceled', 'rejected', 'refunded', 'voided'].includes(status)
+    || ['refunded', 'refund', 'success', 'succeeded', 'completed'].includes(refund);
+  if (!terminal) throw new Error('訂單尚未取消或退款，不能撤銷點數');
+  if (!order.userId) return { points: 0, alreadyReversed: false };
+
+  const path = `memberPoints/${encodeURIComponent(memberKey(order.userId))}`;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const current = await firebaseJson<MemberPointsAccount>(path, { etag: true });
+    const account = current.value || { balance: 0, entries: {} };
+    const entries = account.entries || {};
+    const earned = Object.entries(entries).filter(([, entry]) =>
+      Number(entry.delta || 0) > 0 && String(entry.orderNo || '') === String(orderNo)
+        && (entry.type === 'pos_purchase' || entry.type === 'order_reward'),
+    );
+    if (!earned.length) return { points: 0, alreadyReversed: false };
+    const reversible = earned.filter(([entryId]) => !entries[`reversal_${entryId}`]);
+    if (!reversible.length) return { points: 0, alreadyReversed: true };
+    const points = reversible.reduce((sum, [, entry]) => sum + Number(entry.delta || 0), 0);
+    const now = Date.now();
+    const nextEntries = { ...entries } as Record<string, MemberPointEntry>;
+    for (const [entryId, entry] of reversible) {
+      nextEntries[`reversal_${entryId}`] = {
+        delta: -Math.abs(Number(entry.delta || 0)),
+        type: 'order_reward_reversal',
+        sourceLabel: '訂單取消／退款，撤銷原集點',
+        createdAt: now,
+        orderNo: String(orderNo),
+        channel: entry.channel === 'pos' ? 'pos' : 'pos_migration',
+        idempotencyKey: `reversal_${entryId}`,
+      };
+    }
+    const next = { balance: Math.max(0, Number(account.balance || 0) - points), updatedAt: now, entries: nextEntries };
+    const response = await fetch(`${databaseUrl()}/${path}.json`, {
+      method: 'PUT',
+      headers: new Headers({ 'Content-Type': 'application/json', 'If-Match': current.etag || '*' }),
+      body: JSON.stringify(next), cache: 'no-store', signal: AbortSignal.timeout(10000),
+    });
+    if (response.status === 412) continue;
+    if (!response.ok) throw new Error(`Firebase 點數撤銷失敗（${response.status}）`);
+    return { points, balance: next.balance, alreadyReversed: false };
+  }
+  throw new Error('會員點數正在被其他交易更新，請重新操作一次');
+}
+
+export async function migrateLegacyLinePoints({ accessToken, points, operator }: { accessToken: string; points: number; operator?: string }) {
+  const member = await getLineMember(accessToken);
+  const amount = Number(points);
+  if (!Number.isInteger(amount) || amount < 0 || amount > 10) throw new Error('舊點卡轉入點數必須是 0 至 10 的整數');
+  const path = `memberPoints/${encodeURIComponent(memberKey(member.userId))}`;
+  const entryId = `legacy_${createHash('sha256').update(member.userId).digest('hex').slice(0, 24)}`;
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const current = await firebaseJson<MemberPointsAccount>(path, { etag: true });
+    const account = current.value || { balance: 0, entries: {} };
+    const entries = account.entries || {};
+    if (entries[entryId]) {
+      return { member, points: Number(entries[entryId].delta || 0), balance: Math.max(0, Number(account.balance || 0)), alreadyProcessed: true };
+    }
+    const now = Date.now();
+    const entry: MemberPointEntry = {
+      delta: amount,
+      type: 'legacy_line_reward_migration',
+      sourceLabel: 'LINE 官方內建集點卡移轉',
+      createdAt: now,
+      orderNo: `legacy-migration-${member.userId}`,
+      channel: 'pos_migration',
+      idempotencyKey: entryId,
+    };
+    const next = { balance: Math.max(0, Number(account.balance || 0)) + amount, updatedAt: now, entries: { ...entries, [entryId]: entry } };
+    const headers = new Headers({ 'Content-Type': 'application/json', 'If-Match': current.etag || '*' });
+    const response = await fetch(`${databaseUrl()}/${path}.json`, { method: 'PUT', headers, body: JSON.stringify(next), cache: 'no-store', signal: AbortSignal.timeout(10000) });
+    if (response.status === 412) continue;
+    if (!response.ok) throw new Error(`Firebase 舊點卡移轉寫入失敗（${response.status}）`);
+    return { member, points: amount, balance: next.balance, alreadyProcessed: false, operator: operator || 'POS' };
   }
   throw new Error('會員點數正在被其他交易更新，請重新操作一次');
 }

@@ -1,5 +1,6 @@
 import { createHmac, randomUUID } from 'node:crypto';
 import { getPaymentDisplayStatus, isOrderTerminal } from '@/lib/order-status';
+import { reverseOrderPoints } from '@/lib/member-points';
 
 type LinePayConfig = {
   channelId: string;
@@ -197,6 +198,11 @@ export async function cancelWaitingOrder(orderNo: string, userId: string) {
     throw new OrderCancellationError('訂單狀態已更新，請重新整理後確認；如店家已接單，請洽客服人員', 409);
   }
   if (!updateResponse.ok) throw new Error('無法更新 Firebase 訂單狀態');
+  try {
+    await reverseOrderPoints(orderNo);
+  } catch (error) {
+    console.error('顧客取消後撤銷點數失敗:', error);
+  }
 }
 
 export type { FirebaseOrder };
