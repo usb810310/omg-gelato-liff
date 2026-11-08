@@ -347,6 +347,12 @@
 .menuFrame { position:fixed; z-index:6; top:80px; bottom:73px; left:50%; width:min(100%,520px); transform:translateX(-50%); overflow:hidden; border-radius:0; background:var(--paper); transition:opacity .18s ease, visibility .18s ease; }
 .menuFrame iframe { display:block; width:100%; height:100%; border:0; background:var(--paper); }
 .menuFrameVisible { visibility:visible; opacity:1; pointer-events:auto; }.menuFrameHidden { visibility:hidden; opacity:0; pointer-events:none; }
+.menuLoadingOverlay { position:absolute; inset:0; z-index:2; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:7px; color:var(--ink); background:linear-gradient(145deg,#fffaf2 0%,#f8eee5 100%); }
+.menuLoadingOrb { display:grid; place-items:center; width:54px; height:54px; border:1px solid rgba(213,137,105,.28); border-radius:50%; color:#d47758; background:rgba(255,255,255,.75); box-shadow:0 8px 24px rgba(169,105,76,.14); font-size:24px; animation:menuLoadingFloat 1.4s ease-in-out infinite; }
+.menuLoadingOverlay strong { font-size:15px; font-weight:850; letter-spacing:.02em; }.menuLoadingOverlay small { color:var(--muted); font-size:11px; }.menuLoadingOverlay i { width:46px; height:3px; overflow:hidden; border-radius:99px; background:#ead8cc; position:relative; }.menuLoadingOverlay i::after { content:''; position:absolute; inset:0 auto 0 0; width:45%; border-radius:inherit; background:#d47758; animation:menuLoadingBar 1.15s ease-in-out infinite; }
+@keyframes menuLoadingFloat { 0%,100% { transform:translateY(0) scale(1); } 50% { transform:translateY(-5px) scale(1.04); } }
+@keyframes menuLoadingBar { 0% { transform:translateX(-110%); } 100% { transform:translateX(245%); } }
+@media (prefers-reduced-motion: reduce) { .menuLoadingOrb, .menuLoadingOverlay i::after { animation:none; } }
 .appDock .dockOrderActive { color:#fff; background:linear-gradient(145deg,#e78f69,#c76851); box-shadow:0 9px 16px rgba(193,93,70,.25); }.appDock .dockOrderActive small { color:#fff; }
 @media (orientation: landscape) and (max-height:600px) { .menuFrame { top:62px; bottom:57px; } }
 
@@ -367,3 +373,160 @@
 .pageEyebrow { margin: 0; color: var(--muted); font-size: 8px; font-weight: 800; letter-spacing: .18em; line-height: 1.1; }
 .pageTitle { margin: 3px 0 0; color: var(--ink); font-size: 18px; font-weight: 850; letter-spacing: -.04em; line-height: 1.15; }
 .topbar .brandLockup { display: flex; flex-direction: column; align-items: flex-start; gap: 0; }
+
+/* ===== 2026 全站一致設計系統：首頁／訂單／會員共用 ===== */
+.appShell {
+  --ink: #29231f;
+  --muted: #897b70;
+  --paper: #f7f3ec;
+  --cream: #fffdf8;
+  --line: #e9dfd3;
+  --accent: #c96851;
+  --accent-soft: #fff0e6;
+  --sage: #657f5d;
+  --sage-soft: #e9f1e4;
+  --sand: #f5e6d1;
+  min-height: 100dvh;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(232, 166, 112, .13), transparent 31%),
+    var(--paper);
+}
+:global(body) { margin: 0; background: #e9e4da; }
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  width: 100%;
+  height: 68px;
+  box-sizing: border-box;
+  padding: 11px 18px;
+  background: rgba(247, 243, 236, .88);
+  border-bottom: 1px solid rgba(224, 211, 197, .7);
+  backdrop-filter: blur(18px);
+}
+.topbar .pageEyebrow { color: #a08e80; letter-spacing: .2em; }
+.topbar .pageTitle { color: var(--ink); font-size: 19px; letter-spacing: -.045em; }
+.livePill { border: 1px solid #dce8d8; background: rgba(233, 241, 228, .9); color: #587253; }
+.livePillClosed { border-color: #f0d2cb; background: rgba(255, 240, 236, .92); color: #a45449; }
+.content {
+  height: calc(100dvh - 68px);
+  width: min(100%, 520px);
+  box-sizing: border-box;
+  padding: 13px 16px 96px;
+  overflow-y: auto;
+  animation: appPageIn .25s ease-out;
+}
+.content::-webkit-scrollbar { display: none; }
+.homeView, .ordersPageView, .memberPageView, .pageView { padding-top: 2px; }
+.appHero {
+  min-height: 350px;
+  margin: 0 0 14px;
+  padding: 21px 20px;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 28px;
+  background: linear-gradient(142deg, #49362d 0%, #775044 53%, #c4775d 100%);
+  box-shadow: 0 18px 34px rgba(86, 55, 43, .2);
+}
+.appHeroTop { padding-bottom: 1px; }
+.appHeroKicker { margin-top: 58px; color: #f3c69e; }
+.appHero h1 { max-width: 250px; font-size: clamp(37px, 10vw, 46px); }
+.heroOrderButton { min-height: 45px; margin-top: 23px; background: #fff9ef; color: var(--ink); }
+.heroOrderButton:focus-visible, .homeActionCard:focus-visible, .appDock button:focus-visible, button:focus-visible, a:focus-visible { outline: 3px solid rgba(201, 104, 81, .35); outline-offset: 3px; }
+.homeWelcomeCard {
+  margin-bottom: 20px;
+  border: 1px solid var(--line);
+  background: rgba(255, 253, 248, .78);
+  box-shadow: 0 6px 18px rgba(83, 59, 42, .045);
+}
+.homeSectionLabel { margin: 0 3px 10px; }
+.homeSectionLabel h2, .ordersHero h1, .memberPageHeader h1 { color: var(--ink); }
+.homeActionGrid { grid-template-columns: 1.12fr .88fr; gap: 10px; }
+.homeActionCard {
+  min-height: 128px;
+  border: 1px solid var(--line);
+  border-radius: 21px;
+  background: var(--cream);
+  box-shadow: 0 8px 20px rgba(83, 59, 42, .06);
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+.homeActionCard:hover { transform: translateY(-2px); border-color: #e0b39a; box-shadow: 0 12px 24px rgba(83, 59, 42, .1); }
+.homeActionPrimary { border-color: transparent; background: var(--sage); }
+.homeFeatureCard { border: 1px solid #efdfca; background: linear-gradient(135deg, #f8ead9, #f3dfc7); }
+.closedNotice { margin: 0 0 14px; }
+.ordersPageView { padding-top: 4px; }
+.ordersHero { padding: 7px 3px 16px; }
+.ordersHero h1 { font-size: 37px; }
+.refreshButton { width: 42px; height: 42px; border: 1px solid #dbe8d7; border-radius: 14px; background: var(--sage-soft); color: var(--sage); }
+.orderSummaryBar { margin: 0 0 12px; border: 1px solid var(--line); background: rgba(255,253,248,.75); }
+.orderList { gap: 10px; }
+.orderListItem {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--cream);
+  box-shadow: 0 7px 18px rgba(83, 59, 42, .055);
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+.orderListItem::before { content: ''; position: absolute; inset: 0 auto 0 0; width: 4px; background: #d99a6a; }
+.orderListItem:hover { transform: translateY(-2px); border-color: #dfc6af; box-shadow: 0 12px 24px rgba(83, 59, 42, .1); }
+.orderListInfo h3 { color: var(--ink); }
+.orderListTotal { color: var(--accent); }
+.orderStatus { background: var(--sage-soft); color: #5c7756; }
+.orderStatusCancelled { background: #fff0ed; color: #a45449; }
+.paymentBadge { border-radius: 999px; background: #f5eee5; color: #967053; padding: 4px 9px; }
+.orderListArrow { color: var(--accent); font-weight: 800; }
+.orderDetailCard { border: 1px solid var(--line); border-radius: 22px; background: var(--cream); box-shadow: 0 10px 24px rgba(83, 59, 42, .07); }
+.backButton { color: var(--accent); }
+.statusPanel { border-color: #e8dfd3; background: linear-gradient(145deg, #fffdf8, #f5eee5); }
+.statusPanelReady { border-color: #d4e5cf; background: linear-gradient(145deg, #fbfff8, #edf5e8); }
+.linePayButton { min-height: 38px; padding: 8px 14px; border-radius: 13px; }
+.cancelOrderButton { min-height: 42px; }
+.memberPageView { padding-top: 4px; }
+.memberPageHeader { padding: 7px 3px 18px; }
+.memberPageHeader h1 { font-size: 37px; }
+.memberMiniAvatar { border-color: var(--cream); }
+.pointsOverview {
+  margin: 0 0 14px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: linear-gradient(140deg, #3d2e28 0%, #644d41 56%, #966c53 100%);
+  box-shadow: 0 15px 28px rgba(65, 45, 35, .19);
+}
+.pointsProgress span { background: linear-gradient(90deg, #e89465, #f4cf8c); }
+.memberActionCard, .memberHistoryCard, .howToCollect, .rewardGuideCard, .wishCard, .lineButton { border: 1px solid var(--line); box-shadow: 0 7px 18px rgba(83, 59, 42, .045); }
+.memberActionCard { background: var(--cream); }
+.actionIcon { background: var(--accent); }
+.qrActionButton { min-height: 47px; border-radius: 14px; background: var(--ink); }
+.memberHistoryCard { background: var(--cream); }
+.howToCollect { background: var(--sage-soft); }
+.stepItem { border-top-color: #dce8d7; }
+.stepItem > span { color: var(--sage); background: #dce8d7; }
+.rewardGuideCard { background: linear-gradient(135deg, #fff6e9, #f7e7d2); }
+.rewardGuideBadge { border-color: #b87550; color: #9b5d40; }
+.lineButton { background: #e7f1e3; color: #4d724b; }
+.wishCard { background: linear-gradient(135deg, #fffaf2, #fff5e8); }
+.wishCard textarea { border-color: #eadccc; background: rgba(255,255,255,.75); }
+.wishButton { min-height: 44px; background: var(--accent); }
+.appDock {
+  z-index: 20;
+  bottom: max(10px, env(safe-area-inset-bottom));
+  border: 1px solid rgba(227, 216, 202, .95);
+  border-radius: 23px;
+  background: rgba(255, 253, 248, .9);
+  box-shadow: 0 10px 28px rgba(72, 52, 39, .16), 0 1px 0 rgba(255,255,255,.8) inset;
+}
+.appDock button { border-radius: 16px; }
+.appDock .dockActive { background: var(--accent-soft); color: var(--accent); }
+.appDock .dockOrderButton { color: #bd7357; background: transparent; box-shadow: none; }
+.appDock .dockOrderActive { color: #fff; background: linear-gradient(145deg, #e78f69, #c76851); box-shadow: 0 8px 16px rgba(193, 93, 70, .24); }
+@media (max-width: 380px) {
+  .topbar { padding-left: 14px; padding-right: 14px; }
+  .content { padding-left: 13px; padding-right: 13px; }
+  .appHero { min-height: 330px; padding-left: 17px; padding-right: 17px; }
+  .appHero h1 { font-size: 35px; }
+  .homeActionCard { min-height: 116px; padding: 13px; }
+  .memberPageHeader h1, .ordersHero h1 { font-size: 32px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .homeActionCard, .orderListItem { transition: none; }
+}
