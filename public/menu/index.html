@@ -2086,7 +2086,7 @@
         }
 
         import { initializeApp, getApp, getApps } from 'firebase/app';
-        import { getDatabase, ref, onValue, push, set, get, query, orderByChild, equalTo, limitToLast, runTransaction } from 'firebase/database';
+        import { getDatabase, ref, onValue, push, set, get, query, orderByChild, equalTo, limitToLast } from 'firebase/database';
 
         const firebaseConfig = {
             apiKey: "AIzaSyDvzZKr2x3TGeOFZGisKKXjbYH00DLVhKg",
@@ -2099,7 +2099,7 @@
         };
         const firebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig);
         const db = getDatabase(firebaseApp);
-        // 一般獨享杯／雙重奏每杯 1 點；活動日每筆符合品項訂單額外加 2 點。
+        // 點數由 Vercel 後端統一寫入；前端只保留顯示用的規則設定。
         const POINTS_REWARDS_ENABLED = true;
         const BASE_REWARD_POINTS_PER_CUP = 1;
         const CAMPAIGN_BONUS_POINTS = 0;
@@ -2258,50 +2258,6 @@
             }
         }
 
-        async function awardOrderPoints({ memberProfile, orderId, orderNo, items, points, campaign }) {
-            if (!POINTS_REWARDS_ENABLED) return 0;
-            const totalPoints = Number(points || getOrderRewardPoints(items, campaign?.bonusPoints ?? CAMPAIGN_BONUS_POINTS));
-            if (!totalPoints || !memberProfile?.memberKey || !orderId) return 0;
-            const accountRef = ref(db, `memberPoints/${memberProfile.memberKey}`);
-            const result = await runTransaction(accountRef, (current) => {
-                const account = current && typeof current === 'object' ? current : {};
-                const entries = account.entries && typeof account.entries === 'object' ? account.entries : {};
-                const awardKey = `order_${orderId}`;
-                if (entries[awardKey]) return;
-                return {
-                    ...account,
-                    balance: Number(account.balance || 0) + totalPoints,
-                    updatedAt: Date.now(),
-                    entries: {
-                        ...entries,
-                        [awardKey]: {
-                            id: awardKey,
-                            delta: totalPoints,
-                            type: 'order_reward',
-                            source: 'order',
-                            sourceLabel: campaign ? `訂單集點・${campaign.name || '活動日'}` : '訂單自動集點',
-                            basePoints: getOrderRewardPoints(items, 0),
-                            campaignBonusPoints: Math.max(0, Number(campaign?.bonusPoints ?? CAMPAIGN_BONUS_POINTS)),
-                            campaignId: campaign?.id || null,
-                            campaignName: campaign?.name || null,
-                            orderId,
-                            orderNo: String(orderNo || ''),
-                            itemSummary: (items || []).filter((item) => /獨享杯|雙重奏/.test(String(item?.name || ''))).map((item) => `${item.name} × ${item.qty || 0}`).join('、'),
-                            createdAt: Date.now(),
-                            createdBy: 'system',
-                        },
-                    },
-                };
-            });
-            if (result.committed) {
-                const awardedBalance = Number(result.snapshot.val()?.balance || 0);
-                const updatedProfile = { ...memberProfile, pointsBalance: awardedBalance, updatedAt: Date.now() };
-                await set(ref(db, `members/${memberProfile.memberKey}`), updatedProfile);
-                currentMember = updatedProfile;
-                return totalPoints;
-            }
-            return 0;
-        }
         let isSubmittingOrder = false;
         const ORDER_SUBMIT_LOCK_KEY = 'omg-order-submit-lock';
         const ORDER_SUBMIT_LOCK_MS = 15000;
@@ -3393,13 +3349,18 @@
                 });
 
                 let pointsWarning = '';
-                if (POINTS_REWARDS_ENABLED && rewardPoints) {
+                if (POINTS_REWARDS_ENABLED && rewardPoints && window.liffAccessToken) {
                     try {
-                        await awardOrderPoints({ memberProfile, orderId: orderRef.key, orderNo, items: itemsForFirebase, points: rewardPoints, campaign: pointCampaign });
-                        await set(ref(db, `orders/${orderRef.key}/pointsAwardStatus`), 'awarded');
+                        const pointsResponse = await fetch('/api/points/award-order', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ accessToken: window.liffAccessToken, orderNo }),
+                        });
+                        const pointsResult = await pointsResponse.json().catch(() => ({}));
+                        if (!pointsResponse.ok || !pointsResult.success) throw new Error(pointsResult.error || '點數發送失敗');
                     } catch (error) {
-                        console.error('訂單已建立，但點數入帳失敗:', error);
-                        pointsWarning = '點數稍後由店家補登';
+                        console.error('訂單已建立，但後端點數入帳失敗:', error);
+                        pointsWarning = '點數稍後由系統補登';
                     }
                 }
                 let notificationWarning = '';

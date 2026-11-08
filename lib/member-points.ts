@@ -10,7 +10,7 @@ export type MemberPointEntry = {
   sourceLabel: string;
   createdAt: number;
   orderNo: string;
-  channel: 'pos' | 'pos_migration';
+  channel: 'pos' | 'online' | 'pos_migration';
   idempotencyKey: string;
 };
 export type MemberPointsAccount = {
@@ -150,6 +150,38 @@ export async function earnPosPoints({ accessToken, orderNo }: { accessToken: str
   throw new Error('會員點數正在被其他交易更新，請重新操作一次');
 }
 
+function isTerminalOrderStatus(status?: string) {
+  return ['cancelled', 'canceled', 'rejected', 'refunded', 'voided'].includes(String(status || '').toLowerCase());
+}
+
+export async function earnOnlineOrderPoints({ accessToken, orderNo }: { accessToken: string; orderNo: string }) {
+  const member = await getLineMember(accessToken);
+  const order = await findOrderByNo(String(orderNo));
+  if (!order) throw new Error('找不到線上訂單');
+  if (order.channel !== 'online' && order.source !== 'LIFF') throw new Error('這不是線上會員訂單');
+  if (order.userId !== member.userId) throw new Error('訂單會員與登入會員不一致');
+  if (order.cancelled || order.rejected || order.voided || order.refunded || isTerminalOrderStatus(order.status)) throw new Error('訂單已取消或退款，不能發送點數');
+  const points = calculatePosPoints(order.items);
+  if (points <= 0) return { member, points: 0, balance: Math.max(0, Number((await getMemberPoints(member.userId)).balance || 0)), alreadyProcessed: false };
+
+  const orderKey = String(order.orderNo || orderNo);
+  const entryId = `order_${createHash('sha256').update(`${member.userId}:${orderKey}`).digest('hex').slice(0, 24)}`;
+  const path = `memberPoints/${encodeURIComponent(memberKey(member.userId))}`;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const current = await firebaseJson<MemberPointsAccount>(path, { etag: true });
+    const account = current.value || { balance: 0, entries: {} };
+    const entries = account.entries || {};
+    if (entries[entryId]) return { member, points: Number(entries[entryId].delta || 0), balance: Math.max(0, Number(account.balance || 0)), alreadyProcessed: true };
+    const entry: MemberPointEntry = { delta: points, type: 'order_reward', sourceLabel: '線上訂單獨享杯／雙重奏集點', createdAt: Date.now(), orderNo: orderKey, channel: 'online', idempotencyKey: entryId };
+    const next = { balance: Math.max(0, Number(account.balance || 0)) + points, updatedAt: Date.now(), entries: { ...entries, [entryId]: entry } };
+    const response = await fetch(`${databaseUrl()}/${path}.json`, { method: 'PUT', headers: new Headers({ 'Content-Type': 'application/json', 'If-Match': current.etag || '*' }), body: JSON.stringify(next), cache: 'no-store', signal: AbortSignal.timeout(10000) });
+    if (response.status === 412) continue;
+    if (!response.ok) throw new Error(`Firebase 點數寫入失敗（${response.status}）`);
+    return { member, points, balance: next.balance, alreadyProcessed: false };
+  }
+  throw new Error('會員點數正在被其他交易更新，請重新操作一次');
+}
+
 export async function reverseOrderPoints(orderNo: string) {
   const order = await findOrderByNo(String(orderNo));
   if (!order) throw new Error('找不到要撤銷點數的訂單');
@@ -183,7 +215,7 @@ export async function reverseOrderPoints(orderNo: string) {
         sourceLabel: '訂單取消／退款，撤銷原集點',
         createdAt: now,
         orderNo: String(orderNo),
-        channel: entry.channel === 'pos' ? 'pos' : 'pos_migration',
+        channel: entry.channel || 'pos',
         idempotencyKey: `reversal_${entryId}`,
       };
     }
