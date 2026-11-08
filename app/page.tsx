@@ -25,6 +25,16 @@ const dailyData = [
 
 type Profile = { userId: string; displayName: string; pictureUrl?: string };
 
+type PointCampaign = {
+  id?: string;
+  name?: string;
+  date?: string;
+  active?: boolean;
+  ruleText?: string;
+  description?: string;
+  bonusPoints?: number;
+};
+
 type MemberPointsAccount = {
   balance?: number;
   updatedAt?: number;
@@ -299,6 +309,7 @@ export default function Home() {
   const [memberQrOpen, setMemberQrOpen] = useState(false);
   const [legacyQrDataUrl, setLegacyQrDataUrl] = useState('');
   const [legacyQrOpen, setLegacyQrOpen] = useState(false);
+  const [pointCampaign, setPointCampaign] = useState<PointCampaign | null>(null);
   const ordersRef = useRef<Order[]>([]);
 
   const [todayContent] = useState(() => dailyData[new Date().getDay()]);
@@ -393,6 +404,20 @@ export default function Home() {
       setBusinessHours((snapshot.val() as BusinessHours | null) ?? null);
     }, (error) => {
       console.error('營業時間同步失敗:', error);
+    });
+  }, []);
+
+  useEffect(() => {
+    return onValue(ref(getGelatoDatabase(), 'pointCampaigns'), (snapshot) => {
+      const today = new Date().toISOString().slice(0, 10);
+      const campaigns = snapshot.val() as Record<string, PointCampaign> | null;
+      const active = Object.entries(campaigns || {})
+        .map(([id, campaign]) => ({ id, ...(campaign || {}) }))
+        .find((campaign) => campaign.active !== false && (!campaign.date || campaign.date === today));
+      setPointCampaign(active || null);
+    }, (error) => {
+      console.error('點數公告同步失敗:', error);
+      setPointCampaign(null);
     });
   }, []);
 
@@ -604,7 +629,7 @@ export default function Home() {
   const recentPointEntries = Object.entries(memberPoints.entries || {})
     .sort(([, a], [, b]) => Number(b.createdAt || 0) - Number(a.createdAt || 0))
     .slice(0, 3);
-  const pageTitle = activeTab === 'menu' ? '線上預訂' : activeTab === 'orders' ? (selectedOrder ? '訂單詳情' : '訂單足跡') : activeTab === 'member' ? '會員與點數' : '今日首頁';
+  const pageTitle = activeTab === 'menu' ? '線上點餐' : activeTab === 'orders' ? (selectedOrder ? '訂單詳情' : '訂單足跡') : activeTab === 'member' ? '會員與點數' : '今日首頁';
 
   return (
     <main className={styles.appShell}>
@@ -641,12 +666,12 @@ export default function Home() {
 
             <div className={styles.homeSectionLabel}><div><p className={styles.kicker}>YOUR SHORTCUTS</p><h2>現在想做什麼？</h2></div><span>Swipe less · enjoy more</span></div>
             <section className={styles.homeActionGrid}>
-              <button type="button" className={`${styles.homeActionCard} ${styles.homeActionPrimary}`} onClick={openMenu}><span className={styles.actionCardIcon}>📲</span><div><b>線上預訂</b><small>查看今日口味馬上下單</small></div><strong>›</strong></button>
-              <button type="button" className={styles.homeActionCard} onClick={() => switchTab('orders')}><span className={styles.actionCardIcon}>🔍</span><div><b>我的訂單</b><small>{orders.length ? `有 ${orders.length} 筆訂單紀錄` : '查看取餐進度'}</small></div><strong>›</strong></button>
+              <button type="button" className={`${styles.homeActionCard} ${styles.homeActionPrimary}`} onClick={openMenu}><span className={styles.actionCardIcon}>✦</span><div><b>開始點餐</b><small>挑一個今天的口味</small></div><strong>↗</strong></button>
+              <button type="button" className={styles.homeActionCard} onClick={() => switchTab('orders')}><span className={styles.actionCardIcon}>◷</span><div><b>追蹤訂單</b><small>{orders.length ? `最近有 ${orders.length} 筆紀錄` : '查看取餐進度'}</small></div><strong>›</strong></button>
             </section>
 
             <section className={styles.homeFeatureCard}>
-              <div><p className={styles.kicker}>ON MY GELATO</p><h2>致力於將道地義式工法,<br />與在地新鮮食材完美融合。<br /><em>堅持使用低脂乳，每口清爽無負擔</em></h2><p>我們不追求甜度，而是回歸食材本色風味。</p></div><span className={styles.featureMark}>✦</span>
+              <div><p className={styles.kicker}>GELATO NOTE</p><h2>真正的義式冰淇淋，<br /><em>不只是一種甜。</em></h2><p>每天少量製作，把季節與心情一起放進冰櫃。</p></div><span className={styles.featureMark}>✦</span>
             </section>
           </div>
         )}
@@ -654,14 +679,14 @@ export default function Home() {
         {activeTab === 'orders' && (
           selectedOrder ? (
             <section className={styles.pageView}>
-              <button type="button" className={styles.backButton} onClick={() => setSelectedOrderNo(null)}><span>‹</span> 返回訂單總覽</button>
+              <button type="button" className={styles.backButton} onClick={() => setSelectedOrderNo(null)}><span>‹</span> 返回訂單足跡</button>
               <OrderDetailCard order={selectedOrder} payingOrderNo={payingOrderNo} onPay={startLinePay} cancellingOrderNo={cancellingOrderNo} onCancel={cancelOrder} />
             </section>
           ) : (
             <section className={styles.ordersPageView}>
-              <header className={styles.ordersHero}><div><p className={styles.kicker}>ORDER JOURNEY</p><h1>你的訂單</h1><p>從送出訂單，到我們準備好見面。</p></div><button type="button" className={styles.refreshButton} onClick={loadOrders} disabled={isLoadingOrders} aria-label="重新整理訂單">{isLoadingOrders ? '…' : '↻'}</button></header>
-              <div className={styles.orderSummaryBar}><span><b>{orders.length}</b> 筆最近訂單</span><button type="button" onClick={openMenu}>前往訂購 ↗</button></div>
-              {isLoadingOrders ? <div className={styles.emptyState}><span className={styles.loadingDot} /><p>正在找回你的美好紀錄…</p></div> : orders.length === 0 ? <div className={styles.ordersEmpty}><span>◌</span><h3>還沒有任何訂單足跡</h3><p>現在就去看今日有什麼口味，<br />任您挑滿意立即下單。</p><button type="button" onClick={openMenu} className={styles.secondaryButton}>開始第一次點餐</button></div> : <div className={styles.orderList}>{orders.map((order, index) => <OrderListItem key={`${getOrderKey(order)}-${index}`} order={order} onSelect={() => setSelectedOrderNo(getOrderKey(order))} />)}</div>}
+              <header className={styles.ordersHero}><div><p className={styles.kicker}>ORDER JOURNEY</p><h1>訂單足跡</h1><p>從送出訂單，到準備好見面。</p></div><button type="button" className={styles.refreshButton} onClick={loadOrders} disabled={isLoadingOrders} aria-label="重新整理訂單">{isLoadingOrders ? '…' : '↻'}</button></header>
+              <div className={styles.orderSummaryBar}><span><b>{orders.length}</b> 筆最近訂單</span><button type="button" onClick={openMenu}>再點一份 ↗</button></div>
+              {isLoadingOrders ? <div className={styles.emptyState}><span className={styles.loadingDot} /><p>正在找回你的甜蜜紀錄…</p></div> : orders.length === 0 ? <div className={styles.ordersEmpty}><span>◌</span><h3>還沒有訂單足跡</h3><p>今天就挑一個喜歡的口味，<br />留下第一個甜蜜紀錄。</p><button type="button" onClick={openMenu} className={styles.secondaryButton}>開始第一次點餐</button></div> : <div className={styles.orderList}>{orders.map((order, index) => <OrderListItem key={`${getOrderKey(order)}-${index}`} order={order} onSelect={() => setSelectedOrderNo(getOrderKey(order))} />)}</div>}
             </section>
           )
         )}
@@ -670,12 +695,22 @@ export default function Home() {
           <section className={styles.memberPageView}>
             <header className={styles.memberPageHeader}>
               <div>
-                <p className={styles.kicker}>OMG </p>
-                <h1>會員中心</h1>
+                <p className={styles.kicker}>GELATO CLUB</p>
+                <h1>我的會員中心</h1>
                 <p>每一口喜歡的味道，都替下一份獎勵靠近一點。</p>
               </div>
               <div className={styles.memberMiniAvatar}>{profile?.pictureUrl ? <Image src={profile.pictureUrl} alt="會員頭像" width={52} height={52} /> : <span>OG</span>}</div>
             </header>
+
+            <section className={`${styles.pointsNotice} ${pointCampaign ? styles.pointsNoticeCampaign : ''}`} aria-label="點數規則公告">
+              <div className={styles.pointsNoticeIcon}>{pointCampaign ? '!' : '✦'}</div>
+              <div>
+                <p className={styles.kicker}>{pointCampaign ? 'POINTS UPDATE · 活動公告' : 'POINTS RULE · 點數公告'}</p>
+                <h2>{pointCampaign?.name || '目前點數發送規則'}</h2>
+                <p>{pointCampaign?.ruleText || pointCampaign?.description || '完成訂單後，購買獨享杯或雙重奏，每件可獲得 1 點；分享盒及其他商品不集點。'}</p>
+                {pointCampaign?.date && <small>適用日期：{pointCampaign.date}</small>}
+              </div>
+            </section>
 
             <section className={styles.pointsOverview} aria-label="目前集點進度">
               <div className={styles.pointsOverviewTop}><span>目前點數</span><span className={styles.pointsLive}><i />即時同步</span></div>
@@ -685,9 +720,9 @@ export default function Home() {
               <div className={styles.pointsMeta}><span>{stampCount}/10 本輪進度</span><span>無使用期限</span></div>
             </section>
 
-            <section className={styles.memberActionCard} aria-label="門市消費專用QR Code">
-              <div className={styles.actionCardHeading}><span className={styles.actionIcon}>⌁</span><div><p className={styles.kicker}>門市消費專用QR Code</p><h2>結帳前，請出示會員條碼</h2></div></div>
-              <p className={styles.actionCardDescription}>購買「獨享杯／雙重奏」系統自動結算發放點數。</p>
+            <section className={styles.memberActionCard} aria-label="到店集點">
+              <div className={styles.actionCardHeading}><span className={styles.actionIcon}>⌁</span><div><p className={styles.kicker}>到店集點</p><h2>結帳前，出示會員條碼</h2></div></div>
+              <p className={styles.actionCardDescription}>讓店員掃描一次，購買「獨享杯／雙重奏」就會自動累積 1 點。</p>
               <button type="button" className={styles.qrActionButton} onClick={() => setMemberQrOpen((open) => !open)} aria-expanded={memberQrOpen}>
                 <span>{memberQrOpen ? '收起會員 QR Code' : '出示會員 QR Code'}</span><b>{memberQrOpen ? '⌃' : '↗'}</b>
               </button>
@@ -735,10 +770,10 @@ export default function Home() {
       </section>
 
       <nav className={styles.appDock} aria-label="主要導覽">
-        <button type="button" onClick={() => switchTab('home')} className={activeTab === 'home' ? styles.dockActive : ''}><span>⌂</span><small>首頁</small></button>
-        <button type="button" onClick={openMenu} className={`${styles.dockOrderButton} ${activeTab === 'menu' ? styles.dockOrderActive : ''}`}><span>✦</span><small>線上訂</small></button>
-        <button type="button" onClick={() => switchTab('orders')} className={activeTab === 'orders' ? styles.dockActive : ''}><span>◷</span><small>查訂單</small></button>
-        <button type="button" onClick={() => switchTab('member')} className={activeTab === 'member' ? styles.dockActive : ''}><span>◒</span><small>OMG會員</small></button>
+        <button type="button" onClick={() => switchTab('home')} className={activeTab === 'home' ? styles.dockActive : ''}><span>⌂</span><small>今日</small></button>
+        <button type="button" onClick={openMenu} className={`${styles.dockOrderButton} ${activeTab === 'menu' ? styles.dockOrderActive : ''}`}><span>✦</span><small>點餐</small></button>
+        <button type="button" onClick={() => switchTab('orders')} className={activeTab === 'orders' ? styles.dockActive : ''}><span>◷</span><small>足跡</small></button>
+        <button type="button" onClick={() => switchTab('member')} className={activeTab === 'member' ? styles.dockActive : ''}><span>◒</span><small>會員</small></button>
       </nav>
     </main>
   );

@@ -486,6 +486,34 @@
 .memberPageHeader { padding: 7px 3px 18px; }
 .memberPageHeader h1 { font-size: 37px; }
 .memberMiniAvatar { border-color: var(--cream); }
+.pointsNotice {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  margin: 0 0 12px;
+  padding: 14px 15px;
+  border: 1px solid #eadfce;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #fffaf0, #f8efe1);
+  box-shadow: 0 6px 16px rgba(83, 59, 42, .045);
+}
+.pointsNoticeCampaign { border-color: #e9c89d; background: linear-gradient(135deg, #fff4df, #f8e4c7); }
+.pointsNoticeIcon {
+  display: grid;
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 11px;
+  color: #fff;
+  background: var(--accent);
+  font-size: 14px;
+  font-weight: 900;
+}
+.pointsNoticeCampaign .pointsNoticeIcon { background: #d68a4d; }
+.pointsNotice h2 { margin: 4px 0 5px; color: var(--ink); font-size: 14px; letter-spacing: -.03em; }
+.pointsNotice p:last-of-type { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.65; }
+.pointsNotice small { display: block; margin-top: 5px; color: #a8754b; font-size: 9px; font-weight: 800; }
 .pointsOverview {
   margin: 0 0 14px;
   border: 1px solid rgba(255,255,255,.08);
