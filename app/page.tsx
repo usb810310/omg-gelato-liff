@@ -604,7 +604,7 @@ export default function Home() {
   const recentPointEntries = Object.entries(memberPoints.entries || {})
     .sort(([, a], [, b]) => Number(b.createdAt || 0) - Number(a.createdAt || 0))
     .slice(0, 3);
-  const pageTitle = activeTab === 'menu' ? '線上點餐' : activeTab === 'orders' ? (selectedOrder ? '訂單詳情' : '訂單足跡') : activeTab === 'member' ? '會員與點數' : '今日首頁';
+  const pageTitle = activeTab === 'menu' ? '線上預訂' : activeTab === 'orders' ? (selectedOrder ? '訂單詳情' : '訂單足跡') : activeTab === 'member' ? '會員與點數' : '今日首頁';
 
   return (
     <main className={styles.appShell}>
@@ -641,12 +641,12 @@ export default function Home() {
 
             <div className={styles.homeSectionLabel}><div><p className={styles.kicker}>YOUR SHORTCUTS</p><h2>現在想做什麼？</h2></div><span>Swipe less · enjoy more</span></div>
             <section className={styles.homeActionGrid}>
-              <button type="button" className={`${styles.homeActionCard} ${styles.homeActionPrimary}`} onClick={openMenu}><span className={styles.actionCardIcon}>✦</span><div><b>開始點餐</b><small>挑一個今天的口味</small></div><strong>↗</strong></button>
-              <button type="button" className={styles.homeActionCard} onClick={() => switchTab('orders')}><span className={styles.actionCardIcon}>◷</span><div><b>追蹤訂單</b><small>{orders.length ? `最近有 ${orders.length} 筆紀錄` : '查看取餐進度'}</small></div><strong>›</strong></button>
+              <button type="button" className={`${styles.homeActionCard} ${styles.homeActionPrimary}`} onClick={openMenu}><span className={styles.actionCardIcon}>📲</span><div><b>線上預訂</b><small>查看今日口味馬上下單</small></div><strong>›</strong></button>
+              <button type="button" className={styles.homeActionCard} onClick={() => switchTab('orders')}><span className={styles.actionCardIcon}>🔍</span><div><b>我的訂單</b><small>{orders.length ? `有 ${orders.length} 筆訂單紀錄` : '查看取餐進度'}</small></div><strong>›</strong></button>
             </section>
 
             <section className={styles.homeFeatureCard}>
-              <div><p className={styles.kicker}>GELATO NOTE</p><h2>真正的義式冰淇淋，<br /><em>不只是一種甜。</em></h2><p>每天少量製作，把季節與心情一起放進冰櫃。</p></div><span className={styles.featureMark}>✦</span>
+              <div><p className={styles.kicker}>ON MY GELATO</p><h2>致力於將道地義式工法與在地新鮮食材完美融合，<br /><em>每一口 Gelato堅持低乳脂、清爽無負擔</em></h2><p>我們不追求甜度，而是回歸食材本色來襯托風味。</p></div><span className={styles.featureMark}>✦</span>
             </section>
           </div>
         )}
