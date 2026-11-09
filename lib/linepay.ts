@@ -1,6 +1,7 @@
 import { createHmac, randomUUID } from 'node:crypto';
 import { getPaymentDisplayStatus, isOrderTerminal } from '@/lib/order-status';
 import { reverseOrderPoints } from '@/lib/member-points';
+import { adminDatabaseRef } from '@/lib/firebase-admin';
 
 type LinePayConfig = {
   channelId: string;
@@ -109,23 +110,13 @@ export async function callLinePay<T>({
 }
 
 export async function findOrderByNo(orderNo: string | number) {
-  const databaseUrl = process.env.FIREBASE_DATABASE_URL || DEFAULT_DATABASE_URL;
-  const response = await fetch(`${databaseUrl}/orders.json`, { cache: 'no-store', signal: AbortSignal.timeout(10000) });
-  if (!response.ok) throw new Error('無法讀取 Firebase 訂單資料');
-  const data = (await response.json()) as Record<string, Omit<FirebaseOrder, 'key'>> | null;
+  const data = (await adminDatabaseRef('orders').get()).val() as Record<string, Omit<FirebaseOrder, 'key'>> | null;
   const match = Object.entries(data || {}).find(([, order]) => String(order?.orderNo) === String(orderNo));
   return match ? ({ key: match[0], ...match[1] } as FirebaseOrder) : null;
 }
 
 export async function updateOrder(order: FirebaseOrder, patch: Record<string, unknown>) {
-  const databaseUrl = process.env.FIREBASE_DATABASE_URL || DEFAULT_DATABASE_URL;
-  const response = await fetch(`${databaseUrl}/orders/${encodeURIComponent(order.key)}.json`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(patch),
-    signal: AbortSignal.timeout(10000),
-  });
-  if (!response.ok) throw new Error('無法更新 Firebase 訂單狀態');
+  await adminDatabaseRef(`orders/${order.key}`).update(patch);
 }
 
 export class OrderCancellationError extends Error {
@@ -136,73 +127,43 @@ export class OrderCancellationError extends Error {
 }
 
 export async function cancelWaitingOrder(orderNo: string, userId: string) {
-  const databaseUrl = process.env.FIREBASE_DATABASE_URL || DEFAULT_DATABASE_URL;
-  const ordersResponse = await fetch(`${databaseUrl}/orders.json`, {
-    cache: 'no-store',
-    signal: AbortSignal.timeout(10000),
-  });
-  if (!ordersResponse.ok) throw new Error('無法讀取 Firebase 訂單資料');
-
-  const orders = (await ordersResponse.json()) as Record<string, Omit<FirebaseOrder, 'key'>> | null;
-  const match = Object.entries(orders || {}).find(([, order]) =>
-    String(order?.orderNo) === orderNo && order?.userId === userId,
-  );
+  const orders = (await adminDatabaseRef('orders').get()).val() as Record<string, Omit<FirebaseOrder, 'key'>> | null;
+  const match = Object.entries(orders || {}).find(([, order]) => String(order?.orderNo) === orderNo && order?.userId === userId);
   if (!match) throw new OrderCancellationError('找不到這筆訂單', 404);
-
   const [key] = match;
-  const orderUrl = `${databaseUrl}/orders/${encodeURIComponent(key)}.json`;
-  const response = await fetch(orderUrl, {
-    headers: { 'X-Firebase-ETag': 'true' },
-    cache: 'no-store',
-    signal: AbortSignal.timeout(10000),
-  });
-  if (!response.ok) throw new Error('無法讀取 Firebase 訂單資料');
-
-  const etag = response.headers.get('ETag');
-  const order = (await response.json()) as FirebaseOrder | null;
+  const orderRef = adminDatabaseRef(`orders/${key}`);
+  const snapshot = await orderRef.get();
+  const order = snapshot.val() as FirebaseOrder | null;
   if (!order || order.userId !== userId || String(order.orderNo) !== orderNo) {
     throw new OrderCancellationError('找不到這筆訂單', 404);
   }
-  if (!etag) throw new Error('無法確認訂單最新狀態');
-
   const status = String(order.status || '').trim();
   if (isOrderTerminal(order) || !['', 'waiting', 'pending', 'waiting_accept', '等待接單', '等待店家接單'].includes(status)) {
     throw new OrderCancellationError('店家已接單或訂單已處理，請洽客服人員協助取消', 409);
   }
-
   const paymentStatus = getPaymentDisplayStatus(order);
-  if (paymentStatus === '已付款') {
-    throw new OrderCancellationError('此訂單已付款，請洽客服人員辦理取消與退款', 409);
-  }
-  if (paymentStatus === '付款處理中') {
-    throw new OrderCancellationError('此訂單付款處理中，請洽客服人員協助取消', 409);
-  }
+  if (paymentStatus === '已付款') throw new OrderCancellationError('此訂單已付款，請洽客服人員辦理取消與退款', 409);
+  if (paymentStatus === '付款處理中') throw new OrderCancellationError('此訂單付款處理中，請洽客服人員協助取消', 409);
 
-  const updateResponse = await fetch(orderUrl, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      'If-Match': etag,
-    },
-    body: JSON.stringify({
-      ...order,
+  const result = await orderRef.transaction((current) => {
+    const latest = current as FirebaseOrder | null;
+    if (!latest || latest.userId !== userId || String(latest.orderNo) !== orderNo) return;
+    const latestStatus = String(latest.status || '').trim();
+    if (isOrderTerminal(latest) || !['', 'waiting', 'pending', 'waiting_accept', '等待接單', '等待店家接單'].includes(latestStatus)) return;
+    return {
+      ...latest,
       status: 'cancelled',
       voided: true,
       cancelledBy: 'customer',
       cancelledAt: new Date().toISOString(),
       paymentStatus: 'cancelled',
-    }),
-    signal: AbortSignal.timeout(10000),
+    };
   });
-  if (updateResponse.status === 412) {
-    throw new OrderCancellationError('訂單狀態已更新，請重新整理後確認；如店家已接單，請洽客服人員', 409);
-  }
-  if (!updateResponse.ok) throw new Error('無法更新 Firebase 訂單狀態');
+  if (!result.committed) throw new OrderCancellationError('訂單狀態已更新，請重新整理後確認；如店家已接單，請洽客服人員', 409);
   try {
     await reverseOrderPoints(orderNo);
   } catch (error) {
     console.error('顧客取消後撤銷點數失敗:', error);
   }
 }
-
 export type { FirebaseOrder };

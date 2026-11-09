@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { adminDatabaseRef } from '@/lib/firebase-admin';
 
 const DEFAULT_DATABASE_URL = 'https://omg-menu-5761a-default-rtdb.asia-southeast1.firebasedatabase.app';
 const ELIGIBLE_PRODUCTS = new Set(['OMG獨享杯', 'OMG雙重奏']);
@@ -37,10 +38,6 @@ export type PointOrder = {
   channel?: string;
 };
 
-function databaseUrl() {
-  return (process.env.FIREBASE_DATABASE_URL || DEFAULT_DATABASE_URL).replace(/\/$/, '');
-}
-
 function memberKey(userId: string) {
   return `line_${userId.replace(/[^A-Za-z0-9_-]/g, '')}`;
 }
@@ -55,9 +52,12 @@ function quantityOf(item: PointOrderItem) {
 }
 
 export function calculatePosPoints(items: PointOrderItem[] | undefined) {
-  return (items || []).reduce((total, item) => {
-    return total + (ELIGIBLE_PRODUCTS.has(normalizeProductName(item.name)) ? quantityOf(item) : 0);
-  }, 0);
+  return (items || []).reduce((total, item) => total + (ELIGIBLE_PRODUCTS.has(normalizeProductName(item.name)) ? quantityOf(item) : 0), 0);
+}
+
+async function firebaseJson<T>(path: string) {
+  const snapshot = await adminDatabaseRef(path).get();
+  return { value: snapshot.val() as T, etag: undefined };
 }
 
 export async function getLineMember(accessToken: string): Promise<LineMember> {
@@ -72,19 +72,6 @@ export async function getLineMember(accessToken: string): Promise<LineMember> {
   const profile = await response.json() as { userId?: string; displayName?: string; pictureUrl?: string };
   if (!profile.userId) throw new Error('LINE 會員資料不完整');
   return { userId: profile.userId, displayName: profile.displayName || 'LINE 會員', pictureUrl: profile.pictureUrl };
-}
-
-async function firebaseJson<T>(path: string, init?: RequestInit & { etag?: boolean }) {
-  const headers = new Headers(init?.headers);
-  if (init?.etag) headers.set('X-Firebase-ETag', 'true');
-  const response = await fetch(`${databaseUrl()}/${path.replace(/^\//, '')}.json`, {
-    ...init,
-    headers,
-    cache: 'no-store',
-    signal: AbortSignal.timeout(10000),
-  });
-  if (!response.ok) throw new Error(`Firebase 讀寫失敗（${response.status}）`);
-  return { value: await response.json() as T, etag: response.headers.get('ETag') };
 }
 
 export async function getMemberPoints(userId: string) {
@@ -125,7 +112,7 @@ export async function earnPosPoints({ accessToken, orderNo }: { accessToken: str
   const path = `memberPoints/${encodeURIComponent(memberKey(member.userId))}`;
 
   for (let attempt = 0; attempt < 3; attempt += 1) {
-    const current = await firebaseJson<MemberPointsAccount>(path, { etag: true });
+    const current = await firebaseJson<MemberPointsAccount>(path);
     const account = current.value || { balance: 0, entries: {} };
     const entries = account.entries || {};
     if (entries[entryId]) {
@@ -141,10 +128,7 @@ export async function earnPosPoints({ accessToken, orderNo }: { accessToken: str
       idempotencyKey: entryId,
     };
     const next = { balance: Math.max(0, Number(account.balance || 0)) + points, updatedAt: Date.now(), entries: { ...entries, [entryId]: entry } };
-    const headers = new Headers({ 'Content-Type': 'application/json', 'If-Match': current.etag || '*' });
-    const response = await fetch(`${databaseUrl()}/${path}.json`, { method: 'PUT', headers, body: JSON.stringify(next), cache: 'no-store', signal: AbortSignal.timeout(10000) });
-    if (response.status === 412) continue;
-    if (!response.ok) throw new Error(`Firebase 點數寫入失敗（${response.status}）`);
+    await adminDatabaseRef(path).set(next);
     return { member, points, balance: next.balance, alreadyProcessed: false };
   }
   throw new Error('會員點數正在被其他交易更新，請重新操作一次');
@@ -168,15 +152,13 @@ export async function earnOnlineOrderPoints({ accessToken, orderNo }: { accessTo
   const entryId = `order_${createHash('sha256').update(`${member.userId}:${orderKey}`).digest('hex').slice(0, 24)}`;
   const path = `memberPoints/${encodeURIComponent(memberKey(member.userId))}`;
   for (let attempt = 0; attempt < 3; attempt += 1) {
-    const current = await firebaseJson<MemberPointsAccount>(path, { etag: true });
+    const current = await firebaseJson<MemberPointsAccount>(path);
     const account = current.value || { balance: 0, entries: {} };
     const entries = account.entries || {};
     if (entries[entryId]) return { member, points: Number(entries[entryId].delta || 0), balance: Math.max(0, Number(account.balance || 0)), alreadyProcessed: true };
     const entry: MemberPointEntry = { delta: points, type: 'order_reward', sourceLabel: '線上訂單獨享杯／雙重奏集點', createdAt: Date.now(), orderNo: orderKey, channel: 'online', idempotencyKey: entryId };
     const next = { balance: Math.max(0, Number(account.balance || 0)) + points, updatedAt: Date.now(), entries: { ...entries, [entryId]: entry } };
-    const response = await fetch(`${databaseUrl()}/${path}.json`, { method: 'PUT', headers: new Headers({ 'Content-Type': 'application/json', 'If-Match': current.etag || '*' }), body: JSON.stringify(next), cache: 'no-store', signal: AbortSignal.timeout(10000) });
-    if (response.status === 412) continue;
-    if (!response.ok) throw new Error(`Firebase 點數寫入失敗（${response.status}）`);
+    await adminDatabaseRef(path).set(next);
     return { member, points, balance: next.balance, alreadyProcessed: false };
   }
   throw new Error('會員點數正在被其他交易更新，請重新操作一次');
@@ -195,7 +177,7 @@ export async function reverseOrderPoints(orderNo: string) {
 
   const path = `memberPoints/${encodeURIComponent(memberKey(order.userId))}`;
   for (let attempt = 0; attempt < 3; attempt += 1) {
-    const current = await firebaseJson<MemberPointsAccount>(path, { etag: true });
+    const current = await firebaseJson<MemberPointsAccount>(path);
     const account = current.value || { balance: 0, entries: {} };
     const entries = account.entries || {};
     const earned = Object.entries(entries).filter(([, entry]) =>
@@ -220,13 +202,7 @@ export async function reverseOrderPoints(orderNo: string) {
       };
     }
     const next = { balance: Math.max(0, Number(account.balance || 0) - points), updatedAt: now, entries: nextEntries };
-    const response = await fetch(`${databaseUrl()}/${path}.json`, {
-      method: 'PUT',
-      headers: new Headers({ 'Content-Type': 'application/json', 'If-Match': current.etag || '*' }),
-      body: JSON.stringify(next), cache: 'no-store', signal: AbortSignal.timeout(10000),
-    });
-    if (response.status === 412) continue;
-    if (!response.ok) throw new Error(`Firebase 點數撤銷失敗（${response.status}）`);
+    await adminDatabaseRef(path).set(next);
     return { points, balance: next.balance, alreadyReversed: false };
   }
   throw new Error('會員點數正在被其他交易更新，請重新操作一次');
@@ -240,7 +216,7 @@ export async function migrateLegacyLinePoints({ accessToken, points, operator }:
   const entryId = `legacy_${createHash('sha256').update(member.userId).digest('hex').slice(0, 24)}`;
 
   for (let attempt = 0; attempt < 3; attempt += 1) {
-    const current = await firebaseJson<MemberPointsAccount>(path, { etag: true });
+    const current = await firebaseJson<MemberPointsAccount>(path);
     const account = current.value || { balance: 0, entries: {} };
     const entries = account.entries || {};
     if (entries[entryId]) {
@@ -257,10 +233,7 @@ export async function migrateLegacyLinePoints({ accessToken, points, operator }:
       idempotencyKey: entryId,
     };
     const next = { balance: Math.max(0, Number(account.balance || 0)) + amount, updatedAt: now, entries: { ...entries, [entryId]: entry } };
-    const headers = new Headers({ 'Content-Type': 'application/json', 'If-Match': current.etag || '*' });
-    const response = await fetch(`${databaseUrl()}/${path}.json`, { method: 'PUT', headers, body: JSON.stringify(next), cache: 'no-store', signal: AbortSignal.timeout(10000) });
-    if (response.status === 412) continue;
-    if (!response.ok) throw new Error(`Firebase 舊點卡移轉寫入失敗（${response.status}）`);
+    await adminDatabaseRef(path).set(next);
     return { member, points: amount, balance: next.balance, alreadyProcessed: false, operator: operator || 'POS' };
   }
   throw new Error('會員點數正在被其他交易更新，請重新操作一次');
