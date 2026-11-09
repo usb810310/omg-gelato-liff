@@ -31,6 +31,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true, ...result }, { headers: headers(request) });
   } catch (error) {
     const message = error instanceof Error ? error.message : '點數撤銷失敗';
-    return NextResponse.json({ success: false, error: message }, { status: 409, headers: headers(request) });
+    const status = /登入|權限|Token/.test(message) ? 401 : 409;
+    return NextResponse.json({ success: false, error: message }, { status, headers: headers(request) });
   }
 }

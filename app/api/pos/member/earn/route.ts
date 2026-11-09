@@ -32,7 +32,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true, ...result }, { headers: { ...corsHeaders(request), 'Cache-Control': 'no-store' } });
   } catch (error) {
     const message = error instanceof Error ? error.message : '現場點數發送失敗';
-    const status = /Token|會員/.test(message) ? 401 : /找不到|綁定|付款|一致/.test(message) ? 409 : 500;
+    const status = /Token|會員|登入|權限/.test(message) ? 401 : /找不到|綁定|付款|一致/.test(message) ? 409 : 500;
     return NextResponse.json({ success: false, error: message }, { status, headers: corsHeaders(request) });
   }
 }
