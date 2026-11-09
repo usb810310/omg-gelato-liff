@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import liff from '@line/liff';
 import QRCode from 'qrcode';
 import { getApp, getApps, initializeApp } from 'firebase/app';
-import { getDatabase, get, equalTo, onValue, orderByChild, query, ref } from 'firebase/database';
+import { getDatabase, onValue, ref } from 'firebase/database';
 import { getShopStatus, type BusinessHours } from '@/lib/business-hours';
 import { getPaymentDisplayStatus, isOrderCancelled, isOrderRefunded, isOrderRejected, isOrderTerminal } from '@/lib/order-status';
 import styles from './page.module.css';
@@ -346,28 +346,42 @@ export default function Home() {
 
   useEffect(() => {
     if (!profile?.userId) return;
-    const ordersQuery = query(ref(getGelatoDatabase(), 'orders'), orderByChild('userId'), equalTo(profile.userId));
-    return onValue(ordersQuery, (snapshot) => {
-      const userOrders: Order[] = [];
-      snapshot.forEach((child) => {
-        const order = { id: child.key ?? undefined, ...(child.val() as Order) };
-        if (order.userId === profile.userId && isRecentOrder(order)) userOrders.push(order);
-      });
-      userOrders.sort((a, b) => new Date(b.time ?? 0).getTime() - new Date(a.time ?? 0).getTime());
-      setOrders(userOrders);
-    }, (error) => {
-      console.error('訂單即時同步失敗:', error);
-    });
+    let cancelled = false;
+    const refreshOrders = async () => {
+      try {
+        const accessToken = liff.getAccessToken();
+        if (!accessToken) return;
+        const response = await fetch('/api/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accessToken }), cache: 'no-store' });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || !result.success) throw new Error(result.error || '訂單同步失敗');
+        if (!cancelled) setOrders((result.orders || []).filter((order: Order) => isRecentOrder(order)));
+      } catch (error) {
+        console.error('訂單同步失敗:', error);
+      }
+    };
+    void refreshOrders();
+    const timer = window.setInterval(refreshOrders, 15000);
+    return () => { cancelled = true; window.clearInterval(timer); };
   }, [profile?.userId]);
 
   useEffect(() => {
     if (!profile?.userId) return;
-    const memberKey = `line_${profile.userId.replace(/[^A-Za-z0-9_-]/g, '')}`;
-    return onValue(ref(getGelatoDatabase(), `memberPoints/${memberKey}`), (snapshot) => {
-      setMemberPoints((snapshot.val() as MemberPointsAccount | null) ?? { balance: 0, entries: {} });
-    }, (error) => {
-      console.error('會員點數同步失敗:', error);
-    });
+    let cancelled = false;
+    const refreshPoints = async () => {
+      try {
+        const accessToken = liff.getAccessToken();
+        if (!accessToken) return;
+        const response = await fetch('/api/member/points', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accessToken }), cache: 'no-store' });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || !result.success) throw new Error(result.error || '會員點數同步失敗');
+        if (!cancelled) setMemberPoints(result.points || { balance: 0, entries: {} });
+      } catch (error) {
+        console.error('會員點數同步失敗:', error);
+      }
+    };
+    void refreshPoints();
+    const timer = window.setInterval(refreshPoints, 15000);
+    return () => { cancelled = true; window.clearInterval(timer); };
   }, [profile?.userId]);
 
   useEffect(() => {
@@ -384,10 +398,17 @@ export default function Home() {
       try {
         const accessToken = liff.getAccessToken();
         if (!accessToken) throw new Error('找不到 LINE 登入 Token');
+        const claim = async (mode: 'member' | 'legacy') => {
+          const response = await fetch('/api/member/qr', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accessToken, mode }), cache: 'no-store' });
+          const result = await response.json().catch(() => ({}));
+          if (!response.ok || !result.success || typeof result.token !== 'string') throw new Error(result.error || '會員條碼產生失敗');
+          return result.token as string;
+        };
+        const [memberClaim, legacyClaim] = await Promise.all([claim('member'), claim('legacy')]);
         const qrOptions = { errorCorrectionLevel: 'M' as const, margin: 2, width: 320, color: { dark: '#2d1f14', light: '#fffdf9' } };
-        const dataUrl = await QRCode.toDataURL(`gelato-member-token:${accessToken}`, qrOptions);
+        const dataUrl = await QRCode.toDataURL(memberClaim, qrOptions);
         if (!cancelled) setMemberQrDataUrl(dataUrl);
-        const legacyDataUrl = await QRCode.toDataURL(`gelato-legacy-migration:${accessToken}`, qrOptions);
+        const legacyDataUrl = await QRCode.toDataURL(legacyClaim, qrOptions);
         if (!cancelled) setLegacyQrDataUrl(legacyDataUrl);
       } catch (error) {
         console.error('會員 QR Code 產生失敗:', error);
@@ -432,14 +453,12 @@ export default function Home() {
     if (!profile?.userId) return;
     setIsLoadingOrders(true);
     try {
-      const snapshot = await get(query(ref(getGelatoDatabase(), 'orders'), orderByChild('userId'), equalTo(profile.userId)));
-      const userOrders: Order[] = [];
-      snapshot.forEach((child) => {
-        const order = { id: child.key ?? undefined, ...(child.val() as Order & { userId?: string }) };
-        if (order.userId === profile.userId && isRecentOrder(order)) userOrders.push(order);
-      });
-      userOrders.sort((a, b) => new Date(b.time ?? 0).getTime() - new Date(a.time ?? 0).getTime());
-      setOrders(userOrders);
+      const accessToken = liff.getAccessToken();
+      if (!accessToken) throw new Error('LINE 登入已失效');
+      const response = await fetch('/api/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accessToken }), cache: 'no-store' });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.success) throw new Error(result.error || '訂單查詢失敗');
+      setOrders((result.orders || []).filter((order: Order) => isRecentOrder(order)));
     } catch (err) {
       console.error(err);
       alert('查詢失敗，請稍後再試');

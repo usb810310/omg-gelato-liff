@@ -13,7 +13,6 @@ export async function POST(request: Request) {
     const body = await request.json().catch(() => ({}));
     const accessToken = clean(body?.accessToken, 8192);
     const existingKey = clean(body?.memberKey, 120);
-    const guest = !accessToken;
     let userId = '';
     let memberKey = existingKey;
     let memberType: 'line' | 'guest' = 'guest';

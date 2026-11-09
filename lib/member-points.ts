@@ -74,6 +74,30 @@ export async function getLineMember(accessToken: string): Promise<LineMember> {
   return { userId: profile.userId, displayName: profile.displayName || 'LINE 會員', pictureUrl: profile.pictureUrl };
 }
 
+export async function consumeMemberQrClaim(token: string, expectedMode: 'member' | 'legacy' = 'member'): Promise<LineMember> {
+  const match = /^gelato-member-claim:(member|legacy):([A-Za-z0-9_-]{20,})$/.exec(String(token || '').trim());
+  if (!match || match[1] !== expectedMode) throw new Error('會員條碼無效或已過期');
+  const claimHash = createHash('sha256').update(match[2]).digest('hex');
+  const claimRef = adminDatabaseRef(`memberQrClaims/${claimHash}`);
+  const result = await claimRef.transaction((current) => {
+    if (!current || current.usedAt || Number(current.expiresAt || 0) < Date.now()) return;
+    return { ...current, usedAt: Date.now() };
+  });
+  if (!result.committed) throw new Error('會員條碼無效或已使用');
+  const claim = result.snapshot.val() as { userId?: string } | null;
+  if (!claim?.userId) throw new Error('會員條碼資料不完整');
+  return { userId: claim.userId, displayName: 'LINE 會員' };
+}
+
+export async function peekMemberQrClaim(token: string): Promise<LineMember> {
+  const match = /^gelato-member-claim:(member|legacy):([A-Za-z0-9_-]{20,})$/.exec(String(token || '').trim());
+  if (!match) throw new Error('會員條碼無效或已過期');
+  const claimHash = createHash('sha256').update(match[2]).digest('hex');
+  const claim = (await adminDatabaseRef(`memberQrClaims/${claimHash}`).get()).val() as { userId?: string; expiresAt?: number; usedAt?: number } | null;
+  if (!claim?.userId || claim.usedAt || Number(claim.expiresAt || 0) < Date.now()) throw new Error('會員條碼無效或已過期');
+  return { userId: claim.userId, displayName: 'LINE 會員' };
+}
+
 export async function getMemberPoints(userId: string) {
   const result = await firebaseJson<MemberPointsAccount>(`memberPoints/${encodeURIComponent(memberKey(userId))}`);
   return result.value || { balance: 0, entries: {} };
@@ -97,7 +121,9 @@ function orderIsSettled(order: PointOrder) {
 }
 
 export async function earnPosPoints({ accessToken, orderNo }: { accessToken: string; orderNo: string }) {
-  const member = await getLineMember(accessToken);
+  const member = accessToken.startsWith('gelato-member-claim:')
+    ? await consumeMemberQrClaim(accessToken, 'member')
+    : await getLineMember(accessToken);
   const order = await findOrderByNo(orderNo);
   if (!order) throw new Error('找不到現場訂單，請先完成交易同步');
   if (order.userId && order.userId !== member.userId) throw new Error('訂單會員與掃描會員不一致');
@@ -111,27 +137,17 @@ export async function earnPosPoints({ accessToken, orderNo }: { accessToken: str
   const entryId = `pos_${createHash('sha256').update(`${member.userId}:${orderKey}`).digest('hex').slice(0, 24)}`;
   const path = `memberPoints/${encodeURIComponent(memberKey(member.userId))}`;
 
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    const current = await firebaseJson<MemberPointsAccount>(path);
-    const account = current.value || { balance: 0, entries: {} };
+  let alreadyProcessed = false;
+  const result = await adminDatabaseRef(path).transaction((current) => {
+    const account = (current || { balance: 0, entries: {} }) as MemberPointsAccount;
     const entries = account.entries || {};
-    if (entries[entryId]) {
-      return { member, points: Number(entries[entryId].delta || 0), balance: Math.max(0, Number(account.balance || 0)), alreadyProcessed: true };
-    }
-    const entry: MemberPointEntry = {
-      delta: points,
-      type: 'pos_purchase',
-      sourceLabel: '現場購買獨享杯／雙重奏',
-      createdAt: Date.now(),
-      orderNo: orderKey,
-      channel: 'pos',
-      idempotencyKey: entryId,
-    };
-    const next = { balance: Math.max(0, Number(account.balance || 0)) + points, updatedAt: Date.now(), entries: { ...entries, [entryId]: entry } };
-    await adminDatabaseRef(path).set(next);
-    return { member, points, balance: next.balance, alreadyProcessed: false };
-  }
-  throw new Error('會員點數正在被其他交易更新，請重新操作一次');
+    if (entries[entryId]) { alreadyProcessed = true; return account; }
+    const entry: MemberPointEntry = { delta: points, type: 'pos_purchase', sourceLabel: '現場購買獨享杯／雙重奏', createdAt: Date.now(), orderNo: orderKey, channel: 'pos', idempotencyKey: entryId };
+    return { balance: Math.max(0, Number(account.balance || 0)) + points, updatedAt: Date.now(), entries: { ...entries, [entryId]: entry } };
+  });
+  if (!result.committed) throw new Error('會員點數正在被其他交易更新，請重新操作一次');
+  const account = result.snapshot.val() as MemberPointsAccount;
+  return { member, points: alreadyProcessed ? Number(account.entries?.[entryId]?.delta || 0) : points, balance: Math.max(0, Number(account.balance || 0)), alreadyProcessed };
 }
 
 function isTerminalOrderStatus(status?: string) {
@@ -151,17 +167,17 @@ export async function earnOnlineOrderPoints({ accessToken, orderNo }: { accessTo
   const orderKey = String(order.orderNo || orderNo);
   const entryId = `order_${createHash('sha256').update(`${member.userId}:${orderKey}`).digest('hex').slice(0, 24)}`;
   const path = `memberPoints/${encodeURIComponent(memberKey(member.userId))}`;
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    const current = await firebaseJson<MemberPointsAccount>(path);
-    const account = current.value || { balance: 0, entries: {} };
+  let alreadyProcessed = false;
+  const result = await adminDatabaseRef(path).transaction((current) => {
+    const account = (current || { balance: 0, entries: {} }) as MemberPointsAccount;
     const entries = account.entries || {};
-    if (entries[entryId]) return { member, points: Number(entries[entryId].delta || 0), balance: Math.max(0, Number(account.balance || 0)), alreadyProcessed: true };
+    if (entries[entryId]) { alreadyProcessed = true; return account; }
     const entry: MemberPointEntry = { delta: points, type: 'order_reward', sourceLabel: '線上訂單獨享杯／雙重奏集點', createdAt: Date.now(), orderNo: orderKey, channel: 'online', idempotencyKey: entryId };
-    const next = { balance: Math.max(0, Number(account.balance || 0)) + points, updatedAt: Date.now(), entries: { ...entries, [entryId]: entry } };
-    await adminDatabaseRef(path).set(next);
-    return { member, points, balance: next.balance, alreadyProcessed: false };
-  }
-  throw new Error('會員點數正在被其他交易更新，請重新操作一次');
+    return { balance: Math.max(0, Number(account.balance || 0)) + points, updatedAt: Date.now(), entries: { ...entries, [entryId]: entry } };
+  });
+  if (!result.committed) throw new Error('會員點數正在被其他交易更新，請重新操作一次');
+  const account = result.snapshot.val() as MemberPointsAccount;
+  return { member, points: alreadyProcessed ? Number(account.entries?.[entryId]?.delta || 0) : points, balance: Math.max(0, Number(account.balance || 0)), alreadyProcessed };
 }
 
 export async function reverseOrderPoints(orderNo: string) {
@@ -176,18 +192,19 @@ export async function reverseOrderPoints(orderNo: string) {
   if (!order.userId) return { points: 0, alreadyReversed: false };
 
   const path = `memberPoints/${encodeURIComponent(memberKey(order.userId))}`;
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    const current = await firebaseJson<MemberPointsAccount>(path);
-    const account = current.value || { balance: 0, entries: {} };
+  let points = 0;
+  let alreadyReversed = false;
+  const result = await adminDatabaseRef(path).transaction((current) => {
+    const account = (current || { balance: 0, entries: {} }) as MemberPointsAccount;
     const entries = account.entries || {};
     const earned = Object.entries(entries).filter(([, entry]) =>
       Number(entry.delta || 0) > 0 && String(entry.orderNo || '') === String(orderNo)
         && (entry.type === 'pos_purchase' || entry.type === 'order_reward'),
     );
-    if (!earned.length) return { points: 0, alreadyReversed: false };
+    if (!earned.length) return account;
     const reversible = earned.filter(([entryId]) => !entries[`reversal_${entryId}`]);
-    if (!reversible.length) return { points: 0, alreadyReversed: true };
-    const points = reversible.reduce((sum, [, entry]) => sum + Number(entry.delta || 0), 0);
+    if (!reversible.length) { alreadyReversed = true; return account; }
+    points = reversible.reduce((sum, [, entry]) => sum + Number(entry.delta || 0), 0);
     const now = Date.now();
     const nextEntries = { ...entries } as Record<string, MemberPointEntry>;
     for (const [entryId, entry] of reversible) {
@@ -201,11 +218,11 @@ export async function reverseOrderPoints(orderNo: string) {
         idempotencyKey: `reversal_${entryId}`,
       };
     }
-    const next = { balance: Math.max(0, Number(account.balance || 0) - points), updatedAt: now, entries: nextEntries };
-    await adminDatabaseRef(path).set(next);
-    return { points, balance: next.balance, alreadyReversed: false };
-  }
-  throw new Error('會員點數正在被其他交易更新，請重新操作一次');
+    return { balance: Math.max(0, Number(account.balance || 0) - points), updatedAt: now, entries: nextEntries };
+  });
+  if (!result.committed) throw new Error('會員點數正在被其他交易更新，請重新操作一次');
+  const account = result.snapshot.val() as MemberPointsAccount;
+  return { points, balance: Math.max(0, Number(account.balance || 0)), alreadyReversed };
 }
 
 export async function migrateLegacyLinePoints({ accessToken, points, operator }: { accessToken: string; points: number; operator?: string }) {

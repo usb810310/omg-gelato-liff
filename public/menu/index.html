@@ -3328,6 +3328,7 @@
                 });
                 const createdOrder = await createOrderResponse.json().catch(() => ({}));
                 if (!createOrderResponse.ok || !createdOrder.success) throw new Error(createdOrder.error || '建立訂單失敗');
+                const serverOrderNo = createdOrder.orderNo || orderNo;
                 const pickupNo = createdOrder.pickupNo;
 
                 let pointsWarning = '';
@@ -3336,7 +3337,7 @@
                         const pointsResponse = await fetch('/api/points/award-order', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ accessToken: window.liffAccessToken, orderNo }),
+                            body: JSON.stringify({ accessToken: window.liffAccessToken, orderNo: serverOrderNo }),
                         });
                         const pointsResult = await pointsResponse.json().catch(() => ({}));
                         if (!pointsResponse.ok || !pointsResult.success) throw new Error(pointsResult.error || '點數發送失敗');

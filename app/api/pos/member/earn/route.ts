@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { earnPosPoints } from '@/lib/member-points';
+import { requirePosStaff } from '@/lib/pos-auth';
 
 export const runtime = 'nodejs';
 
@@ -9,7 +10,7 @@ function corsHeaders(request?: Request) {
   return {
   'Access-Control-Allow-Origin': allowedOrigin,
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
   'Access-Control-Max-Age': '86400',
   };
 }
@@ -20,6 +21,7 @@ export function OPTIONS(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    await requirePosStaff(request);
     const body = await request.json().catch(() => ({}));
     const sessionToken = typeof body?.sessionToken === 'string' ? body.sessionToken.trim() : '';
     const orderNo = typeof body?.orderNo === 'string' || typeof body?.orderNo === 'number' ? String(body.orderNo).trim() : '';

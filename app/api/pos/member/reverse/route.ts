@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { reverseOrderPoints } from '@/lib/member-points';
+import { requirePosStaff } from '@/lib/pos-auth';
 
 export const runtime = 'nodejs';
 
@@ -10,7 +11,7 @@ function headers(request: Request) {
   return {
     'Access-Control-Allow-Origin': allowed,
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Cache-Control': 'no-store',
   };
 }
@@ -21,6 +22,7 @@ export function OPTIONS(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    await requirePosStaff(request);
     const body = await request.json().catch(() => ({}));
     const orderNo = typeof body?.orderNo === 'string' || typeof body?.orderNo === 'number'
       ? String(body.orderNo).trim() : '';

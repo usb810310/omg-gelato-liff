@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getLineMember, getMemberPoints } from '@/lib/member-points';
+import { getLineMember, getMemberPoints, peekMemberQrClaim } from '@/lib/member-points';
 
 export const runtime = 'nodejs';
 
@@ -23,7 +23,7 @@ export async function POST(request: Request) {
     const body = await request.json().catch(() => ({}));
     const token = typeof body?.token === 'string' ? body.token.trim() : '';
     if (!token) return NextResponse.json({ success: false, error: '缺少會員 Token' }, { status: 400, headers: corsHeaders(request) });
-    const member = await getLineMember(token);
+    const member = token.startsWith('gelato-member-claim:') ? await peekMemberQrClaim(token) : await getLineMember(token);
     const account = await getMemberPoints(member.userId);
     return NextResponse.json({
       success: true,
