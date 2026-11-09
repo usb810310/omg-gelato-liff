@@ -1,9 +1,11 @@
 import { cert, getApps, initializeApp, type App } from 'firebase-admin/app';
+import { getAuth, type Auth } from 'firebase-admin/auth';
 import { getDatabase, type Database } from 'firebase-admin/database';
 
 const DEFAULT_DATABASE_URL = 'https://omg-menu-5761a-default-rtdb.asia-southeast1.firebasedatabase.app';
 let cachedApp: App | null = null;
 let cachedDatabase: Database | null = null;
+let cachedAuth: Auth | null = null;
 
 function serviceAccount() {
   const raw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
@@ -42,6 +44,11 @@ export function getFirebaseAdminApp() {
 export function getFirebaseAdminDatabase() {
   if (!cachedDatabase) cachedDatabase = getDatabase(getFirebaseAdminApp());
   return cachedDatabase;
+}
+
+export function getFirebaseAdminAuth() {
+  if (!cachedAuth) cachedAuth = getAuth(getFirebaseAdminApp());
+  return cachedAuth;
 }
 
 export function adminDatabaseRef(path: string) {
