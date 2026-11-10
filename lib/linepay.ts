@@ -65,11 +65,13 @@ export async function callLinePay<T>({
   path,
   body,
   timeoutMs = 40000,
+  acceptReturnCodes = [],
 }: {
   method: 'GET' | 'POST';
   path: string;
   body?: Record<string, unknown>;
   timeoutMs?: number;
+  acceptReturnCodes?: string[];
 }) {
   const config = getLinePayConfig();
   const nonce = randomUUID();
@@ -102,7 +104,7 @@ export async function callLinePay<T>({
     throw new Error(`LINE Pay 回應格式錯誤（HTTP ${response.status}）`);
   }
   const returnCode = String(data.returnCode ?? data.resultCode ?? '');
-  if (!response.ok || returnCode !== '0000') {
+  if (!response.ok || (returnCode !== '0000' && !acceptReturnCodes.includes(returnCode))) {
     const message = data.returnMessage || data.statusMessage || 'LINE Pay API 錯誤';
     throw new Error(`${message} (${returnCode || `HTTP ${response.status}`})`);
   }

@@ -2304,6 +2304,10 @@
                 pickupModalConfirm.disabled = submitting || selectedSlot === null;
                 pickupModalConfirm.textContent = submitting ? '送出中…' : '選擇付款方式';
             }
+            if (orderConfirmSubmit) {
+                orderConfirmSubmit.disabled = submitting;
+                orderConfirmSubmit.textContent = submitting ? '付款處理中…' : '確認送出';
+            }
         }
 
         function hasRecentOrderSubmitLock() {
@@ -2842,6 +2846,7 @@
             setOrderSubmitting(true);
             const method = pendingPayMethod;
             closeOrderConfirm();
+            showToast(method === 'onsite_linepay' ? '正在建立訂單並準備 LINE Pay，請稍候…' : '正在送出訂單，請稍候…', '⏳');
             await sendOrderToLine(pendingPickup.abs, pendingPickup.rel, method);
             pendingPayMethod = null;
         });

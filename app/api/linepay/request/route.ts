@@ -24,6 +24,53 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: '這筆訂單目前無法付款' }, { status: 409 });
     }
 
+    // 同一筆訂單只允許一個 LINE Pay 交易。若第一次付款已建立交易，
+    // 重新點擊付款時先查詢原交易，避免再次 request 觸發 LINE Pay 1172。
+    const existingTransactionId = String(order.linePayTransactionId || '').trim();
+    if (existingTransactionId && getPaymentDisplayStatus(order) === '付款處理中') {
+      try {
+        const statusResponse = await callLinePay<{ returnCode?: string | number; info?: { payInfo?: unknown[] } }>({
+          method: 'GET',
+          path: `/v4/payments/requests/${encodeURIComponent(existingTransactionId)}/check`,
+          timeoutMs: 20000,
+          acceptReturnCodes: ['0110', '0121', '0123'],
+        });
+        const statusCode = String(statusResponse.returnCode || '');
+        if (statusCode === '0110') {
+          const confirmed = await callLinePay<{ info?: { transactionId?: string | number; payInfo?: unknown[] } }>({
+            method: 'POST',
+            path: `/v4/payments/${encodeURIComponent(existingTransactionId)}/confirm`,
+            body: { amount: Number(order.total || 0), currency: 'TWD' },
+            timeoutMs: 45000,
+          });
+          await updateOrder(order, {
+            payment: '已付款',
+            paymentStatus: 'paid',
+            linePayTransactionId: String(confirmed.info?.transactionId || existingTransactionId),
+            linePayConfirmedAt: new Date().toISOString(),
+            linePayResult: confirmed.info?.payInfo || null,
+          });
+          return NextResponse.json({ success: true, alreadyConfirmed: true, orderNo: String(orderNo) });
+        }
+        if (statusCode === '0123') {
+          await updateOrder(order, {
+            payment: '已付款',
+            paymentStatus: 'paid',
+            linePayConfirmedAt: new Date().toISOString(),
+            linePayResult: statusResponse.info?.payInfo || null,
+          });
+          return NextResponse.json({ success: true, alreadyConfirmed: true, orderNo: String(orderNo) });
+        }
+      } catch (statusError) {
+        console.error('LINE Pay 既有交易狀態查詢失敗，保留付款處理中:', statusError);
+      }
+      return NextResponse.json({
+        success: false,
+        paymentPending: true,
+        error: '這筆訂單已有付款流程，請稍候重新整理訂單狀態，不要重複付款。',
+      }, { status: 409 });
+    }
+
     const amount = Number(order.total || 0);
     if (!Number.isInteger(amount) || amount <= 0) {
       return NextResponse.json({ success: false, error: '訂單金額不正確' }, { status: 400 });
