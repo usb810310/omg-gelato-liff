@@ -38,7 +38,219 @@
 .quickGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }.quickCard { min-height: 102px; border: 0; border-radius: 20px; padding: 17px 14px; display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between; text-align: left; cursor: pointer; color: var(--ink); transition: transform .16s ease; }.quickCard > span:nth-child(2) { display: flex; flex-direction: column; gap: 4px; }.quickCard b { font-size: 14px; }.quickCard small { color: var(--muted); font-size: 10px; }.quickCard strong { align-self: flex-end; font-size: 18px; font-weight: 400; }.greenCard { background: var(--green); color: #fff; }.greenCard small { color: #dbe7d6; }.creamCard { background: #f1e4ce; }.quickIcon { font-size: 18px; color: #f9d39b; }.creamCard .quickIcon { color: var(--orange); }
 .noteCard { position: relative; margin-top: 12px; padding: 20px 23px; min-height: 92px; border-radius: 20px; background: #dbe3d2; overflow: hidden; }.noteCard:after { content: '✦'; position: absolute; right: 23px; bottom: -14px; color: #b8c7ac; font-size: 95px; line-height: 1; }.noteMark { font-family: Georgia, serif; color: #77926c; font-size: 34px; line-height: .5; }.noteCard p { margin: 4px 0 7px; font-family: Georgia, serif; font-size: 17px; line-height: 1.2; position: relative; z-index: 1; }.noteCard p b { color: #557455; }.noteCaption { color: #6d8269; font-size: 8px; font-weight: 800; letter-spacing: .12em; }
 .pageView { padding-top: 18px; }.sectionHeading { display: flex; justify-content: space-between; align-items: end; margin: 0 4px 23px; }.sectionHeading h1, .memberHero h1 { margin: 7px 0 0; font-family: Georgia, serif; font-size: 38px; letter-spacing: -.07em; font-weight: 500; }.headingIcon { width: 45px; height: 45px; border-radius: 14px; display: grid; place-items: center; background: #e5eee1; color: var(--green); font-size: 22px; }.refreshButton { width: 45px; height: 45px; border: 0; border-radius: 14px; background: #e5eee1; color: var(--green); font: inherit; font-size: 25px; line-height: 1; cursor: pointer; transition: transform .16s ease, opacity .16s ease; }.refreshButton:disabled { opacity: .5; cursor: wait; }.emptyState { min-height: 260px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: var(--muted); }.emptyState h3 { color: var(--ink); margin: 12px 0 4px; font-size: 18px; }.emptyState p { margin: 0 0 20px; font-size: 12px; }.emptyEmoji { color: var(--orange); font-size: 44px; }.secondaryButton { background: var(--green); font-size: 12px; }.orderList { display: grid; gap: 11px; }.orderCard { display: flex; align-items: center; justify-content: space-between; padding: 17px; border-radius: 19px; background: var(--cream); box-shadow: 0 8px 24px rgba(92,68,42,.06); }.orderLabel { color: var(--orange); font-size: 9px; font-weight: 800; letter-spacing: .13em; }.orderCard h3 { margin: 5px 0 6px; font-size: 17px; }.orderCard p { margin: 0; color: var(--muted); font-size: 11px; }.orderCard > strong { color: var(--red); font-size: 19px; }
-.lineStampCard { position:relative; overflow:hidden; margin:0 -2px; padding:22px 20px 17px; border-radius:22px; color:#fff; background:linear-gradient(145deg,#625046,#3f3029); box-shadow:0 12px 24px rgba(59,43,34,.2); }.lineStampCard:before { content:'✦'; position:absolute; right:-14px; top:-31px; color:rgba(255,255,255,.06); font-size:150px; line-height:1; transform:rotate(18deg); }.stampCardTop { position:relative; z-index:1; display:flex; align-items:center; justify-content:space-between; }.stampBrand { display:flex; align-items:center; gap:9px; font-weight:800; font-size:14px; }.stampMark { display:grid; width:43px; height:43px; place-items:center; border:2px solid #fff; border-radius:50%; background:#18b99d; color:#fff; transform:rotate(-8deg); }.stampMark i { display:block; margin-top:-2px; font-size:18px; font-style:normal; line-height:13px; }.stampMark b { font-size:8px; letter-spacing:.08em; }.stampBrand small { display:block; margin-top:3px; color:#d8cec7; font-size:9px; font-weight:500; }.stampMore { font-size:27px; color:#e8dfd9; line-height:1; }.lineStampCard h2 { position:relative; z-index:1; margin:18px 0 2px; text-align:center; font-size:22px; letter-spacing:-.04em; }.stampExpiry { position:relative; z-index:1; margin:0; text-align:center; color:#cfc4bd; font-size:11px; }.stampRewardHint { position:relative; z-index:1; display:flex; align-items:center; gap:10px; margin:18px 0 12px; font-size:12px; }.stampRewardHint span:first-child { padding:5px 8px; border-radius:5px; background:#12c7aa; color:#fff; font-weight:800; }.stampRewardHint b { flex:1; color:#fff; }.stampRewardHint span:last-child { font-size:20px; color:#ddd2cb; }.stampGrid { position:relative; z-index:1; display:grid; grid-template-columns:repeat(5,1fr); gap:12px 10px; padding:4px 5px 12px; }.stampDot { position:relative; display:grid; width:42px; height:42px; place-items:center; justify-self:center; border:2px solid rgba(226,216,208,.28); border-radius:50%; color:rgba(240,233,228,.48); font-size:7px; font-weight:800; letter-spacing:.04em; transform:rotate(-12deg); }.stampDot:after { content:''; position:absolute; width:34px; height:34px; border:1px solid rgba(226,216,208,.22); border-radius:50%; }.stampDotFilled { border-color:#fff; color:#4b3930; background:#fff; box-shadow:0 2px 8px rgba(0,0,0,.12); }.stampDotFilled:after { border-color:rgba(75,57,48,.3); }.stampProgressLine { position:relative; z-index:1; display:flex; justify-content:space-between; color:#cbbeb5; font-size:9px; }.pointsNotice { position:relative; overflow:hidden; margin:0 0 14px; padding:16px 16px 14px; border:1px solid #e3ebe6; border-radius:20px; background:#fff; box-shadow:0 8px 22px rgba(31,55,45,.07); }.pointsNotice::after { content:'✦'; position:absolute; right:-18px; top:-34px; color:rgba(6,199,85,.07); font-size:130px; line-height:1; pointer-events:none; }.pointsNoticeCampaign { border-color:#c9e8d5; background:linear-gradient(145deg,#fff,#f4fbf6); }.pointsNoticeHeader { position:relative; z-index:1; display:flex; align-items:center; gap:10px; }.pointsNoticeIcon { display:grid; flex:0 0 34px; width:34px; height:34px; place-items:center; border-radius:12px; color:#fff; background:#06c755; font-size:15px; font-weight:900; box-shadow:0 5px 10px rgba(6,199,85,.2); }.pointsNoticeCampaign .pointsNoticeIcon { background:#12a85a; }.pointsNoticeTitle { flex:1; min-width:0; }.pointsNoticeMeta { display:flex; align-items:center; gap:7px; }.pointsNoticeMeta .kicker { margin:0; color:#83938a; font-size:8px; letter-spacing:.12em; }.pointsNoticeMeta > span { padding:3px 7px; border-radius:999px; background:#e7f7ed; color:#159447; font-size:9px; font-weight:800; }.pointsNoticeCampaign .pointsNoticeMeta > span { background:#d8f3e1; color:#118348; }.pointsNotice h2 { margin:4px 0 0; color:#1f2b25; font-size:16px; letter-spacing:-.04em; }.pointsNoticeArrow { position:relative; z-index:1; color:#a4b4aa; font-size:24px; font-weight:300; }.pointsNoticeList { position:relative; z-index:1; display:grid; gap:8px; margin:15px 0 0; padding:14px 0 0; border-top:1px solid #edf2ee; list-style:none; }.pointsNoticeList li { display:flex; align-items:flex-start; gap:9px; color:#53635a; font-size:11px; line-height:1.55; }.pointsNoticeList li b { flex:0 0 21px; color:#06a94c; font-size:9px; letter-spacing:.04em; }.pointsNoticeList li span { flex:1; }.pointsNotice small { position:relative; z-index:1; display:inline-block; margin-top:12px; padding:5px 9px; border-radius:7px; background:#f0f8f2; color:#4b8a61; font-size:9px; font-weight:800; }
+.lineStampCard { position:relative; overflow:hidden; margin:0 -2px; padding:22px 20px 17px; border-radius:22px; color:#fff; background:linear-gradient(145deg,#625046,#3f3029); box-shadow:0 12px 24px rgba(59,43,34,.2); }.lineStampCard:before { content:'✦'; position:absolute; right:-14px; top:-31px; color:rgba(255,255,255,.06); font-size:150px; line-height:1; transform:rotate(18deg); }.stampCardTop { position:relative; z-index:1; display:flex; align-items:center; justify-content:space-between; }.stampBrand { display:flex; align-items:center; gap:9px; font-weight:800; font-size:14px; }.stampMark { display:grid; width:43px; height:43px; place-items:center; border:2px solid #fff; border-radius:50%; background:#18b99d; color:#fff; transform:rotate(-8deg); }.stampMark i { display:block; margin-top:-2px; font-size:18px; font-style:normal; line-height:13px; }.stampMark b { font-size:8px; letter-spacing:.08em; }.stampBrand small { display:block; margin-top:3px; color:#d8cec7; font-size:9px; font-weight:500; }.stampMore { font-size:27px; color:#e8dfd9; line-height:1; }.lineStampCard h2 { position:relative; z-index:1; margin:18px 0 2px; text-align:center; font-size:22px; letter-spacing:-.04em; }.stampExpiry { position:relative; z-index:1; margin:0; text-align:center; color:#cfc4bd; font-size:11px; }.stampRewardHint { position:relative; z-index:1; display:flex; align-items:center; gap:10px; margin:18px 0 12px; font-size:12px; }.stampRewardHint span:first-child { padding:5px 8px; border-radius:5px; background:#12c7aa; color:#fff; font-weight:800; }.stampRewardHint b { flex:1; color:#fff; }.stampRewardHint span:last-child { font-size:20px; color:#ddd2cb; }.stampGrid { position:relative; z-index:1; display:grid; grid-template-columns:repeat(5,1fr); gap:12px 10px; padding:4px 5px 12px; }.stampDot { position:relative; display:grid; width:42px; height:42px; place-items:center; justify-self:center; border:2px solid rgba(226,216,208,.28); border-radius:50%; color:rgba(240,233,228,.48); font-size:7px; font-weight:800; letter-spacing:.04em; transform:rotate(-12deg); }.stampDot:after { content:''; position:absolute; width:34px; height:34px; border:1px solid rgba(226,216,208,.22); border-radius:50%; }.stampDotFilled { border-color:#fff; color:#4b3930; background:#fff; box-shadow:0 2px 8px rgba(0,0,0,.12); }.stampDotFilled:after { border-color:rgba(75,57,48,.3); }.stampProgressLine { position:relative; z-index:1; display:flex; justify-content:space-between; color:#cbbeb5; font-size:9px; }.pointsNotice { margin:14px 0 0; padding:16px 17px 15px; border:1px solid #dce8df; border-radius:18px; background:linear-gradient(135deg,#f1f7ee,#fbf8f0); }.pointsNoticeHeading { display:flex; align-items:center; gap:10px; }.pointsNoticeHeading > span { display:grid; width:30px; height:30px; place-items:center; border-radius:10px; background:#12b89b; color:#fff; font-size:16px; }.pointsNoticeHeading h3 { margin:3px 0 0; color:#34483d; font-size:16px; }.pointsNotice ul { display:grid; gap:6px; margin:12px 0 0; padding-left:18px; color:#68766d; font-size:11px; line-height:1.55; }.pointsNotice li::marker { color:#12b89b; }
+.rewardTabs { display:grid; grid-template-columns:1fr 1fr; margin:20px -20px 0; border-bottom:1px solid #e8e4e1; background:#fff; }.rewardTabs button { min-height:52px; border:0; border-bottom:3px solid transparent; background:#fff; color:#b9b6b4; font:inherit; font-size:13px; font-weight:800; cursor:pointer; }.rewardTabs .rewardTabActive { border-bottom-color:#1e1b1a; color:#171514; }.rewardItem { display:flex; align-items:center; gap:15px; padding:20px 0 13px; }.rewardThumb { display:grid; width:92px; height:92px; place-items:center; overflow:hidden; border-radius:12px; background:#eee; }.rewardBadge { display:grid; width:62px; height:62px; place-items:center; align-content:center; border:3px solid #6c5548; border-radius:50%; color:#6c5548; font-size:21px; font-weight:900; line-height:1; transform:rotate(-10deg); }.rewardBadge small { margin-top:5px; font-size:7px; letter-spacing:.14em; }.rewardItem h3, .earnedReward h3 { margin:0 0 7px; font-size:15px; }.rewardItem p, .earnedReward p { margin:0; color:var(--muted); font-size:11px; }.earnedReward { display:flex; align-items:center; gap:13px; margin-top:16px; padding:18px 15px; border-radius:14px; background:#f3eee7; }.earnedReward > span { color:var(--orange); font-size:25px; }.stampHowTo { margin-top:24px; padding:19px 0 4px; border-top:1px solid #ebe5dc; }.stampHowTo strong { display:inline-block; font-size:17px; }.stampHowTo > span { float:right; padding:10px 15px; border-radius:28px; background:#59483f; color:#fff; font-size:12px; font-weight:800; }.stampHowTo p { clear:both; margin:14px 0 0; color:var(--muted); font-size:10px; line-height:1.8; }
+.pointsCard { display:flex; align-items:center; justify-content:space-between; gap:14px; margin:14px 0 13px; padding:19px 20px; border:1px solid #ead8bf; border-radius:22px; background:linear-gradient(135deg,#fffaf0,#f6e4c8); box-shadow:0 8px 22px rgba(156,103,47,.08); }.pointsCard > div { display:grid; gap:4px; }.pointsCard strong { color:#9b5d2b; font-size:31px; line-height:1; letter-spacing:-.05em; }.pointsCard strong small { font-size:13px; letter-spacing:0; }.pointsCard span { color:#9c8067; font-size:10px; }.pointsIcon { display:grid; width:42px; height:42px; place-items:center; border-radius:15px; background:#edbd72; color:#fffaf0 !important; font-size:23px !important; box-shadow:0 5px 13px rgba(156,103,47,.15); }
+.memberHero { text-align: center; padding: 20px 0 25px; }.memberAvatar { margin: 0 auto 17px; width: 96px; height: 96px; border-radius: 50%; display: grid; place-items: center; overflow: hidden; background: #e6c094; border: 6px solid #fff; box-shadow: 0 8px 25px rgba(92,68,42,.12); color: #fff; font-size: 24px; font-weight: 800; }.memberHero h1 { font-size: 34px; }.memberId { color: var(--muted); font-size: 10px; letter-spacing: .12em; }.lineButton { display: flex; align-items: center; gap: 10px; background: #e4f0df; color: #49704b; padding: 16px 17px; border-radius: 17px; font-size: 12px; font-weight: 700; }.lineButton span { padding: 5px 7px; color: #fff; background: #06c755; border-radius: 6px; font-size: 9px; }.lineButton b { margin-left: auto; font-size: 18px; }.wishCard { background: #fffaf2; border: 1px solid #f1e6d6; margin-top: 13px; padding: 20px; border-radius: 22px; }.wishHeading { display: flex; align-items: center; gap: 10px; }.wishHeading > span { color: var(--orange); font-size: 24px; }.wishHeading h2 { font-family: Georgia, serif; margin: 4px 0 0; font-size: 23px; font-weight: 500; }.wishCard > p { color: var(--muted); font-size: 12px; margin: 15px 0; }.wishCard textarea { width: 100%; min-height: 84px; resize: vertical; box-sizing: border-box; border: 1px solid #eadccc; border-radius: 14px; background: #fff; color: var(--ink); padding: 12px; outline: none; font: inherit; font-size: 13px; }.wishCard textarea:focus { border-color: var(--orange); box-shadow: 0 0 0 3px rgba(223,138,81,.12); }.wishButton { width: 100%; margin-top: 10px; border: 0; border-radius: 30px; padding: 13px; background: var(--orange); color: white; font-size: 12px; font-weight: 800; cursor: pointer; transition: transform .16s ease, opacity .16s ease; }.wishButton:disabled { opacity: .4; cursor: not-allowed; }.successMessage { color: #529258 !important; text-align: center; font-weight: 700; margin: 12px 0 0 !important; }
+.bottomNav { position: fixed; z-index: 5; left: 50%; bottom: 0; transform: translateX(-50%); width: min(100%, 520px); height: 65px; padding: 7px 30px max(7px, env(safe-area-inset-bottom)); box-sizing: border-box; display: flex; justify-content: space-between; background: rgba(255,253,248,.94); border-top: 1px solid #ece5d9; backdrop-filter: blur(15px); }.bottomNav button { flex: 1; border: 0; background: transparent; color: #b3aa9e; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; transition: color .16s ease, transform .16s ease; }.bottomNav button span { font-size: 23px; line-height: 23px; }.bottomNav button small { font-size: 10px; font-weight: 700; }.bottomNav button:active { transform: scale(.95); }.bottomNav .activeNav { color: var(--red); }.bottomNav .activeNav span { transform: translateY(-2px); }
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } } @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-5px); } } @keyframes pulse { 0%,100% { opacity: .35; transform: scale(.8); } 50% { opacity: 1; transform: scale(1); } }
+@media (min-width: 700px) { .appShell { max-width: 520px; margin: 0 auto; box-shadow: 0 0 45px rgba(53,42,31,.08); } body { background: #eee9df; } }
+@media (prefers-reduced-motion: reduce) { .content, .loadingLogo, .loadingDot { animation: none; } :global(*) { scroll-behavior: auto !important; } }
+
+.orderCard { display: block; padding: 16px 17px; }
+.orderTopline { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.orderStatus { flex: 0 0 auto; padding: 5px 9px; border-radius: 20px; background: #e5efe0; color: #52734f; font-size: 10px; font-weight: 800; }
+.orderStatusCancelled { background: #f8e3df; color: #b1564c; }
+.orderMain { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 8px; }
+.orderMain h3 { margin: 0 0 6px; color: var(--green); }
+.onlineOrderNo { margin: 0 0 5px !important; color: var(--muted); font-size: 10px !important; letter-spacing: .02em; }
+.orderMain > strong { color: var(--red); font-size: 19px; }
+.pickupText { max-width: 220px; }
+.orderDetails { margin-top: 14px; padding-top: 12px; border-top: 1px dashed #e6dbcc; }
+.detailLabel { display: block; margin-bottom: 7px; color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .08em; }
+.orderDetails ul { display: grid; gap: 5px; margin: 0; padding: 0; list-style: none; }
+.orderDetails li { color: #5f574e; font-size: 11px; line-height: 1.45; }
+.orderDetails li::before { content: '✦'; margin-right: 6px; color: var(--orange); font-size: 9px; }
+@media (max-width: 370px) { .orderTopline { align-items: flex-start; flex-direction: column; gap: 6px; } .pickupText { max-width: 180px; } }
+
+.paymentRow { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 14px; padding-top: 12px; border-top: 1px solid #f0e7db; color: var(--muted); font-size: 11px; }
+.paymentRow b { margin-left: 5px; color: #a87342; font-weight: 800; }
+.linePayButton { border: 0; border-radius: 20px; padding: 8px 11px; background: #06c755; color: #fff; font-size: 10px; font-weight: 800; cursor: pointer; box-shadow: 0 4px 10px rgba(6,199,85,.18); transition: transform .16s ease, opacity .16s ease; }
+.linePayButton:active { transform: scale(.97); }
+.linePayButton:disabled { opacity: .55; cursor: wait; }
+@media (max-width: 370px) { .paymentRow { align-items: flex-start; flex-direction: column; } .linePayButton { width: 100%; } }
+.cancelOrderButton { display: block; width: 100%; min-height: 42px; margin-top: 12px; border: 1px solid #e6c7c1; border-radius: 14px; background: #fff8f6; color: #a33b32; font-size: 13px; font-weight: 800; cursor: pointer; transition: background .16s ease, opacity .16s ease; }
+.cancelOrderButton:active { background: #ffefeb; }
+.cancelOrderButton:disabled { opacity: .55; cursor: wait; }
+.cancelOrderNotice { margin: 10px 0 0; color: #9a4c3d; font-size: 11px; line-height: 1.55; }
+.paymentProcessingNotice { margin: 10px 0 0; padding: 9px 11px; border: 1px solid #cfe9d4; border-radius: 12px; background: #f1fbf3; color: #397347; font-size: 11px; line-height: 1.55; }
+
+/* 即時訂單狀態時間軸 */
+.statusPanel { margin-top: 14px; padding: 16px 15px 15px; border: 1px solid #eee4d7; border-radius: 18px; background: linear-gradient(145deg, #fffdf8, #f8f2e9); box-shadow: 0 7px 18px rgba(92,68,42,.05); }
+.statusPanelReady { border-color: #d5e6ce; background: linear-gradient(145deg, #fbfff8, #edf6e8); }
+.statusPanelHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.statusPanelHeader > div { display: grid; gap: 4px; }
+.statusEyebrow { color: var(--muted); font-size: 8px; font-weight: 800; letter-spacing: .13em; }
+.statusPanelHeader strong { color: var(--ink); font-size: 16px; letter-spacing: -.03em; }
+.liveStatusDot { flex: 0 0 auto; width: 9px; height: 9px; margin-top: 4px; border-radius: 50%; background: #75a66b; box-shadow: 0 0 0 5px rgba(117,166,107,.14); animation: statusPulse 1.8s ease-in-out infinite; }
+.statusHint { margin: 8px 0 15px; color: var(--muted); font-size: 11px; line-height: 1.55; }
+.statusTimeline { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
+.statusStep { position: relative; display: flex; min-width: 0; flex-direction: column; align-items: center; gap: 6px; color: #b6aa9c; text-align: center; font-size: 9px; line-height: 1.25; }
+.statusStepIcon { position: relative; z-index: 1; display: grid; width: 27px; height: 27px; place-items: center; border: 1px solid #eadfd1; border-radius: 50%; background: #fffdf8; color: #b8aa9a; font-size: 9px; font-weight: 800; }
+.statusStepDone { color: #607d57; font-weight: 700; }
+.statusStepDone .statusStepIcon { border-color: #a9c79f; background: #e6f0e1; color: #52734f; }
+.statusStepCurrent .statusStepIcon { box-shadow: 0 0 0 5px rgba(223,138,81,.13); border-color: var(--orange); background: var(--orange); color: #fff; }
+.statusStep i { position: absolute; z-index: 0; top: 13px; left: calc(50% + 15px); width: calc(100% - 10px); height: 1px; background: #e5dacf; }
+.statusStep i.statusConnectorDone { background: #a9c79f; }
+.pickupAlert { display: flex; align-items: center; gap: 10px; margin-top: 14px; padding: 11px 12px; border-radius: 13px; background: #e4f0df; color: #52734f; }
+.pickupAlert > span { display: grid; width: 26px; height: 26px; place-items: center; border-radius: 50%; background: #6e9865; color: #fff; font-size: 14px; }
+.pickupAlert div { display: grid; gap: 2px; }
+.pickupAlert b { font-size: 11px; }
+.pickupAlert small { color: #718a6b; font-size: 10px; }
+.statusNoticeRejected { display: flex; align-items: center; gap: 10px; margin-top: 14px; padding: 13px 12px; border: 1px solid #f0d2cd; border-radius: 15px; background: #fff3f0; color: #a64a40; }
+.statusNoticeIcon { display: grid; flex: 0 0 auto; width: 26px; height: 26px; place-items: center; border-radius: 50%; background: #d75b4f; color: #fff; font-weight: 800; }
+.statusNoticeRejected div { display: grid; gap: 3px; }
+.statusNoticeRejected strong { font-size: 13px; }
+.statusNoticeRejected p { margin: 0; color: #ae766d; font-size: 10px; line-height: 1.45; }
+@keyframes statusPulse { 0%, 100% { opacity: .55; transform: scale(.9); } 50% { opacity: 1; transform: scale(1.08); } }
+@media (prefers-reduced-motion: reduce) { .liveStatusDot { animation: none; } }
+
+
+/* === 訂單列表項目（可點擊卡片） === */
+.orderListItem {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 18px;
+  padding: 16px 18px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.orderListItem:active { transform: scale(0.985); }
+.orderListItem:hover { box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06); }
+
+.orderListMain {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 10px 0 12px;
+}
+.orderListInfo h3 { margin: 0 0 4px; font-size: 16px; }
+.orderListPreview {
+  margin: 0;
+  font-size: 13px;
+  color: #6b6b6b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 60vw;
+}
+.orderListTotal { font-size: 18px; }
+
+.orderListFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px dashed rgba(0, 0, 0, 0.08);
+  padding-top: 10px;
+}
+.paymentBadge {
+  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.05);
+}
+.orderListArrow { font-size: 13px; color: #2f8a5b; }
+
+/* === 單張訂單頁 === */
+.backButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  padding: 6px 0 14px;
+  font: inherit;
+  font-size: 14px;
+  color: #2f8a5b;
+  cursor: pointer;
+}
+.orderDetailCard {
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 20px;
+  padding: 20px;
+}
+
+/* === 目前 LIFF 導覽與訂單流程補強：保留完整舊版樣式，僅補新增元件 === */
+.homeView { padding-top: 4px; }
+.heroKicker { margin: 0; color: #8b907d; font-size: 9px; font-weight: 800; letter-spacing: .12em; line-height: 1.4; }
+.avatarWrap { flex: 0 0 42px; width: 42px; height: 42px; border-radius: 50%; overflow: hidden; display: grid; place-items: center; background: #d9a16e; color: #fff; font-size: 12px; font-weight: 800; border: 3px solid #fff; box-shadow: 0 2px 10px rgba(60,40,20,.1); }
+.avatarWrap img { width: 100%; height: 100%; object-fit: cover; }
+.miniLabel { margin: 0; color: var(--muted); font-size: 8px; font-weight: 800; letter-spacing: .12em; }
+.quickCard { cursor: pointer; }
+.menuNavButton { color: var(--green) !important; }
+.activeNav { color: var(--red) !important; }
+.backButton { display: inline-flex; align-items: center; gap: 7px; margin: 0 0 14px; padding: 8px 0; border: 0; background: transparent; color: var(--green); font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; }
+.backButton span { font-size: 25px; line-height: 16px; }
+.orderList { display: grid; gap: 11px; }
+.orderListItem { display: block; width: 100%; padding: 16px 17px; border: 0; border-radius: 19px; background: var(--cream); color: var(--ink); box-shadow: 0 8px 24px rgba(92,68,42,.06); text-align: left; cursor: pointer; font: inherit; }
+.orderListItem:active { transform: scale(.985); }
+.orderListInfo { min-width: 0; }
+.orderListMain { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 8px; }
+.orderListInfo h3 { margin: 0 0 6px; color: var(--green); font-size: 17px; }
+.orderListPreview { overflow: hidden; margin: 0; color: var(--muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.orderListTotal { flex: 0 0 auto; color: var(--red); font-size: 19px; }
+.orderListFooter { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; padding-top: 10px; border-top: 1px solid #f0e7db; }
+.paymentBadge { color: #a87342; font-size: 10px; font-weight: 800; }
+.orderListArrow { color: var(--muted); font-size: 10px; }
+.orderDetailCard { display: block; padding: 16px 17px; border-radius: 19px; background: var(--cream); box-shadow: 0 8px 24px rgba(92,68,42,.06); }
+.statusNoticeRejected { display: flex; align-items: flex-start; gap: 10px; margin-top: 14px; padding: 13px; border: 1px solid #f0d5cf; border-radius: 16px; background: #fff6f3; color: #a33b32; }
+.statusNoticeRejected strong { display: block; font-size: 14px; }
+.statusNoticeRejected p { margin: 4px 0 0; font-size: 11px; line-height: 1.5; }
+.statusNoticeIcon { display: grid; flex: 0 0 24px; width: 24px; height: 24px; place-items: center; border-radius: 50%; background: #e77a69; color: #fff; font-weight: 800; }
+.statusPanel { margin-top: 14px; padding: 16px 15px 15px; border: 1px solid #eee4d7; border-radius: 18px; background: linear-gradient(145deg, #fffdf8, #f8f2e9); box-shadow: 0 7px 18px rgba(92,68,42,.05); }
+.statusPanelReady { border-color: #d5e6ce; background: linear-gradient(145deg, #fbfff8, #edf6e8); }
+.statusPanelHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.statusPanelHeader > div { display: grid; gap: 4px; }
+.statusEyebrow { color: var(--muted); font-size: 8px; font-weight: 800; letter-spacing: .13em; }
+.statusPanelHeader strong { color: var(--green); font-size: 15px; }
+.statusHint { margin: 8px 0 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
+.liveStatusDot { width: 9px; height: 9px; margin-top: 4px; border-radius: 50%; background: #58a566; box-shadow: 0 0 0 4px rgba(88,165,102,.13); animation: pulse 1.8s ease-in-out infinite; }
+.statusTimeline { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-top: 16px; }
+.statusStep { position: relative; display: flex; flex-direction: column; align-items: center; gap: 5px; color: #aaa096; font-size: 9px; text-align: center; }
+.statusStepIcon { display: grid; width: 25px; height: 25px; place-items: center; border-radius: 50%; background: #eee8df; color: #aaa096; font-size: 10px; font-weight: 800; }
+.statusStepDone, .statusStepCurrent { color: var(--green); }
+.statusStepDone .statusStepIcon { background: #dcebd7; color: #477048; }
+.statusStepCurrent .statusStepIcon { box-shadow: 0 0 0 4px rgba(82,115,79,.12); }
+.statusStep i { position: absolute; top: 12px; left: calc(50% + 15px); width: calc(100% - 18px); height: 1px; background: #e4ddd3; }
+.statusStep i.statusConnectorDone { background: #a9c5a2; }
+.pickupAlert { display: flex; align-items: center; gap: 9px; margin-top: 13px; padding: 10px 11px; border-radius: 12px; background: rgba(213,230,206,.58); color: #4d754e; }
+.pickupAlert > span { color: #d28b4d; font-size: 17px; }
+.pickupAlert b, .pickupAlert small { display: block; }
+.pickupAlert b { font-size: 11px; }
+.pickupAlert small { margin-top: 2px; font-size: 10px; }
+@media (max-width: 370px) {
+  .statusTimeline { gap: 1px; }
+  .statusStep { font-size: 8px; }
+  .statusStep i { left: calc(50% + 13px); width: calc(100% - 15px); }
+  .orderListMain { align-items: flex-start; }
+  .orderListInfo h3 { font-size: 15px; }
+}
+
+
+.memberQrCard { display: grid; grid-template-columns: 1fr 190px; align-items: center; gap: 16px; margin: 18px 0; padding: 19px; border: 1px solid #dfe9dc; border-radius: 22px; background: linear-gradient(135deg, #f7fbf3, #eef5e9); }
+.memberQrCopy h2 { margin: 5px 0 8px; color: var(--ink); font-size: 22px; }
+.memberQrCopy > p:last-child { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.7; }
+.memberQrImage { width: 190px; height: 190px; padding: 8px; box-sizing: border-box; border-radius: 15px; background: #fffdf9; box-shadow: 0 6px 16px rgba(73,112,75,.12); }
+.memberQrLoading { display: grid; width: 190px; height: 190px; place-items: center; border-radius: 15px; background: #fffdf9; color: var(--muted); font-size: 11px; text-align: center; }
+.memberQrSecurity { grid-column: 1 / -1; color: #6f896f; font-size: 10px; text-align: center; }
+@media (max-width: 430px) { .memberQrCard { grid-template-columns: 1fr; text-align: center; } .memberQrCopy .kicker { text-align: center; } .memberQrImage, .memberQrLoading { justify-self: center; } }
+
+
+/* Member center redesign */
+.memberPageView { padding-top: 12px; padding-bottom: 24px; }
+.memberPageHeader { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; padding: 8px 2px 20px; }
+.memberPageHeader h1 { margin: 7px 0 7px; font-family: Georgia, serif; font-size: 35px; font-weight: 500; letter-spacing: -.07em; }
+.memberPageHeader > div:first-child > p:last-child { margin:0; max-width:270px; color:var(--muted); font-size:11px; line-height:1.6; }
+.memberMiniAvatar { flex:0 0 52px; width:52px; height:52px; display:grid; place-items:center; overflow:hidden; border:3px solid #fff; border-radius:50%; background:#dfb887; color:#fff; font-size:14px; font-weight:800; box-shadow:0 5px 16px rgba(92,68,42,.12); }
+.memberMiniAvatar img { width:100%; height:100%; object-fit:cover; }
 .pointsOverview { margin:0 -2px 13px; padding:20px 20px 17px; border-radius:23px; color:#fff; background:linear-gradient(140deg,#3d302b 0%,#654f43 57%,#8d6b54 100%); box-shadow:0 13px 25px rgba(59,43,34,.18); }
 .pointsOverviewTop,.pointsGoalRow,.pointsMeta { display:flex; align-items:center; justify-content:space-between; }
 .pointsOverviewTop { color:#dfd3ca; font-size:11px; font-weight:700; }
@@ -275,34 +487,7 @@
 .memberPageHeader { padding: 7px 3px 18px; }
 .memberPageHeader h1 { font-size: 37px; }
 .memberMiniAvatar { border-color: var(--cream); }
-.pointsNotice {
-  display: flex;
-  align-items: flex-start;
-  gap: 11px;
-  margin: 0 0 12px;
-  padding: 14px 15px;
-  border: 1px solid #eadfce;
-  border-radius: 18px;
-  background: linear-gradient(135deg, #fffaf0, #f8efe1);
-  box-shadow: 0 6px 16px rgba(83, 59, 42, .045);
-}
-.pointsNoticeCampaign { border-color: #e9c89d; background: linear-gradient(135deg, #fff4df, #f8e4c7); }
-.pointsNoticeIcon {
-  display: grid;
-  flex: 0 0 30px;
-  width: 30px;
-  height: 30px;
-  place-items: center;
-  border-radius: 11px;
-  color: #fff;
-  background: var(--accent);
-  font-size: 14px;
-  font-weight: 900;
-}
-.pointsNoticeCampaign .pointsNoticeIcon { background: #d68a4d; }
-.pointsNotice h2 { margin: 4px 0 5px; color: var(--ink); font-size: 14px; letter-spacing: -.03em; }
-.pointsNotice p:last-of-type { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.65; }
-.pointsNotice small { display: block; margin-top: 5px; color: #a8754b; font-size: 9px; font-weight: 800; }
+.pointsNotice { position:relative; overflow:hidden; margin:0 0 14px; padding:16px 16px 14px; border:1px solid #e3ebe6; border-radius:20px; background:#fff; box-shadow:0 8px 22px rgba(31,55,45,.07); }.pointsNotice::after { content:'✦'; position:absolute; right:-18px; top:-34px; color:rgba(6,199,85,.07); font-size:130px; line-height:1; pointer-events:none; }.pointsNoticeCampaign { border-color:#c9e8d5; background:linear-gradient(145deg,#fff,#f4fbf6); }.pointsNoticeHeader { position:relative; z-index:1; display:flex; align-items:center; gap:10px; }.pointsNoticeIcon { display:grid; flex:0 0 34px; width:34px; height:34px; place-items:center; border-radius:12px; color:#fff; background:#06c755; font-size:15px; font-weight:900; box-shadow:0 5px 10px rgba(6,199,85,.2); }.pointsNoticeCampaign .pointsNoticeIcon { background:#12a85a; }.pointsNoticeTitle { flex:1; min-width:0; }.pointsNoticeMeta { display:flex; align-items:center; gap:7px; }.pointsNoticeMeta .kicker { margin:0; color:#83938a; font-size:8px; letter-spacing:.12em; }.pointsNoticeMeta > span { padding:3px 7px; border-radius:999px; background:#e7f7ed; color:#159447; font-size:9px; font-weight:800; }.pointsNoticeCampaign .pointsNoticeMeta > span { background:#d8f3e1; color:#118348; }.pointsNotice h2 { margin:4px 0 0; color:#1f2b25; font-size:16px; letter-spacing:-.04em; }.pointsNoticeArrow { position:relative; z-index:1; color:#a4b4aa; font-size:24px; font-weight:300; }.pointsNoticeList { position:relative; z-index:1; display:grid; gap:8px; margin:15px 0 0; padding:14px 0 0; border-top:1px solid #edf2ee; list-style:none; }.pointsNoticeList li { display:flex; align-items:flex-start; gap:9px; color:#53635a; font-size:11px; line-height:1.55; }.pointsNoticeList li b { flex:0 0 21px; color:#06a94c; font-size:9px; letter-spacing:.04em; }.pointsNoticeList li span { flex:1; }.pointsNotice small { position:relative; z-index:1; display:inline-block; margin-top:12px; padding:5px 9px; border-radius:7px; background:#f0f8f2; color:#4b8a61; font-size:9px; font-weight:800; }
 .pointsOverview {
   margin: 0 0 14px;
   border: 1px solid rgba(255,255,255,.08);
