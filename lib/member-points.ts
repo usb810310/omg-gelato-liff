@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { adminDatabaseRef } from '@/lib/firebase-admin';
 import { isOrderTerminal } from '@/lib/order-status';
 import { DEFAULT_POS_POINT_RULES, parsePosPointRules, resolvePosPointMultiplier } from '@/lib/pos-point-rules';
@@ -8,22 +8,35 @@ const ELIGIBLE_PRODUCTS = new Set(['OMG獨享杯', 'OMG雙重奏']);
 export type LineMember = { userId: string; displayName: string; pictureUrl?: string };
 export type MemberPointEntry = {
   delta: number;
-  type: 'pos_purchase' | 'order_reward' | 'legacy_line_reward_migration' | 'order_reward_reversal';
+  type: 'pos_purchase' | 'order_reward' | 'legacy_line_reward_migration' | 'order_reward_reversal' | 'reward_redemption';
   sourceLabel: string;
   createdAt: number;
-  orderNo: string;
+  orderNo?: string;
   orderId?: string;
-  channel: 'pos' | 'online' | 'pos_migration';
+  channel: 'pos' | 'online' | 'pos_migration' | 'member';
   idempotencyKey: string;
   basePoints?: number;
   multiplier?: number;
   ruleSource?: 'manual' | 'campaign' | 'standard';
   ruleLabel?: string;
 };
+export type MemberRewardType = 'exclusive_cup' | 'duet';
+export type MemberRewardVoucher = {
+  id: string;
+  rewardType: MemberRewardType;
+  title: string;
+  pointsCost: 10;
+  status: 'issued' | 'redeemed';
+  issuedAt: number;
+  redeemedAt?: number;
+  redeemedBy?: string;
+  redemptionIdempotencyKey?: string;
+};
 export type MemberPointsAccount = {
   balance?: number;
   updatedAt?: number;
   entries?: Record<string, MemberPointEntry>;
+  rewardVouchers?: Record<string, MemberRewardVoucher>;
 };
 export type PointOrderItem = { name?: unknown; qty?: unknown; quantity?: unknown };
 export type PointOrder = {
@@ -263,7 +276,7 @@ export async function earnPosPoints({ accessToken, orderNo, orderId }: { accessT
       ruleSource: appliedRule.source,
       ruleLabel: appliedRule.label,
     };
-    return { balance: Math.max(0, Number(account.balance || 0)) + points, updatedAt: Date.now(), entries: { ...entries, [entryId]: entry } };
+    return { ...account, balance: Math.max(0, Number(account.balance || 0)) + points, updatedAt: Date.now(), entries: { ...entries, [entryId]: entry } };
   });
   if (!result.committed) throw new Error('會員點數正在被其他交易更新，請重新操作一次');
   if (ambiguousLegacyEntryDetected) throw new Error('此取餐編號已有舊點數紀錄且無法唯一對應，請管理員核對後再操作');
@@ -392,7 +405,7 @@ export async function earnOnlineOrderPoints({ accessToken, orderNo, orderId }: {
       channel: 'online',
       idempotencyKey: entryId,
     };
-    return { balance: Math.max(0, Number(account.balance || 0)) + points, updatedAt: Date.now(), entries: { ...entries, [entryId]: entry } };
+    return { ...account, balance: Math.max(0, Number(account.balance || 0)) + points, updatedAt: Date.now(), entries: { ...entries, [entryId]: entry } };
   });
   if (!result.committed) throw new Error('會員點數正在被其他交易更新，請重新操作一次');
   if (ambiguousLegacyEntryDetected) throw new Error('此訂單編號已有舊點數紀錄且無法唯一對應，請管理員核對後再操作');
@@ -481,7 +494,7 @@ export async function reverseOrderPoints(orderNo: string, orderId: string) {
           idempotencyKey: `reversal_${entryId}`,
         };
       }
-      return { balance: Math.max(0, Number(account.balance || 0) - points), updatedAt: now, entries: nextEntries };
+      return { ...account, balance: Math.max(0, Number(account.balance || 0) - points), updatedAt: now, entries: nextEntries };
     });
     if (!result.committed) throw new Error('會員點數正在被其他交易更新，請重新操作一次');
     if (ambiguousLegacyEntryDetected) throw new Error('此取餐編號有舊點數流水且無法唯一對應，為避免撤錯點數已停止自動回收，請管理員核對');
@@ -523,14 +536,12 @@ export async function migrateLegacyLinePoints({ accessToken, points, operator }:
   if (!Number.isInteger(amount) || amount < 0 || amount > 10) throw new Error('舊點卡轉入點數必須是 0 至 10 的整數');
   const path = `memberPoints/${encodeURIComponent(memberKey(member.userId))}`;
   const entryId = `legacy_${createHash('sha256').update(member.userId).digest('hex').slice(0, 24)}`;
-
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    const current = await firebaseJson<MemberPointsAccount>(path);
-    const account = current.value || { balance: 0, entries: {} };
+  let alreadyProcessed = false;
+  const result = await adminDatabaseRef(path).transaction((current) => {
+    alreadyProcessed = false;
+    const account = (current || { balance: 0, entries: {} }) as MemberPointsAccount;
     const entries = account.entries || {};
-    if (entries[entryId]) {
-      return { member, points: Number(entries[entryId].delta || 0), balance: Math.max(0, Number(account.balance || 0)), alreadyProcessed: true };
-    }
+    if (entries[entryId]) { alreadyProcessed = true; return account; }
     const now = Date.now();
     const entry: MemberPointEntry = {
       delta: amount,
@@ -541,9 +552,125 @@ export async function migrateLegacyLinePoints({ accessToken, points, operator }:
       channel: 'pos_migration',
       idempotencyKey: entryId,
     };
-    const next = { balance: Math.max(0, Number(account.balance || 0)) + amount, updatedAt: now, entries: { ...entries, [entryId]: entry } };
-    await adminDatabaseRef(path).set(next);
-    return { member, points: amount, balance: next.balance, alreadyProcessed: false, operator: operator || 'POS' };
-  }
-  throw new Error('會員點數正在被其他交易更新，請重新操作一次');
+    return { ...account, balance: Math.max(0, Number(account.balance || 0)) + amount, updatedAt: now, entries: { ...entries, [entryId]: entry } };
+  });
+  if (!result.committed) throw new Error('會員點數正在被其他交易更新，請重新操作一次');
+  const account = result.snapshot.val() as MemberPointsAccount;
+  return { member, points: Number(account.entries?.[entryId]?.delta || 0), balance: Math.max(0, Number(account.balance || 0)), alreadyProcessed, ...(alreadyProcessed ? {} : { operator: operator || 'POS' }) };
+}
+
+const MEMBER_REWARDS: Record<MemberRewardType, { title: string; pointsCost: 10 }> = {
+  exclusive_cup: { title: '獨享杯', pointsCost: 10 },
+  duet: { title: '雙重奏', pointsCost: 10 },
+};
+const REWARD_QR_TTL_MS = 5 * 60 * 1000;
+
+export class MemberRewardError extends Error {
+  constructor(message: string, public readonly statusCode = 400) { super(message); this.name = 'MemberRewardError'; }
+}
+
+export function isMemberRewardType(value: unknown): value is MemberRewardType {
+  return value === 'exclusive_cup' || value === 'duet';
+}
+
+export async function issueMemberRewardVoucher(accessToken: string, rewardType: MemberRewardType, idempotencyKey: string) {
+  if (!isMemberRewardType(rewardType)) throw new MemberRewardError('兌換獎項無效');
+  if (!/^[A-Za-z0-9_-]{16,80}$/.test(idempotencyKey)) throw new MemberRewardError('兌換請求識別碼格式錯誤');
+  const member = await getLineMember(accessToken);
+  const reward = MEMBER_REWARDS[rewardType];
+  const voucherId = `rv_${createHash('sha256').update(`${member.userId}:${idempotencyKey}`).digest('hex').slice(0, 32)}`;
+  const entryId = `reward_${voucherId}`;
+  const path = `memberPoints/${encodeURIComponent(memberKey(member.userId))}`;
+  const now = Date.now();
+  let alreadyProcessed = false;
+  let failure = '';
+  const result = await adminDatabaseRef(path).transaction((current) => {
+    alreadyProcessed = false; failure = '';
+    const account = (current || { balance: 0, entries: {} }) as MemberPointsAccount;
+    const vouchers = account.rewardVouchers || {};
+    const existing = vouchers[voucherId];
+    if (existing) {
+      if (existing.rewardType !== rewardType) { failure = '此兌換請求已用於不同獎項，請重新整理後再試'; return; }
+      alreadyProcessed = true;
+      return account;
+    }
+    const balance = Math.max(0, Number(account.balance || 0));
+    if (!Number.isFinite(balance) || balance < reward.pointsCost) { failure = '點數不足，集滿 10 點後即可兌換'; return; }
+    const voucher: MemberRewardVoucher = { id: voucherId, rewardType, title: reward.title, pointsCost: reward.pointsCost, status: 'issued', issuedAt: now };
+    const entry: MemberPointEntry = { delta: -reward.pointsCost, type: 'reward_redemption', sourceLabel: `兌換${reward.title}兌換券`, createdAt: now, channel: 'member', idempotencyKey: entryId };
+    return { ...account, balance: balance - reward.pointsCost, updatedAt: now, entries: { ...(account.entries || {}), [entryId]: entry }, rewardVouchers: { ...vouchers, [voucherId]: voucher } };
+  });
+  if (!result.committed) throw new MemberRewardError(failure || '點數正在更新，請稍後重試', failure ? 409 : 503);
+  const account = result.snapshot.val() as MemberPointsAccount;
+  const voucher = account.rewardVouchers?.[voucherId];
+  if (!voucher) throw new MemberRewardError('兌換券建立狀態不明，請重新整理會員頁確認', 503);
+  return { member, points: account, voucher, alreadyProcessed };
+}
+
+type MemberRewardQrClaim = { userId: string; voucherId: string; createdAt: number; expiresAt: number };
+
+function parseMemberRewardToken(token: string) {
+  const match = /^gelato-reward-claim:([A-Za-z0-9_-]{43})$/.exec(String(token || '').trim());
+  if (!match) throw new MemberRewardError('兌換券條碼格式無效', 400);
+  return createHash('sha256').update(match[1]).digest('hex');
+}
+
+async function readMemberRewardQrClaim(token: string, allowExpired = false) {
+  const tokenHash = parseMemberRewardToken(token);
+  const claim = (await adminDatabaseRef(`rewardQrClaims/${tokenHash}`).get()).val() as MemberRewardQrClaim | null;
+  if (!claim?.userId || !claim.voucherId || (!allowExpired && Number(claim.expiresAt || 0) <= Date.now())) throw new MemberRewardError('兌換券條碼已失效，請顧客重新開啟券碼', 410);
+  return claim;
+}
+
+export async function createMemberRewardQrClaim(accessToken: string, voucherId: string) {
+  if (!/^rv_[a-f0-9]{32}$/.test(voucherId)) throw new MemberRewardError('兌換券識別碼無效');
+  const member = await getLineMember(accessToken);
+  const path = `memberPoints/${encodeURIComponent(memberKey(member.userId))}`;
+  const account = (await adminDatabaseRef(path).get()).val() as MemberPointsAccount | null;
+  const voucher = account?.rewardVouchers?.[voucherId];
+  if (!voucher) throw new MemberRewardError('找不到這張兌換券', 404);
+  if (voucher.status !== 'issued') throw new MemberRewardError('這張兌換券已核銷，不能再次使用', 409);
+  const secret = randomBytes(32).toString('base64url');
+  const now = Date.now();
+  const expiresAt = now + REWARD_QR_TTL_MS;
+  await adminDatabaseRef(`rewardQrClaims/${createHash('sha256').update(secret).digest('hex')}`).set({ userId: member.userId, voucherId, createdAt: now, expiresAt } satisfies MemberRewardQrClaim);
+  return { token: `gelato-reward-claim:${secret}`, expiresAt };
+}
+
+export async function previewMemberRewardQrClaim(token: string) {
+  const claim = await readMemberRewardQrClaim(token);
+  const path = `memberPoints/${encodeURIComponent(memberKey(claim.userId))}`;
+  const account = (await adminDatabaseRef(path).get()).val() as MemberPointsAccount | null;
+  const voucher = account?.rewardVouchers?.[claim.voucherId];
+  if (!voucher) throw new MemberRewardError('找不到這張兌換券', 404);
+  return { voucher: { id: voucher.id, rewardType: voucher.rewardType, title: voucher.title, pointsCost: voucher.pointsCost, status: voucher.status, issuedAt: voucher.issuedAt, ...(voucher.redeemedAt ? { redeemedAt: voucher.redeemedAt } : {}) }, canRedeem: voucher.status === 'issued' };
+}
+
+export async function redeemMemberRewardQrClaim(token: string, staffUid: string, idempotencyKey: string) {
+  if (!staffUid || staffUid.length > 128) throw new MemberRewardError('無法識別核銷店員', 401);
+  if (!/^[A-Za-z0-9_-]{16,80}$/.test(idempotencyKey)) throw new MemberRewardError('核銷請求識別碼格式錯誤');
+  const claim = await readMemberRewardQrClaim(token, true);
+  const path = `memberPoints/${encodeURIComponent(memberKey(claim.userId))}`;
+  const now = Date.now();
+  let alreadyProcessed = false;
+  let failure = '';
+  const result = await adminDatabaseRef(path).transaction((current) => {
+    alreadyProcessed = false; failure = '';
+    const account = (current || { balance: 0, entries: {} }) as MemberPointsAccount;
+    const vouchers = account.rewardVouchers || {};
+    const voucher = vouchers[claim.voucherId];
+    if (!voucher) { failure = '找不到這張兌換券'; return; }
+    if (voucher.status === 'redeemed') {
+      if (voucher.redeemedBy === staffUid && voucher.redemptionIdempotencyKey === idempotencyKey) { alreadyProcessed = true; return account; }
+      failure = '這張兌換券已核銷，不能再次使用'; return;
+    }
+    if (Number(claim.expiresAt || 0) <= Date.now()) { failure = '兌換券條碼已失效，請顧客重新開啟券碼'; return; }
+    const redeemed: MemberRewardVoucher = { ...voucher, status: 'redeemed', redeemedAt: now, redeemedBy: staffUid, redemptionIdempotencyKey: idempotencyKey };
+    return { ...account, updatedAt: now, rewardVouchers: { ...vouchers, [claim.voucherId]: redeemed } };
+  });
+  if (!result.committed) throw new MemberRewardError(failure || '兌換券正在核銷，請重新掃描確認', failure ? 409 : 503);
+  const account = result.snapshot.val() as MemberPointsAccount;
+  const voucher = account.rewardVouchers?.[claim.voucherId];
+  if (!voucher || voucher.status !== 'redeemed') throw new MemberRewardError('兌換券核銷狀態不明，請勿重複交付商品並重新查詢', 503);
+  return { voucher: { id: voucher.id, rewardType: voucher.rewardType, title: voucher.title, pointsCost: voucher.pointsCost, status: voucher.status, issuedAt: voucher.issuedAt, redeemedAt: voucher.redeemedAt }, alreadyProcessed };
 }

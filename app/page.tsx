@@ -39,6 +39,18 @@ type MemberPointsAccount = {
   balance?: number;
   updatedAt?: number;
   entries?: Record<string, { delta?: number; type?: string; sourceLabel?: string; createdAt?: number; orderNo?: string }>;
+  rewardVouchers?: Record<string, MemberRewardVoucher>;
+};
+
+type MemberRewardType = 'exclusive_cup' | 'duet';
+type MemberRewardVoucher = {
+  id: string;
+  rewardType: MemberRewardType;
+  title: string;
+  pointsCost: number;
+  status: 'issued' | 'redeemed';
+  issuedAt: number;
+  redeemedAt?: number;
 };
 
 type Order = {
@@ -333,6 +345,12 @@ export default function Home() {
   const [pointEntriesExpanded, setPointEntriesExpanded] = useState(false);
   const [memberQrDataUrl, setMemberQrDataUrl] = useState('');
   const [memberQrOpen, setMemberQrOpen] = useState(false);
+  const [rewardActionType, setRewardActionType] = useState<MemberRewardType | null>(null);
+  const [rewardMessage, setRewardMessage] = useState('');
+  const [activeRewardVoucherId, setActiveRewardVoucherId] = useState<string | null>(null);
+  const [rewardQrByVoucher, setRewardQrByVoucher] = useState<Record<string, { dataUrl: string; expiresAt: number }>>({});
+  const [rewardQrLoadingVoucherId, setRewardQrLoadingVoucherId] = useState<string | null>(null);
+  const rewardIdempotencyKeysRef = useRef(new Map<MemberRewardType, string>());
   const [legacyQrDataUrl, setLegacyQrDataUrl] = useState('');
   const [legacyQrOpen, setLegacyQrOpen] = useState(false);
   const [pointCampaign, setPointCampaign] = useState<PointCampaign | null>(null);
@@ -582,6 +600,73 @@ export default function Home() {
     }
   };
 
+  const issueRewardVoucher = async (rewardType: MemberRewardType, title: string) => {
+    if (!profile?.userId || rewardActionType) return;
+    if (pointsBalance < 10) {
+      setRewardMessage('目前點數不足 10 點，集滿後即可兌換。');
+      return;
+    }
+    if (!window.confirm(`確定使用 10 點兌換「${title}」兌換券嗎？送出後會立即扣點，兌換券不設使用期限。`)) return;
+    const idempotencyKey = rewardIdempotencyKeysRef.current.get(rewardType) || window.crypto.randomUUID();
+    rewardIdempotencyKeysRef.current.set(rewardType, idempotencyKey);
+    setRewardActionType(rewardType);
+    setRewardMessage('正在建立兌換券…');
+    try {
+      const accessToken = liff.getAccessToken();
+      if (!accessToken) throw new Error('LINE 登入已失效，請重新開啟會員頁');
+      const response = await fetch('/api/member/rewards/redeem', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accessToken, rewardType, idempotencyKey }),
+        cache: 'no-store',
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.success) throw new Error(result.error || '兌換券建立失敗，請稍後重試');
+      rewardIdempotencyKeysRef.current.delete(rewardType);
+      setMemberPoints(result.points || { balance: 0, entries: {}, rewardVouchers: {} });
+      setActiveRewardVoucherId(null);
+      setRewardMessage(result.alreadyProcessed ? '兌換券已建立；點數不會重複扣除。' : `已扣除 10 點，${title}兌換券已放入「我的兌換券」，永久有效。`);
+    } catch (error) {
+      console.error('建立兌換券失敗:', error);
+      setRewardMessage(error instanceof Error ? error.message : '兌換券建立失敗，請稍後重試。');
+    } finally {
+      setRewardActionType(null);
+    }
+  };
+
+  const showRewardVoucherQr = async (voucherId: string, forceRefresh = false) => {
+    if (!forceRefresh && activeRewardVoucherId === voucherId) {
+      const currentQr = rewardQrByVoucher[voucherId];
+      if (currentQr && currentQr.expiresAt > clock + 5000) {
+        setActiveRewardVoucherId(null);
+        return;
+      }
+    }
+    if (rewardQrLoadingVoucherId) return;
+    setRewardQrLoadingVoucherId(voucherId);
+    setRewardMessage('');
+    try {
+      const accessToken = liff.getAccessToken();
+      if (!accessToken) throw new Error('LINE 登入已失效，請重新開啟會員頁');
+      const response = await fetch('/api/member/rewards/qr', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accessToken, voucherId }),
+        cache: 'no-store',
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.success || typeof result.token !== 'string') throw new Error(result.error || '兌換券條碼產生失敗');
+      const dataUrl = await QRCode.toDataURL(result.token, { errorCorrectionLevel: 'M', margin: 2, width: 280, color: { dark: '#2d1f14', light: '#fffdf9' } });
+      setRewardQrByVoucher((current) => ({ ...current, [voucherId]: { dataUrl, expiresAt: Number(result.expiresAt) } }));
+      setActiveRewardVoucherId(voucherId);
+    } catch (error) {
+      console.error('兌換券條碼產生失敗:', error);
+      setRewardMessage(error instanceof Error ? error.message : '兌換券條碼產生失敗，請稍後再試。');
+    } finally {
+      setRewardQrLoadingVoucherId(null);
+    }
+  };
+
   const switchTab = (tab: 'home' | 'menu' | 'orders' | 'member') => {
     if (tab === 'menu') {
       window.location.assign('/menu/index.html');
@@ -764,6 +849,8 @@ export default function Home() {
   const availableRewards = Math.floor(pointsBalance / 10);
   const recentPointEntries = Object.entries(memberPoints.entries || {})
     .sort(([, a], [, b]) => Number(b.createdAt || 0) - Number(a.createdAt || 0));
+  const memberRewardVouchers = Object.entries(memberPoints.rewardVouchers || {})
+    .sort(([, a], [, b]) => Number(b.issuedAt || 0) - Number(a.issuedAt || 0));
   const visiblePointEntries = pointEntriesExpanded ? recentPointEntries : recentPointEntries.slice(0, 3);
   const pageTitle = activeTab === 'menu' ? '線上點餐' : activeTab === 'orders' ? (selectedOrder ? '訂單詳情' : '訂單足跡') : activeTab === 'member' ? '會員與點數' : '今日首頁';
 
@@ -897,8 +984,26 @@ export default function Home() {
               </> : <div className={styles.noActivity}><span>○</span><p>完成第一次指定品項消費後<br />點數紀錄會顯示在這裡。</p></div>}
             </section>
 
-            <section className={styles.rewardGuideCard} aria-label="獎勵兌換說明">
-              <div className={styles.rewardGuideBadge}>10</div><div><p className={styles.kicker}>REWARD GUIDE</p><h2>集滿 10 點，兌換一份指定獎勵</h2><p>{availableRewards > 0 ? '你已有可兌換資格，請到店向店員出示會員頁。' : `目前還差 ${pointsToReward} 點，慢慢集就好。`}</p></div>
+            <section className={styles.memberRedeemCard} aria-label="點數兌換獎勵">
+              <div className={styles.subsectionHeading}><div><p className={styles.kicker}>REWARD MENU</p><h2>點數兌換</h2></div><span>每張 10 點</span></div>
+              <p className={styles.memberRedeemIntro}>點數與兌換券皆不設使用期限。你可自行選擇兌換獨享杯或雙重奏；取得兌換券後，下次到店出示條碼供店員核銷即可。</p>
+              <div className={styles.rewardChoices}>
+                {([{ type: 'exclusive_cup', title: '獨享杯' }, { type: 'duet', title: '雙重奏' }] as const).map((reward) => <div className={styles.rewardChoice} key={reward.type}><div><b>{reward.title}</b><small>兌換券 · 10 點</small></div><button type="button" disabled={rewardActionType !== null || pointsBalance < 10} onClick={() => void issueRewardVoucher(reward.type, reward.title)}>{rewardActionType === reward.type ? '建立中…' : pointsBalance < 10 ? '點數不足' : '使用 10 點兌換'}</button></div>)}
+              </div>
+              <p className={styles.rewardMessage} aria-live="polite">{rewardMessage || `目前 ${pointsBalance} 點；兌換後可在此查看尚未使用的兌換券。`}</p>
+            </section>
+
+            <section className={styles.memberVouchersCard} aria-label="我的兌換券">
+              <div className={styles.subsectionHeading}><div><p className={styles.kicker}>MY VOUCHERS</p><h2>我的兌換券</h2></div><span>{memberRewardVouchers.filter(([, voucher]) => voucher.status === 'issued').length} 張可使用</span></div>
+              {memberRewardVouchers.length ? <div className={styles.voucherList}>{memberRewardVouchers.map(([voucherId, voucher]) => {
+                const qr = rewardQrByVoucher[voucherId];
+                const qrExpired = !qr || qr.expiresAt <= clock;
+                return <article className={styles.voucherItem} key={voucherId}>
+                  <div className={styles.voucherInfo}><div><b>{voucher.title}兌換券</b><span className={`${styles.voucherStatus} ${voucher.status === 'redeemed' ? styles.voucherStatusRedeemed : ''}`}>{voucher.status === 'redeemed' ? '已核銷' : '未使用'}</span></div><small>永久有效 · 兌換時已扣 {voucher.pointsCost} 點</small>{voucher.redeemedAt ? <small>核銷時間 {new Date(voucher.redeemedAt).toLocaleString('zh-TW')}</small> : null}</div>
+                  {voucher.status === 'issued' && <button type="button" className={styles.voucherQrButton} disabled={rewardQrLoadingVoucherId === voucherId} onClick={() => void showRewardVoucherQr(voucherId, Boolean(qrExpired))}>{rewardQrLoadingVoucherId === voucherId ? '準備中…' : activeRewardVoucherId === voucherId ? '收起條碼' : qrExpired ? '顯示／更新店家條碼' : '顯示店家核銷條碼'}</button>}
+                  {activeRewardVoucherId === voucherId && voucher.status === 'issued' && <div className={styles.voucherQrReveal}>{qr?.dataUrl ? <Image src={qr.dataUrl} alt={`${voucher.title}兌換券核銷 QR Code`} width={190} height={190} unoptimized /> : <span>正在準備專屬條碼…</span>}<p>請讓店員在 POS 掃描此條碼<br />此核銷條碼 5 分鐘內有效，兌換券本身永久有效</p><button type="button" onClick={() => void showRewardVoucherQr(voucherId, true)} disabled={rewardQrLoadingVoucherId === voucherId}>重新產生條碼</button></div>}
+                </article>;
+              })}</div> : <div className={styles.voucherEmpty}><span>✦</span><p>還沒有兌換券<br />集滿 10 點後可兌換獨享杯或雙重奏。</p></div>}
             </section>
 
             <a href="https://lin.ee/sB558niE" target="_blank" rel="noopener noreferrer" className={styles.lineButton}><span>LINE</span> 加入好友，接收最新口味 <b>↗</b></a>
