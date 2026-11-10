@@ -2,6 +2,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { adminDatabaseRef } from '@/lib/firebase-admin';
 import { isOrderTerminal } from '@/lib/order-status';
 import { DEFAULT_POS_POINT_RULES, isDouble11CampaignAt, parsePosPointRules, resolvePosPointMultiplier } from '@/lib/pos-point-rules';
+import { isMemberRewardType, MEMBER_REWARD_OPTIONS, type MemberRewardType } from '@/lib/member-rewards';
 
 const ELIGIBLE_PRODUCTS = new Set(['OMG獨享杯', 'OMG雙重奏']);
 
@@ -20,12 +21,11 @@ export type MemberPointEntry = {
   ruleSource?: 'manual' | 'campaign' | 'standard';
   ruleLabel?: string;
 };
-export type MemberRewardType = 'exclusive_cup' | 'duet';
 export type MemberRewardVoucher = {
   id: string;
   rewardType: MemberRewardType;
   title: string;
-  pointsCost: 10;
+  pointsCost: number;
   status: 'issued' | 'redeemed';
   issuedAt: number;
   redeemedAt?: number;
@@ -593,25 +593,18 @@ export async function migrateLegacyLinePoints({ accessToken, points, operator }:
   return { member, points: Number(account.entries?.[entryId]?.delta || 0), balance: Math.max(0, Number(account.balance || 0)), alreadyProcessed, ...(alreadyProcessed ? {} : { operator: operator || 'POS' }) };
 }
 
-const MEMBER_REWARDS: Record<MemberRewardType, { title: string; pointsCost: 10 }> = {
-  exclusive_cup: { title: '獨享杯', pointsCost: 10 },
-  duet: { title: '雙重奏', pointsCost: 10 },
-};
 const REWARD_QR_TTL_MS = 5 * 60 * 1000;
 
 export class MemberRewardError extends Error {
   constructor(message: string, public readonly statusCode = 400) { super(message); this.name = 'MemberRewardError'; }
 }
 
-export function isMemberRewardType(value: unknown): value is MemberRewardType {
-  return value === 'exclusive_cup' || value === 'duet';
-}
-
 export async function issueMemberRewardVoucher(accessToken: string, rewardType: MemberRewardType, idempotencyKey: string) {
   if (!isMemberRewardType(rewardType)) throw new MemberRewardError('兌換獎項無效');
   if (!/^[A-Za-z0-9_-]{16,80}$/.test(idempotencyKey)) throw new MemberRewardError('兌換請求識別碼格式錯誤');
   const member = await getLineMember(accessToken);
-  const reward = MEMBER_REWARDS[rewardType];
+  const reward = MEMBER_REWARD_OPTIONS.find((option) => option.type === rewardType);
+  if (!reward) throw new MemberRewardError('兌換獎項無效');
   const voucherId = `rv_${createHash('sha256').update(`${member.userId}:${idempotencyKey}`).digest('hex').slice(0, 32)}`;
   const entryId = `reward_${voucherId}`;
   const path = `memberPoints/${encodeURIComponent(memberKey(member.userId))}`;
@@ -629,9 +622,9 @@ export async function issueMemberRewardVoucher(accessToken: string, rewardType: 
       return account;
     }
     const balance = Math.max(0, Number(account.balance || 0));
-    if (!Number.isFinite(balance) || balance < reward.pointsCost) { failure = '點數不足，集滿 10 點後即可兌換'; return; }
+    if (!Number.isFinite(balance) || balance < reward.pointsCost) { failure = `點數不足，兌換此券需要 ${reward.pointsCost} 點`; return; }
     const voucher: MemberRewardVoucher = { id: voucherId, rewardType, title: reward.title, pointsCost: reward.pointsCost, status: 'issued', issuedAt: now };
-    const entry: MemberPointEntry = { delta: -reward.pointsCost, type: 'reward_redemption', sourceLabel: `兌換${reward.title}兌換券`, createdAt: now, channel: 'member', idempotencyKey: entryId };
+    const entry: MemberPointEntry = { delta: -reward.pointsCost, type: 'reward_redemption', sourceLabel: reward.title.includes('券') ? `兌換${reward.title}` : `兌換${reward.title}兌換券`, createdAt: now, channel: 'member', idempotencyKey: entryId };
     return { ...account, balance: balance - reward.pointsCost, updatedAt: now, entries: { ...(account.entries || {}), [entryId]: entry }, rewardVouchers: { ...vouchers, [voucherId]: voucher } };
   });
   if (!result.committed) throw new MemberRewardError(failure || '點數正在更新，請稍後重試', failure ? 409 : 503);

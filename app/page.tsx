@@ -8,6 +8,7 @@ import QRCode from 'qrcode';
 import { getApp, getApps, initializeApp } from 'firebase/app';
 import { getDatabase, onValue, ref } from 'firebase/database';
 import { getShopStatus, type BusinessHours } from '@/lib/business-hours';
+import { MEMBER_REWARD_OPTIONS, type MemberRewardType } from '@/lib/member-rewards';
 import { getPaymentDisplayStatus, isOrderCancelled, isOrderRefunded, isOrderRejected, isOrderTerminal } from '@/lib/order-status';
 import styles from './page.module.css';
 
@@ -43,7 +44,6 @@ type MemberPointsAccount = {
   rewardVouchers?: Record<string, MemberRewardVoucher>;
 };
 
-type MemberRewardType = 'exclusive_cup' | 'duet';
 type MemberRewardVoucher = {
   id: string;
   rewardType: MemberRewardType;
@@ -632,13 +632,14 @@ export default function Home() {
     }
   };
 
-  const issueRewardVoucher = async (rewardType: MemberRewardType, title: string) => {
+  const issueRewardVoucher = async (reward: (typeof MEMBER_REWARD_OPTIONS)[number]) => {
+    const { type: rewardType, title, pointsCost } = reward;
     if (!profile?.userId || rewardActionType) return;
-    if (pointsBalance < 10) {
-      setRewardMessage('目前點數不足 10 點，集滿後即可兌換。');
+    if (pointsBalance < pointsCost) {
+      setRewardMessage(`點數不足，兌換「${title}」需要 ${pointsCost} 點。`);
       return;
     }
-    if (!window.confirm(`確定使用 10 點兌換「${title}」兌換券嗎？送出後會立即扣點，兌換券不設使用期限。`)) return;
+    if (!window.confirm(`確定使用 ${pointsCost} 點兌換「${title}」嗎？送出後會立即扣點，兌換券永久有效。`)) return;
     const idempotencyKey = rewardIdempotencyKeysRef.current.get(rewardType) || window.crypto.randomUUID();
     rewardIdempotencyKeysRef.current.set(rewardType, idempotencyKey);
     setRewardActionType(rewardType);
@@ -657,7 +658,7 @@ export default function Home() {
       rewardIdempotencyKeysRef.current.delete(rewardType);
       setMemberPoints(result.points || { balance: 0, entries: {}, rewardVouchers: {} });
       setActiveRewardVoucherId(null);
-      setRewardMessage(result.alreadyProcessed ? '兌換券已建立；點數不會重複扣除。' : `已扣除 10 點，${title}兌換券已放入「我的兌換券」，永久有效。`);
+      setRewardMessage(result.alreadyProcessed ? '兌換券已建立；點數不會重複扣除。' : `已扣除 ${pointsCost} 點，「${title}」已放入「我的兌換券」，永久有效。`);
     } catch (error) {
       console.error('建立兌換券失敗:', error);
       setRewardMessage(error instanceof Error ? error.message : '兌換券建立失敗，請稍後重試。');
@@ -877,7 +878,7 @@ export default function Home() {
     : null;
   const pointsBalance = Math.max(0, Number(memberPoints.balance || 0));
   const stampCount = pointsBalance % 10;
-  const pointsToReward = pointsBalance >= 10 ? 0 : (stampCount === 0 ? 10 : 10 - stampCount);
+  const pointsToDiscountVoucher = Math.max(0, 5 - pointsBalance);
   const availableRewards = Math.floor(pointsBalance / 10);
   const recentPointEntries = Object.entries(memberPoints.entries || {})
     .sort(([, a], [, b]) => Number(b.createdAt || 0) - Number(a.createdAt || 0));
@@ -975,7 +976,7 @@ export default function Home() {
             <section className={styles.pointsOverview} aria-label="目前集點進度">
               <div className={styles.pointsOverviewTop}><span>目前點數</span><span className={styles.pointsLive}><i />即時同步</span></div>
               <div className={styles.pointsNumber}>{pointsBalance}<small> 點</small></div>
-              <div className={styles.pointsGoalRow}><span>{availableRewards > 0 ? `已有 ${availableRewards} 份兌換資格` : `再 ${pointsToReward} 點可兌換`}</span><b>集滿 10 點</b></div>
+              <div className={styles.pointsGoalRow}><span>{pointsToDiscountVoucher > 0 ? `再 ${pointsToDiscountVoucher} 點可兌換 5 折券` : `已達 5 點兌換門檻${availableRewards > 0 ? ` · 可兌換 ${availableRewards} 張商品券` : ''}`}</span><b>5 折券 5 點 · 商品券 10 點</b></div>
               <div className={styles.pointsProgress}><span style={{ width: `${Math.min(100, (stampCount / 10) * 100)}%` }} /></div>
               <div className={styles.pointsMeta}><span>{stampCount}/10 本輪進度</span><span>無使用期限</span></div>
             </section>
@@ -1017,10 +1018,10 @@ export default function Home() {
             </section>
 
             <section className={styles.memberRedeemCard} aria-label="點數兌換獎勵">
-              <div className={styles.subsectionHeading}><div><p className={styles.kicker}>REWARD MENU</p><h2>點數兌換</h2></div><span>每張 10 點</span></div>
-              <p className={styles.memberRedeemIntro}>點數與兌換券皆不設使用期限。你可自行選擇兌換獨享杯或雙重奏；取得兌換券後，下次到店出示條碼供店員核銷即可。</p>
+              <div className={styles.subsectionHeading}><div><p className={styles.kicker}>REWARD MENU</p><h2>點數兌換</h2></div><span>5 點起兌</span></div>
+              <p className={styles.memberRedeemIntro}>點數與兌換券皆永久有效，可自行選擇兌換完整商品券（10 點）或 5 折券（5 點）。到店出示條碼由店員核銷；折價券須由店員依券面手動折抵，核銷不會自動調整或綁定 POS 訂單。</p>
               <div className={styles.rewardChoices}>
-                {([{ type: 'exclusive_cup', title: '獨享杯' }, { type: 'duet', title: '雙重奏' }] as const).map((reward) => <div className={styles.rewardChoice} key={reward.type}><div><b>{reward.title}</b><small>兌換券 · 10 點</small></div><button type="button" disabled={rewardActionType !== null || pointsBalance < 10} onClick={() => void issueRewardVoucher(reward.type, reward.title)}>{rewardActionType === reward.type ? '建立中…' : pointsBalance < 10 ? '點數不足' : '使用 10 點兌換'}</button></div>)}
+                {MEMBER_REWARD_OPTIONS.map((reward) => <div className={styles.rewardChoice} key={reward.type}><div><b>{reward.title}</b><small>{reward.description} · {reward.pointsCost} 點</small></div><button type="button" disabled={rewardActionType !== null || pointsBalance < reward.pointsCost} onClick={() => void issueRewardVoucher(reward)}>{rewardActionType === reward.type ? '建立中…' : pointsBalance < reward.pointsCost ? '點數不足' : `${reward.pointsCost} 點兌換`}</button></div>)}
               </div>
               <p className={styles.rewardMessage} aria-live="polite">{rewardMessage || `目前 ${pointsBalance} 點；兌換後可在此查看尚未使用的兌換券。`}</p>
             </section>
@@ -1031,11 +1032,11 @@ export default function Home() {
                 const qr = rewardQrByVoucher[voucherId];
                 const qrExpired = !qr || qr.expiresAt <= clock;
                 return <article className={styles.voucherItem} key={voucherId}>
-                  <div className={styles.voucherInfo}><div><b>{voucher.title}兌換券</b><span className={`${styles.voucherStatus} ${voucher.status === 'redeemed' ? styles.voucherStatusRedeemed : ''}`}>{voucher.status === 'redeemed' ? '已核銷' : '未使用'}</span></div><small>永久有效 · 兌換時已扣 {voucher.pointsCost} 點</small>{voucher.redeemedAt ? <small>核銷時間 {new Date(voucher.redeemedAt).toLocaleString('zh-TW')}</small> : null}</div>
+                  <div className={styles.voucherInfo}><div><b>{voucher.title.includes('券') ? voucher.title : `${voucher.title}兌換券`}</b><span className={`${styles.voucherStatus} ${voucher.status === 'redeemed' ? styles.voucherStatusRedeemed : ''}`}>{voucher.status === 'redeemed' ? '已核銷' : '未使用'}</span></div><small>永久有效 · 兌換時已扣 {voucher.pointsCost} 點</small>{voucher.redeemedAt ? <small>核銷時間 {new Date(voucher.redeemedAt).toLocaleString('zh-TW')}</small> : null}</div>
                   {voucher.status === 'issued' && <button type="button" className={styles.voucherQrButton} disabled={rewardQrLoadingVoucherId === voucherId} onClick={() => void showRewardVoucherQr(voucherId, Boolean(qrExpired))}>{rewardQrLoadingVoucherId === voucherId ? '準備中…' : activeRewardVoucherId === voucherId ? '收起條碼' : qrExpired ? '顯示／更新店家條碼' : '顯示店家核銷條碼'}</button>}
                   {activeRewardVoucherId === voucherId && voucher.status === 'issued' && <div className={styles.voucherQrReveal}>{qr?.dataUrl ? <Image src={qr.dataUrl} alt={`${voucher.title}兌換券核銷 QR Code`} width={190} height={190} unoptimized /> : <span>正在準備專屬條碼…</span>}<p>請讓店員在 POS 掃描此條碼<br />此核銷條碼 5 分鐘內有效，兌換券本身永久有效</p><button type="button" onClick={() => void showRewardVoucherQr(voucherId, true)} disabled={rewardQrLoadingVoucherId === voucherId}>重新產生條碼</button></div>}
                 </article>;
-              })}</div> : <div className={styles.voucherEmpty}><span>✦</span><p>還沒有兌換券<br />集滿 10 點後可兌換獨享杯或雙重奏。</p></div>}
+              })}</div> : <div className={styles.voucherEmpty}><span>✦</span><p>還沒有兌換券<br />5 點可兌換指定品項 5 折券，10 點可兌換商品券。</p></div>}
             </section>
 
             {lineFriendStatus !== 'checking' && lineFriendStatus !== 'friend' && <section className={styles.memberActionCard} aria-label="LINE 官方帳號好友狀態">

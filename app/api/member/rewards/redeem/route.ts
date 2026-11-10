@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { isMemberRewardType, issueMemberRewardVoucher, MemberRewardError } from '@/lib/member-points';
+import { issueMemberRewardVoucher, MemberRewardError } from '@/lib/member-points';
+import { isMemberRewardType } from '@/lib/member-rewards';
 
 export const runtime = 'nodejs';
 
