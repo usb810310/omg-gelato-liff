@@ -702,7 +702,7 @@ export default function Home() {
 
   const switchTab = (tab: 'home' | 'menu' | 'orders' | 'member') => {
     if (tab === 'menu') {
-      window.location.assign('/menu/index.html');
+      window.location.replace('/menu/index.html');
       return;
     }
     setActiveTab(tab);
@@ -712,7 +712,7 @@ export default function Home() {
   };
 
   const openMenu = () => {
-    window.location.assign('/menu/index.html');
+    window.location.replace('/menu/index.html');
   };
 
   const retryLiff = () => {
@@ -1043,7 +1043,7 @@ export default function Home() {
 
       <nav className={styles.appDock} aria-label="主要導覽">
         <button type="button" onClick={() => switchTab('home')} className={activeTab === 'home' ? styles.dockActive : ''}><span>⌂</span><small>今日</small></button>
-        <button type="button" onClick={openMenu} className={`${styles.dockOrderButton} ${activeTab === 'menu' ? styles.dockOrderActive : ''}`}><span>✦</span><small>線上訂</small></button>
+        <button type="button" onClick={openMenu} className={`${styles.dockOrderButton} ${activeTab === 'menu' ? styles.dockOrderActive : ''}`}><span>✦</span><small>點餐</small></button>
         <button type="button" onClick={() => switchTab('orders')} className={activeTab === 'orders' ? styles.dockActive : ''}><span>◷</span><small>訂單查看</small></button>
         <button type="button" onClick={() => switchTab('member')} className={activeTab === 'member' ? styles.dockActive : ''}><span>◒</span><small>OMG會員</small></button>
       </nav>
