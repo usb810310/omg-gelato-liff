@@ -1712,6 +1712,19 @@
         .flow-step-label { margin: 18px 2px 9px; font-size: 14px; letter-spacing: -.02em; }
         .flow-step-label .flow-step-number { width: 29px; height: 29px; border-color: #ead1be; color: #b66b51; background: #fffaf3; }
         .flow-step-label small { color: var(--text-muted); }
+        .flow-step-label { position: relative; min-height: 38px; padding: 5px 8px 5px 5px; border: 1px solid transparent; border-radius: 15px; transition: background .25s ease, border-color .25s ease, box-shadow .25s ease, opacity .25s ease; }
+        .flow-step-label.is-current { border-color: rgba(201,104,81,.34); background: linear-gradient(105deg, rgba(255,246,235,.95), rgba(255,253,248,.72)); box-shadow: 0 7px 18px rgba(201,104,81,.12); animation: flowGuidePulse 1.8s ease-in-out infinite; }
+        .flow-step-label.is-done { color: #63815f; }
+        .flow-step-label.is-done .flow-step-number { border-color: #a9c6a2; color: #557c50; background: #edf7ea; }
+        .flow-step-label.is-done .flow-step-number::after { content: '✓'; font-size: 12px; }
+        .flow-step-label.is-done .flow-step-number { font-size: 0; }
+        .flow-step-label:not(.is-current):not(.is-done) { opacity: .68; }
+        .flow-step-guide { display: none; margin-left: 2px; padding: 5px 9px; border-radius: 9px; background: #fff0df; color: #a35d3f; font-size: 10px; font-weight: 800; line-height: 1.35; letter-spacing: 0; white-space: nowrap; }
+        .flow-step-label.is-current .flow-step-guide { display: inline-flex; align-items: center; }
+        .flow-step-label.is-current .flow-step-guide::before { content: '↳'; margin-right: 4px; font-size: 13px; }
+        @keyframes flowGuidePulse { 0%, 100% { box-shadow: 0 7px 18px rgba(201,104,81,.09); } 50% { box-shadow: 0 7px 22px rgba(201,104,81,.24); } }
+        @media (max-width: 480px) { .flow-step-guide { font-size: 9px; padding: 5px 7px; } }
+        @media (prefers-reduced-motion: reduce) { .flow-step-label.is-current { animation: none; } }
         .order-panel, .summary-section, .today-section { border-radius: 22px; border-color: var(--border-light); background: var(--bg-card); box-shadow: var(--shadow-card); }
         .order-panel { padding: 18px 14px 16px; }
         .panel-header { color: var(--text-secondary); }
@@ -1777,7 +1790,7 @@
         <!-- ===== 🆕 重新設計的訂單面板 ===== -->
         <div class="shop-status-bar" id="shopStatusBar"><span class="dot"></span><div><span id="shopStatusLabel">確認營業狀態中…</span><small id="shopStatusDetail"></small></div></div>
         <div class="order-lock-note" id="orderLockNote">今天與明天都不營業，下單區已暫時鎖定；仍可瀏覽今日口味。</div>
-        <div class="flow-step-label"><span class="flow-step-number">01</span><span>選擇盛裝容器</span><small>CHOOSE YOUR SERVE</small></div>
+        <div class="flow-step-label" data-flow-step="1"><span class="flow-step-number">01</span><span>選擇盛裝容器</span><span class="flow-step-guide">先選一個容器開始</span><small>CHOOSE YOUR SERVE</small></div>
         <div class="order-panel" id="orderPanel">
             <!-- 第一行：標題 -->
             <div class="panel-header">
@@ -1838,7 +1851,7 @@
 
 
         <!-- ===== 第二步：選擇口味 ===== -->
-        <div class="flow-step-label"><span class="flow-step-number">02</span><span>選擇口味窗口</span><small>BUILD YOUR FLAVOR</small></div>
+        <div class="flow-step-label" data-flow-step="2"><span class="flow-step-number">02</span><span>選擇口味窗口</span><span class="flow-step-guide">再點口味完成配對</span><small>BUILD YOUR FLAVOR</small></div>
         <div class="brand-sub-title" id="todaySectionTitle">🪧今日口味查看 & 同步店內冰櫃🪧</div>
 
         <!-- ===== ✨開始訂購 & 模擬試用✨口味 ===== -->
@@ -1854,7 +1867,7 @@
         </div>
 
         <!-- ===== 訂單明細 ===== -->
-        <div class="flow-step-label"><span class="flow-step-number">03</span><span>購物清單</span><small>CHECK YOUR ORDER</small></div>
+        <div class="flow-step-label" data-flow-step="3"><span class="flow-step-number">03</span><span>購物清單</span><span class="flow-step-guide">確認明細後送出訂單</span><small>CHECK YOUR ORDER</small></div>
         <div class="summary-section" id="summarySection">
             <!-- 修改：標題獨立並置中，移除原本的 0 項徽章 -->
             
@@ -3028,6 +3041,17 @@
         console.log('✅ 許願池按鈕已重新綁定');
 
         // ---- 訂單核心 ----
+        const flowStepLabels = [...document.querySelectorAll('[data-flow-step]')];
+        function updateFlowGuide() {
+            const hasItems = duetPairs.length > 0 || Object.keys(cupMap).length > 0 || shareBoxes.length > 0;
+            const currentStep = activeTarget || pendingDuetFlavor !== null ? 2 : hasItems ? 3 : 1;
+            flowStepLabels.forEach((label) => {
+                const step = Number(label.dataset.flowStep);
+                label.classList.toggle('is-current', step === currentStep);
+                label.classList.toggle('is-done', step < currentStep);
+            });
+        }
+
         function updateModeLabel(mode) {
             const labelMap = { duet: '雙重奏', cup: '獨享杯', share: '分享盒' };
             const text = labelMap[mode] || '尚未選擇';
@@ -3037,6 +3061,7 @@
             modeCup.classList.toggle('active', mode === 'cup');
             modeShare.classList.toggle('active', mode === 'share');
             updatePendingBadge();
+            updateFlowGuide();
         }
 
         function updatePendingBadge() {
@@ -3148,6 +3173,7 @@
 
             updatePendingBadge();
             renderSummary();
+            updateFlowGuide();
         }
 
         function renderSummary() {
@@ -3205,6 +3231,7 @@
                 summaryList.innerHTML = html;
             }
             summaryTotalAmount.textContent = total;
+            updateFlowGuide();
         }
 
                 // ---- 訂單文字產生 ----
