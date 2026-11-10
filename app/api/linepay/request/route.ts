@@ -27,7 +27,7 @@ export async function POST(request: Request) {
     // 同一筆訂單只允許一個 LINE Pay 交易。若第一次付款已建立交易，
     // 重新點擊付款時先查詢原交易，避免再次 request 觸發 LINE Pay 1172。
     const existingTransactionId = String(order.linePayTransactionId || '').trim();
-    if (existingTransactionId && getPaymentDisplayStatus(order) === '付款處理中') {
+    if (existingTransactionId && ['付款處理中', '付款失敗'].includes(getPaymentDisplayStatus(order))) {
       try {
         const statusResponse = await callLinePay<{ returnCode?: string | number; info?: { payInfo?: unknown[] } }>({
           method: 'GET',
