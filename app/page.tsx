@@ -12,6 +12,8 @@ import { MEMBER_REWARD_OPTIONS, type MemberRewardType } from '@/lib/member-rewar
 import { getPaymentDisplayStatus, isOrderCancelled, isOrderRefunded, isOrderRejected, isOrderTerminal } from '@/lib/order-status';
 import styles from './page.module.css';
 
+const CANONICAL_LIFF_ORIGIN = 'https://my-liff-app-xi.vercel.app';
+
 // ====== 每日動態主題與按鈕設定 ======
 const dailyData = [
   { title: "今天想來點特別的嗎？", desc: "寫下你的願望，也許明天就會出現在冰櫃裡！", btnText: "來去許願看看", btnAction: "wish" },
@@ -367,13 +369,18 @@ export default function Home() {
     const initLiff = async () => {
       setStatus('正在初始化...');
       try {
+        if (window.location.origin !== CANONICAL_LIFF_ORIGIN) {
+          const target = `${CANONICAL_LIFF_ORIGIN}${window.location.pathname}${window.location.search}${window.location.hash}`;
+          window.location.replace(target);
+          return;
+        }
         await Promise.race([
           liff.init({ liffId: '2011536222-v4OvTSup' }),
           new Promise<never>((_, reject) => window.setTimeout(() => reject(new Error('連線逾時，請確認網路後重試')), 10000)),
         ]);
         if (!liff.isLoggedIn()) {
           if (!cancelled) setStatus('請從 LINE 開啟此頁面以完成登入');
-          liff.login();
+          liff.login({ redirectUri: `${CANONICAL_LIFF_ORIGIN}/` });
           return;
         }
         if (cancelled) return;
