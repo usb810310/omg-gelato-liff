@@ -24,6 +24,7 @@ const dailyData = [
 // ===================================
 
 type Profile = { userId: string; displayName: string; pictureUrl?: string };
+type LineFriendStatus = 'checking' | 'friend' | 'not-friend' | 'unavailable';
 
 type PointCampaign = {
   id?: string;
@@ -354,6 +355,7 @@ export default function Home() {
   const [legacyQrDataUrl, setLegacyQrDataUrl] = useState('');
   const [legacyQrOpen, setLegacyQrOpen] = useState(false);
   const [pointCampaign, setPointCampaign] = useState<PointCampaign | null>(null);
+  const [lineFriendStatus, setLineFriendStatus] = useState<LineFriendStatus>('checking');
   const ordersRef = useRef<Order[]>([]);
   const pointsRecoveryAttemptAtRef = useRef(new Map<string, number>());
   const pointsRecoveryInFlightRef = useRef(new Set<string>());
@@ -389,6 +391,36 @@ export default function Home() {
     initLiff();
     return () => { cancelled = true; };
   }, [initAttempt]);
+
+  useEffect(() => {
+    if (!profile?.userId) return;
+    let cancelled = false;
+    let refreshInProgress = false;
+    const refreshFriendship = async () => {
+      if (refreshInProgress) return;
+      refreshInProgress = true;
+      try {
+        const friendship = await liff.getFriendship();
+        if (!cancelled) setLineFriendStatus(friendship.friendFlag ? 'friend' : 'not-friend');
+      } catch (error) {
+        console.warn('LINE 官方帳號好友狀態無法確認：', error);
+        if (!cancelled) setLineFriendStatus('unavailable');
+      } finally {
+        refreshInProgress = false;
+      }
+    };
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') void refreshFriendship();
+    };
+    void refreshFriendship();
+    window.addEventListener('focus', handleVisibility);
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('focus', handleVisibility);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [profile?.userId, initAttempt]);
 
   useEffect(() => {
     if (!profile?.userId) return;
@@ -1006,7 +1038,11 @@ export default function Home() {
               })}</div> : <div className={styles.voucherEmpty}><span>✦</span><p>還沒有兌換券<br />集滿 10 點後可兌換獨享杯或雙重奏。</p></div>}
             </section>
 
-            <a href="https://lin.ee/sB558niE" target="_blank" rel="noopener noreferrer" className={styles.lineButton}><span>LINE</span> 加入好友，接收最新口味 <b>↗</b></a>
+            {lineFriendStatus !== 'checking' && lineFriendStatus !== 'friend' && <section className={styles.memberActionCard} aria-label="LINE 官方帳號好友狀態">
+              <div className={styles.actionCardHeading}><span className={styles.actionIcon}>L</span><div><p className={styles.kicker}>{lineFriendStatus === 'not-friend' ? '好友狀態' : 'LINE 官方帳號'}</p><h2>{lineFriendStatus === 'not-friend' ? '加入 OMG 官方帳號好友' : '追蹤 OMG 最新口味'}</h2></div></div>
+              <p className={styles.actionCardDescription}>{lineFriendStatus === 'not-friend' ? '目前尚未加入（或已封鎖）OMG 官方帳號；加入或解除封鎖後，即可接收最新口味與活動資訊。' : '目前無法自動確認好友狀態，你仍可開啟官方帳號頁面查看或加入好友。'}</p>
+              <a href="https://lin.ee/sB558niE" target="_blank" rel="noopener noreferrer" className={styles.lineButton}><span>LINE</span>{lineFriendStatus === 'not-friend' ? '加入好友，接收最新口味' : '開啟 LINE 官方帳號'}<b>↗</b></a>
+            </section>}
             <div className={styles.wishCard}>
               <div className={styles.wishHeading}><span>✦</span><div><p className={styles.kicker}>TASTE LAB</p><h2>口味許願池</h2></div></div>
               <p>下一球，也許就是你最想吃的那一球。</p>
