@@ -1503,8 +1503,9 @@
         .pay-option-icon-cash { background: #fff0dc; color: #bc7432; font-size: 21px; box-shadow: inset 0 0 0 1px #f4d8b7; }
         .pay-option-icon-line { background: #06c755; color: #fff; font-size: 10px; letter-spacing: -.04em; box-shadow: 0 4px 9px rgba(6,199,85,.2); }
         .pay-option-icon svg { display: block; width: 25px; height: 25px; }
-        .pay-option-icon-cash svg { stroke: #9b5d24; }
-        .pay-option-icon-line svg { width: 29px; height: 29px; }
+        .pay-option-icon-cash svg { width: 42px; height: 42px; stroke: #9b5d24; }
+        .pay-option-icon img { display: block; width: 42px; height: 42px; object-fit: contain; }
+        .pay-option-icon-line { padding: 0; background: #06c755; }
         .pay-option-text { gap: 4px; }
         .pay-option-text b { font-size: 16px; letter-spacing: -.02em; }
         .pay-option-text small { font-size: 11px; line-height: 1.35; }
@@ -1970,7 +1971,7 @@
                     <span class="pay-option-arrow">›</span>
                 </button>
                 <button type="button" class="pay-option pay-option-linepay" data-pay="onsite_linepay">
-                    <span class="pay-option-icon pay-option-icon-line" aria-hidden="true"><svg viewBox="0 0 40 40" fill="none"><rect x="3" y="5" width="34" height="30" rx="10" fill="white"/><path d="M10 19.5c0-5.1 4.5-9 10-9s10 3.9 10 9c0 4.8-4.1 8.6-9.3 9l-3.5 2.5.7-2.8c-4.5-.8-7.9-3.9-7.9-7.7Z" fill="#06C755"/><path d="M15 18h1.8M19.1 18h1.8M23.2 18H25" stroke="white" stroke-width="1.7" stroke-linecap="round"/></svg></span>
+                    <span class="pay-option-icon pay-option-icon-line" aria-hidden="true"><img src="/assets/line-pay-official.png" alt="LINE Pay" /></span>
                     <span class="pay-option-text"><b>LINE Pay</b><small>線上付款</small></span>
                     <span class="pay-option-arrow" aria-hidden="true">›</span>
                 </button>
@@ -2770,7 +2771,6 @@
 
         function openPayModal() {
             paySummary.textContent = `取餐時間：${pendingPickup.rel}`;
-            if (customerNoteInput) customerNoteInput.focus();
             payError.textContent = '';
             payModal.classList.add('open');
             document.body.style.overflow = 'hidden';
