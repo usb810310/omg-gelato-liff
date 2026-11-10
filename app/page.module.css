@@ -286,6 +286,8 @@
 .stepItem small { color:var(--muted); font-size:10px; }
 .memberHistoryCard { background:#fff; border:1px solid #ece7df; }
 .pointActivityList { display:grid; gap:0; }
+.pointActivityToggle { display:block; margin:8px auto 0; padding:8px 14px; border:1px solid #eadfd2; border-radius:999px; background:#fffaf5; color:#8c5a40; font:inherit; font-size:10px; font-weight:800; cursor:pointer; }
+.pointActivityToggle:focus-visible { outline:2px solid #a16b4d; outline-offset:2px; }
 .pointActivityItem { display:flex; align-items:center; gap:10px; padding:12px 0; border-top:1px solid #f0ece6; }
 .pointActivityItem:first-child { border-top:0; padding-top:2px; }
 .activityMark { display:grid; width:31px; height:31px; place-items:center; border-radius:50%; color:#d47b4f; background:#fff0e5; font-size:14px; }

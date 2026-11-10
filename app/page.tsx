@@ -330,6 +330,7 @@ export default function Home() {
   const [businessHours, setBusinessHours] = useState<BusinessHours | null>(null);
   const [clock, setClock] = useState(() => Date.now());
   const [memberPoints, setMemberPoints] = useState<MemberPointsAccount>({ balance: 0, entries: {} });
+  const [pointEntriesExpanded, setPointEntriesExpanded] = useState(false);
   const [memberQrDataUrl, setMemberQrDataUrl] = useState('');
   const [memberQrOpen, setMemberQrOpen] = useState(false);
   const [legacyQrDataUrl, setLegacyQrDataUrl] = useState('');
@@ -762,8 +763,8 @@ export default function Home() {
   const pointsToReward = pointsBalance >= 10 ? 0 : (stampCount === 0 ? 10 : 10 - stampCount);
   const availableRewards = Math.floor(pointsBalance / 10);
   const recentPointEntries = Object.entries(memberPoints.entries || {})
-    .sort(([, a], [, b]) => Number(b.createdAt || 0) - Number(a.createdAt || 0))
-    .slice(0, 3);
+    .sort(([, a], [, b]) => Number(b.createdAt || 0) - Number(a.createdAt || 0));
+  const visiblePointEntries = pointEntriesExpanded ? recentPointEntries : recentPointEntries.slice(0, 3);
   const pageTitle = activeTab === 'menu' ? '線上點餐' : activeTab === 'orders' ? (selectedOrder ? '訂單詳情' : '訂單足跡') : activeTab === 'member' ? '會員與點數' : '今日首頁';
 
   return (
@@ -889,8 +890,11 @@ export default function Home() {
             </section>
 
             <section className={styles.memberHistoryCard} aria-label="最近點數紀錄">
-              <div className={styles.subsectionHeading}><div><p className={styles.kicker}>POINT ACTIVITY</p><h2>最近點數紀錄</h2></div><span>{recentPointEntries.length ? '最新 3 筆' : '尚無紀錄'}</span></div>
-              {recentPointEntries.length ? <div className={styles.pointActivityList}>{recentPointEntries.map(([entryId, entry]) => <div className={styles.pointActivityItem} key={entryId}><span className={styles.activityMark}>✦</span><div><b>{entry.sourceLabel || (entry.type === 'reward_redemption' ? '獎勵兌換' : '點數異動')}</b><small>{entry.orderNo ? `訂單 #${entry.orderNo} · ` : ''}{entry.createdAt ? new Intl.DateTimeFormat('zh-TW', { month: 'numeric', day: 'numeric' }).format(new Date(entry.createdAt)) : '最近更新'}</small></div><strong className={Number(entry.delta || 0) >= 0 ? styles.activityPlus : styles.activityMinus}>{Number(entry.delta || 0) >= 0 ? '+' : ''}{entry.delta || 0}</strong></div>)}</div> : <div className={styles.noActivity}><span>○</span><p>完成第一次指定品項消費後<br />點數紀錄會顯示在這裡。</p></div>}
+              <div className={styles.subsectionHeading}><div><p className={styles.kicker}>POINT ACTIVITY</p><h2>最近點數紀錄</h2></div><span>{recentPointEntries.length ? pointEntriesExpanded ? `共 ${recentPointEntries.length} 筆` : `最新 ${Math.min(3, recentPointEntries.length)} 筆` : '尚無紀錄'}</span></div>
+              {recentPointEntries.length ? <>
+                <div className={styles.pointActivityList} id="member-point-activity-list">{visiblePointEntries.map(([entryId, entry]) => <div className={styles.pointActivityItem} key={entryId}><span className={styles.activityMark}>✦</span><div><b>{entry.sourceLabel || (entry.type === 'reward_redemption' ? '獎勵兌換' : '點數異動')}</b><small>{entry.orderNo ? `訂單 #${entry.orderNo} · ` : ''}{entry.createdAt ? new Intl.DateTimeFormat('zh-TW', { month: 'numeric', day: 'numeric' }).format(new Date(entry.createdAt)) : '最近更新'}</small></div><strong className={Number(entry.delta || 0) >= 0 ? styles.activityPlus : styles.activityMinus}>{Number(entry.delta || 0) >= 0 ? '+' : ''}{entry.delta || 0}</strong></div>)}</div>
+                {recentPointEntries.length > 3 && <button type="button" className={styles.pointActivityToggle} aria-expanded={pointEntriesExpanded} aria-controls="member-point-activity-list" onClick={() => setPointEntriesExpanded((expanded) => !expanded)}>{pointEntriesExpanded ? '收合紀錄' : `查看全部（${recentPointEntries.length} 筆）`}</button>}
+              </> : <div className={styles.noActivity}><span>○</span><p>完成第一次指定品項消費後<br />點數紀錄會顯示在這裡。</p></div>}
             </section>
 
             <section className={styles.rewardGuideCard} aria-label="獎勵兌換說明">
