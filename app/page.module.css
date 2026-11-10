@@ -252,17 +252,13 @@
 .memberMiniAvatar { flex:0 0 52px; width:52px; height:52px; display:grid; place-items:center; overflow:hidden; border:3px solid #fff; border-radius:50%; background:#dfb887; color:#fff; font-size:14px; font-weight:800; box-shadow:0 5px 16px rgba(92,68,42,.12); }
 .memberMiniAvatar img { width:100%; height:100%; object-fit:cover; }
 .pointsOverview { margin:0 -2px 13px; padding:20px 20px 17px; border-radius:23px; color:#fff; background:linear-gradient(140deg,#3d302b 0%,#654f43 57%,#8d6b54 100%); box-shadow:0 13px 25px rgba(59,43,34,.18); }
-.pointsOverviewTop,.pointsGoalRow,.pointsMeta { display:flex; align-items:center; justify-content:space-between; }
+.pointsOverviewTop,.pointsMeta { display:flex; align-items:center; justify-content:space-between; }
 .pointsOverviewTop { color:#dfd3ca; font-size:11px; font-weight:700; }
 .pointsLive { display:flex; align-items:center; gap:5px; color:#b9dec4; font-size:9px; font-weight:700; }
 .pointsLive i { width:6px; height:6px; border-radius:50%; background:#7bd094; box-shadow:0 0 0 3px rgba(123,208,148,.16); }
-.pointsNumber { margin:8px 0 12px; font-size:52px; line-height:1; font-weight:800; letter-spacing:-.08em; }
+.pointsNumber { margin:8px 0 6px; font-size:52px; line-height:1; font-weight:800; letter-spacing:-.08em; }
 .pointsNumber small { margin-left:5px; color:#dfd3ca; font-size:13px; letter-spacing:0; }
-.pointsGoalRow { margin-bottom:9px; color:#f8eee6; font-size:11px; }
-.pointsGoalRow b { color:#f5c798; font-size:10px; }
-.pointsProgress { height:8px; overflow:hidden; border-radius:99px; background:rgba(255,255,255,.17); }
-.pointsProgress span { display:block; height:100%; min-width:3px; border-radius:inherit; background:linear-gradient(90deg,#f2a66f,#f9d28a); transition:width .4s ease; }
-.pointsMeta { margin-top:8px; color:#c4b4a9; font-size:9px; }
+.pointsMeta { justify-content:flex-start; margin-top:0; color:#c4b4a9; font-size:9px; }
 .memberActionCard { margin-bottom:13px; padding:19px; border:1px solid #f0dfcc; border-radius:22px; background:#fffaf3; box-shadow:0 8px 19px rgba(92,68,42,.055); }
 .actionCardHeading { display:flex; align-items:center; gap:11px; }
 .actionIcon { display:grid; width:39px; height:39px; place-items:center; border-radius:13px; color:#fff; background:#de895e; font-size:24px; transform:rotate(-12deg); }
@@ -496,7 +492,6 @@
   background: linear-gradient(140deg, #3d2e28 0%, #644d41 56%, #966c53 100%);
   box-shadow: 0 15px 28px rgba(65, 45, 35, .19);
 }
-.pointsProgress span { background: linear-gradient(90deg, #e89465, #f4cf8c); }
 .memberActionCard, .memberHistoryCard, .howToCollect, .rewardGuideCard, .wishCard, .lineButton { border: 1px solid var(--line); box-shadow: 0 7px 18px rgba(83, 59, 42, .045); }
 .memberActionCard { background: var(--cream); }
 .actionIcon { background: var(--accent); }
@@ -535,7 +530,10 @@
   .homeActionCard, .orderListItem { transition: none; }
 }
 
-.pointsNoticeList { display:grid; gap:6px; margin:12px 0 0; padding-left:18px; color:#68766d; font-size:11px; line-height:1.55; }.pointsNoticeList li::marker { color:#12b89b; }
+.pointsNoticeList { display:grid; gap:8px; margin:14px 0 0; padding:14px 0 0; border-top:1px solid #edf2ee; color:#53635a; font-size:11px; line-height:1.6; list-style:none; }
+.pointsNoticeList li { display:grid; grid-template-columns:22px minmax(0,1fr); align-items:start; gap:9px; color:#53635a; font-size:11px; line-height:1.6; }
+.pointsNoticeList li b { display:grid; width:22px; height:22px; place-items:center; border-radius:7px; color:#159447; background:#e7f7ed; font-size:9px; letter-spacing:.04em; }
+.pointsNoticeList li span { min-width:0; }
 
 
 /* 點數兌換券：依券種扣點、永久有效、店家掃描核銷 */
@@ -548,6 +546,7 @@
 .rewardChoice > div { display:grid; gap:3px; min-width:0; }
 .rewardChoice b { color:var(--ink); font-size:14px; }
 .rewardChoice small { color:var(--muted); font-size:10px; }
+.rewardCost { color:#b34b23; font-size:12px; font-weight:900; }
 .rewardChoice button, .voucherQrButton { min-height:37px; padding:8px 12px; border:0; border-radius:12px; color:#fff; background:var(--accent); font:inherit; font-size:10px; font-weight:850; white-space:nowrap; cursor:pointer; }
 .rewardChoice button:disabled, .voucherQrButton:disabled { color:#9a9087; background:#eee9e2; cursor:not-allowed; }
 .rewardMessage { min-height:16px; margin:10px 2px 0; color:#7e644f; font-size:10px; line-height:1.55; }

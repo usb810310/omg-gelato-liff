@@ -877,9 +877,6 @@ export default function Home() {
     ? orders.find((order) => getOrderKey(order) === selectedOrderNo) ?? null
     : null;
   const pointsBalance = Math.max(0, Number(memberPoints.balance || 0));
-  const stampCount = pointsBalance % 10;
-  const pointsToDiscountVoucher = Math.max(0, 5 - pointsBalance);
-  const availableRewards = Math.floor(pointsBalance / 10);
   const recentPointEntries = Object.entries(memberPoints.entries || {})
     .sort(([, a], [, b]) => Number(b.createdAt || 0) - Number(a.createdAt || 0));
   const memberRewardVouchers = Object.entries(memberPoints.rewardVouchers || {})
@@ -973,12 +970,10 @@ export default function Home() {
               {pointCampaign?.date && <small>適用日期 · {pointCampaign.date}</small>}
             </section>
 
-            <section className={styles.pointsOverview} aria-label="目前集點進度">
+            <section className={styles.pointsOverview} aria-label="目前點數">
               <div className={styles.pointsOverviewTop}><span>目前點數</span><span className={styles.pointsLive}><i />即時同步</span></div>
               <div className={styles.pointsNumber}>{pointsBalance}<small> 點</small></div>
-              <div className={styles.pointsGoalRow}><span>{pointsToDiscountVoucher > 0 ? `再 ${pointsToDiscountVoucher} 點可兌換 5 折券` : `已達 5 點兌換門檻${availableRewards > 0 ? ` · 可兌換 ${availableRewards} 張商品券` : ''}`}</span><b>5 折券 5 點 · 商品券 10 點</b></div>
-              <div className={styles.pointsProgress}><span style={{ width: `${Math.min(100, (stampCount / 10) * 100)}%` }} /></div>
-              <div className={styles.pointsMeta}><span>{stampCount}/10 本輪進度</span><span>無使用期限</span></div>
+              <div className={styles.pointsMeta}><span>無使用期限</span></div>
             </section>
 
             <section className={styles.memberActionCard} aria-label="到店集點">
@@ -1021,7 +1016,7 @@ export default function Home() {
               <div className={styles.subsectionHeading}><div><p className={styles.kicker}>REWARD MENU</p><h2>點數兌換</h2></div><span>5 點起兌</span></div>
               <p className={styles.memberRedeemIntro}>點數與兌換券皆永久有效，可自行選擇兌換完整商品券（10 點）或 5 折券（5 點）。到店出示條碼由店員核銷；折價券須由店員依券面手動折抵，核銷不會自動調整或綁定 POS 訂單。</p>
               <div className={styles.rewardChoices}>
-                {MEMBER_REWARD_OPTIONS.map((reward) => <div className={styles.rewardChoice} key={reward.type}><div><b>{reward.title}</b><small>{reward.description} · {reward.pointsCost} 點</small></div><button type="button" disabled={rewardActionType !== null || pointsBalance < reward.pointsCost} onClick={() => void issueRewardVoucher(reward)}>{rewardActionType === reward.type ? '建立中…' : pointsBalance < reward.pointsCost ? '點數不足' : `${reward.pointsCost} 點兌換`}</button></div>)}
+                {MEMBER_REWARD_OPTIONS.map((reward) => <div className={styles.rewardChoice} key={reward.type}><div><b>{reward.title}</b><small>{reward.description} · <span className={styles.rewardCost}>{reward.pointsCost}</span> 點</small></div><button type="button" disabled={rewardActionType !== null || pointsBalance < reward.pointsCost} onClick={() => void issueRewardVoucher(reward)}>{rewardActionType === reward.type ? '建立中…' : pointsBalance < reward.pointsCost ? '點數不足' : `${reward.pointsCost} 點兌換`}</button></div>)}
               </div>
               <p className={styles.rewardMessage} aria-live="polite">{rewardMessage || `目前 ${pointsBalance} 點；兌換後可在此查看尚未使用的兌換券。`}</p>
             </section>
