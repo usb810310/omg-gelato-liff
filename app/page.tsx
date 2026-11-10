@@ -725,7 +725,12 @@ export default function Home() {
               <div>
                 <p className={styles.kicker}>{pointCampaign ? 'POINTS UPDATE · 活動公告' : 'POINTS RULE · 點數公告'}</p>
                 <h2>{pointCampaign?.name || '目前點數發送規則'}</h2>
-                <p>{pointCampaign?.ruleText || pointCampaign?.description || '完成訂單後，購買獨享杯或雙重奏，每件可獲得 1 點；分享盒及其他商品不集點。'}</p>
+                <ul className={styles.pointsNoticeList}>
+                  <li>線上消費「獨享杯」「雙重奏」，每件累積 1 點。</li>
+                  <li>線上消費贈點由系統自動累入會員帳戶。</li>
+                  <li>當次消費累積點數，限下次消費兌換使用。</li>
+                  <li>店家保有活動、獎項修改之權利。</li>
+                </ul>
                 {pointCampaign?.date && <small>適用日期：{pointCampaign.date}</small>}
               </div>
             </section>
