@@ -25,14 +25,15 @@ export async function POST(request: Request) {
     const body = await request.json().catch(() => ({}));
     const sessionToken = typeof body?.sessionToken === 'string' ? body.sessionToken.trim() : '';
     const orderNo = typeof body?.orderNo === 'string' || typeof body?.orderNo === 'number' ? String(body.orderNo).trim() : '';
-    if (!sessionToken || !orderNo) {
-      return NextResponse.json({ success: false, error: '缺少會員工作階段或訂單編號' }, { status: 400, headers: corsHeaders(request) });
+    const orderId = typeof body?.orderId === 'string' ? body.orderId.trim() : '';
+    if (!sessionToken || !orderNo || !orderId || orderId.length > 128) {
+      return NextResponse.json({ success: false, error: '缺少會員工作階段、訂單編號或雲端訂單識別碼' }, { status: 400, headers: corsHeaders(request) });
     }
-    const result = await earnPosPoints({ accessToken: sessionToken, orderNo });
+    const result = await earnPosPoints({ accessToken: sessionToken, orderNo, orderId });
     return NextResponse.json({ success: true, ...result }, { headers: { ...corsHeaders(request), 'Cache-Control': 'no-store' } });
   } catch (error) {
     const message = error instanceof Error ? error.message : '現場點數發送失敗';
-    const status = /Token|會員|登入|權限/.test(message) ? 401 : /找不到|綁定|付款|一致/.test(message) ? 409 : 500;
+    const status = /Token|會員|登入|權限/.test(message) ? 401 : /找不到|綁定|付款|一致|現場|測試|線上|雲端訂單/.test(message) ? 409 : 500;
     return NextResponse.json({ success: false, error: message }, { status, headers: corsHeaders(request) });
   }
 }

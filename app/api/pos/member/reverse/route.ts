@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { reverseOrderPoints } from '@/lib/member-points';
+import { findOrderByNo, reverseOrderPoints } from '@/lib/member-points';
 import { requirePosStaff } from '@/lib/pos-auth';
 
 export const runtime = 'nodejs';
@@ -26,8 +26,14 @@ export async function POST(request: Request) {
     const body = await request.json().catch(() => ({}));
     const orderNo = typeof body?.orderNo === 'string' || typeof body?.orderNo === 'number'
       ? String(body.orderNo).trim() : '';
+    const orderId = typeof body?.orderId === 'string' ? body.orderId.trim() : '';
     if (!orderNo) return NextResponse.json({ success: false, error: '缺少訂單編號' }, { status: 400, headers: headers(request) });
-    const result = await reverseOrderPoints(orderNo);
+    if (orderId && !/^[A-Za-z0-9_-]{1,128}$/.test(orderId)) {
+      return NextResponse.json({ success: false, error: '雲端訂單識別碼格式錯誤' }, { status: 400, headers: headers(request) });
+    }
+    const order = await findOrderByNo(orderNo, orderId || undefined);
+    if (!order) return NextResponse.json({ success: false, error: '找不到相符的訂單' }, { status: 404, headers: headers(request) });
+    const result = await reverseOrderPoints(orderNo, order.key);
     return NextResponse.json({ success: true, ...result }, { headers: headers(request) });
   } catch (error) {
     const message = error instanceof Error ? error.message : '點數撤銷失敗';

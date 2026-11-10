@@ -47,8 +47,9 @@ type Order = {
   pickupCode?: string | number; pickupNo?: string | number; pickupNumber?: string | number;
   total?: string | number; remark?: string; time?: string; date?: string; createdAt?: string;
   status?: string; payment?: string; paymentStatus?: string; refundStatus?: string;
-  refunded?: boolean; refundedAt?: string; refundCompletedAt?: string; paymentRefundedAt?: string;
+  cancelled?: boolean; refunded?: boolean; refundedAt?: string; refundCompletedAt?: string; paymentRefundedAt?: string;
   channel?: string; source?: string; rejected?: boolean; voided?: boolean; cancelledBy?: string;
+  pointsReversalStatus?: string;
   items?: OrderItem[];
 };
 
@@ -60,6 +61,7 @@ function getOrderKey(order: Order) {
 
 const ORDER_HISTORY_DAYS = 30;
 const ORDER_HISTORY_MS = ORDER_HISTORY_DAYS * 24 * 60 * 60 * 1000;
+const ORDER_POINTS_RECOVERY_COOLDOWN_MS = 5 * 60 * 1000;
 
 function isRecentOrder(order: Order) {
   const rawDate = order.time || order.createdAt || order.date;
@@ -81,6 +83,12 @@ function isWaitingForShop(order: Order) {
   return !isOrderTerminal(order) && ['', 'waiting', 'pending', 'waiting_accept', '等待接單', '等待店家接單'].includes(status);
 }
 
+function needsOrderRecoveryRetry(order: Order) {
+  const pointsNeedRetry = !['reversed', 'not_required'].includes(String(order.pointsReversalStatus || '').toLowerCase());
+  const refundNeedsRetry = order.cancelledBy === 'customer' && ['failed', 'pending'].includes(String(order.refundStatus || '').toLowerCase());
+  return isOrderTerminal(order) && (pointsNeedRetry || refundNeedsRetry);
+}
+
 type OrderStatusKey = 'waiting' | 'accepted' | 'preparing' | 'ready' | 'completed' | 'rejected';
 const statusSteps: Array<{ key: Exclude<OrderStatusKey, 'rejected'>; label: string; icon: string }> = [
   { key: 'waiting', label: '等待接單', icon: '01' },
@@ -97,7 +105,7 @@ function getStatusMeta(order: Order) {
       hint: isOrderRefunded(order) ? '此訂單由您取消，款項已退款。' : '此訂單由您自行取消。',
     };
   }
-  if (isOrderCancelled(order)) {
+  if (isOrderCancelled(order) || (isOrderTerminal(order) && !isOrderRejected(order))) {
     return {
       key: 'rejected' as const,
       label: '訂單已取消',
@@ -162,7 +170,7 @@ function formatOrderItems(items?: OrderItem[]) {
 function OrderListItem({ order, onSelect }: { order: Order; onSelect: () => void }) {
   const items = formatOrderItems(order.items);
   const previewText = items.length > 1 ? `${items[0]} 等 ${items.length} 項` : items[0];
-  const cancelled = isOrderCancelled(order) || isOrderRejected(order);
+  const cancelled = isOrderTerminal(order);
   return (
     <button type="button" className={styles.orderListItem} onClick={onSelect} aria-label={`查看訂單 ${getOrderKey(order)}`}>
       <div className={styles.orderTopline}>
@@ -201,9 +209,10 @@ function OrderDetailCard({
   const paymentStatus = getPaymentStatus(order);
   const isOnsitePayment = order.payment === '現場付款';
   const canPay = LINE_PAY_ENABLED && !isOrderTerminal(order) && !isOnsitePayment && ['尚未付款', '付款失敗', '付款處理中'].includes(paymentStatus);
-  const cancelled = isOrderCancelled(order) || isOrderRejected(order);
+  const cancelled = isOrderTerminal(order);
   const waitingForShop = isWaitingForShop(order);
   const paymentNeedsSupport = ['已付款', '付款處理中'].includes(paymentStatus);
+  const pointsReversalNeedsRetry = needsOrderRecoveryRetry(order);
 
   return (
     <article className={styles.orderDetailCard}>
@@ -262,6 +271,22 @@ function OrderDetailCard({
       {waitingForShop && paymentNeedsSupport && (
         <p className={styles.cancelOrderNotice}>此訂單{paymentStatus}，如需取消請洽客服人員協助。</p>
       )}
+      {pointsReversalNeedsRetry && order.orderNo && (
+        <>
+          <p className={styles.cancelOrderNotice}>{order.refundStatus === 'failed' ? '訂單已取消，但退款或點數回收尚未完成。系統會自動補回點數；退款若仍失敗，可手動重試或聯絡客服。' : order.refundStatus === 'pending' ? 'LINE Pay 退款仍在處理中；系統會自動核對並回收點數。' : '系統會自動核對並回收此筆已取消訂單的點數；若尚未完成，也可手動重試。'}</p>
+          <button
+            type="button"
+            className={styles.cancelOrderButton}
+            onClick={() => onCancel(order)}
+            disabled={cancellingOrderNo === order.orderNo}
+          >
+            {cancellingOrderNo === order.orderNo ? '處理中…' : ['failed', 'pending'].includes(String(order.refundStatus || '').toLowerCase()) ? '重試退款與點數回收' : '重試點數回收'}
+          </button>
+        </>
+      )}
+      {String(order.refundStatus || '').toLowerCase() === 'pending' && !pointsReversalNeedsRetry && (
+        <p className={styles.cancelOrderNotice}>LINE Pay 款項退款仍在處理中，請稍後確認；若長時間未更新，請洽客服。</p>
+      )}
     </article>
   );
 }
@@ -311,6 +336,8 @@ export default function Home() {
   const [legacyQrOpen, setLegacyQrOpen] = useState(false);
   const [pointCampaign, setPointCampaign] = useState<PointCampaign | null>(null);
   const ordersRef = useRef<Order[]>([]);
+  const pointsRecoveryAttemptAtRef = useRef(new Map<string, number>());
+  const pointsRecoveryInFlightRef = useRef(new Set<string>());
 
   const [todayContent] = useState(() => dailyData[new Date().getDay()]);
 
@@ -347,16 +374,80 @@ export default function Home() {
   useEffect(() => {
     if (!profile?.userId) return;
     let cancelled = false;
+    let refreshInProgress = false;
+    const readOrders = async (accessToken: string) => {
+      const response = await fetch('/api/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accessToken }), cache: 'no-store' });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.success) throw new Error(result.error || '訂單同步失敗');
+      return (result.orders || []) as Order[];
+    };
     const refreshOrders = async () => {
+      if (refreshInProgress) return;
+      refreshInProgress = true;
       try {
         const accessToken = liff.getAccessToken();
         if (!accessToken) return;
-        const response = await fetch('/api/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accessToken }), cache: 'no-store' });
-        const result = await response.json().catch(() => ({}));
-        if (!response.ok || !result.success) throw new Error(result.error || '訂單同步失敗');
-        if (!cancelled) setOrders((result.orders || []).filter((order: Order) => isRecentOrder(order)));
+        const nextOrders = await readOrders(accessToken);
+        if (cancelled) return;
+        setOrders(nextOrders.filter(isRecentOrder));
+
+        const now = Date.now();
+        const recoveryCandidates = nextOrders.filter((order) => {
+          const orderNo = String(order.orderNo || '').trim();
+          const orderId = String(order.id || '').trim();
+          const recoveryKey = orderId || orderNo;
+          const reversalStatus = String(order.pointsReversalStatus || '').toLowerCase();
+          if (!orderNo || !orderId || !isOrderTerminal(order) || ['reversed', 'not_required'].includes(reversalStatus)
+            || pointsRecoveryInFlightRef.current.has(recoveryKey)) return false;
+          return now - (pointsRecoveryAttemptAtRef.current.get(recoveryKey) || 0) >= ORDER_POINTS_RECOVERY_COOLDOWN_MS;
+        }).slice(0, 5);
+
+        if (recoveryCandidates.length) {
+          for (const order of recoveryCandidates) {
+            const orderNo = String(order.orderNo);
+            const orderId = String(order.id || '');
+            const recoveryKey = orderId || orderNo;
+            pointsRecoveryAttemptAtRef.current.set(recoveryKey, Date.now());
+            pointsRecoveryInFlightRef.current.add(recoveryKey);
+            try {
+              const recoveryResponse = await fetch('/api/member/points/reverse-order', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ orderNo, orderId, accessToken }),
+                cache: 'no-store',
+              });
+              const recoveryResult = await recoveryResponse.json().catch(() => ({}));
+              if (!recoveryResponse.ok || !recoveryResult.success) {
+                throw new Error(recoveryResult.error || '點數回收尚未完成');
+              }
+            } catch (error) {
+              console.error('訂單點數自動回收未完成:', error);
+            } finally {
+              pointsRecoveryInFlightRef.current.delete(recoveryKey);
+            }
+          }
+
+          if (cancelled) return;
+          setOrders((await readOrders(accessToken)).filter(isRecentOrder));
+          try {
+            const pointsResponse = await fetch('/api/member/points', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ accessToken }),
+              cache: 'no-store',
+            });
+            const pointsResult = await pointsResponse.json().catch(() => ({}));
+            if (!cancelled && pointsResponse.ok && pointsResult.success) {
+              setMemberPoints(pointsResult.points || { balance: 0, entries: {} });
+            }
+          } catch (error) {
+            console.error('自動回收後會員點數同步失敗:', error);
+          }
+        }
       } catch (error) {
         console.error('訂單同步失敗:', error);
+      } finally {
+        refreshInProgress = false;
       }
     };
     void refreshOrders();
@@ -550,8 +641,12 @@ export default function Home() {
   };
 
   const cancelOrder = async (order: Order) => {
-    if (!order.orderNo || !isWaitingForShop(order) || cancellingOrderNo) return;
-    if (!window.confirm('確定要取消這筆尚未接單的訂單嗎？取消後無法復原。')) return;
+    const recoveryRetry = needsOrderRecoveryRetry(order);
+    if (!order.orderNo || (!isWaitingForShop(order) && !recoveryRetry) || cancellingOrderNo) return;
+    const confirmation = recoveryRetry
+      ? '要重新處理這筆訂單的退款與點數回收嗎？'
+      : '確定要取消這筆尚未接單的訂單嗎？取消後無法復原。';
+    if (!window.confirm(confirmation)) return;
     setCancellingOrderNo(order.orderNo);
     try {
       const accessToken = liff.getAccessToken();
@@ -559,14 +654,30 @@ export default function Home() {
       const response = await fetch('/api/cancel-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderNo: order.orderNo, accessToken }),
+        body: JSON.stringify({ orderNo: order.orderNo, orderId: order.id, accessToken }),
       });
-      const result = await response.json().catch((): { success?: boolean; error?: string } => ({}));
+      const result = await response.json().catch((): { success?: boolean; error?: string; refunded?: boolean; refundPending?: boolean; pointsReversalPending?: boolean } => ({}));
       if (!response.ok || !result.success) {
         throw new Error(result.error || '取消訂單失敗，請稍後再試');
       }
-      alert(result.refunded ? '訂單已取消，LINE Pay 款項已自動退款。' : '訂單已取消。');
+      if (result.pointsReversalPending) {
+        alert(result.refundPending ? '訂單已取消，但點數回收與 LINE Pay 退款仍待處理；請稍後重試。' : '訂單已取消，但點數回收仍待處理；請稍後到訂單詳情重試。');
+      } else if (result.refundPending) {
+        alert('點數回收已完成，但 LINE Pay 款項退款仍在處理中；稍後可安全重試。');
+      } else if (recoveryRetry) {
+        alert(result.refunded ? 'LINE Pay 退款與點數回收已完成。' : '點數回收已完成，會員點數已更新。');
+      } else {
+        alert(result.refunded ? '訂單已取消，LINE Pay 款項已自動退款。' : '訂單已取消。');
+      }
       await loadOrders();
+      const pointsResponse = await fetch('/api/member/points', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accessToken }),
+        cache: 'no-store',
+      });
+      const pointsResult = await pointsResponse.json().catch(() => ({}));
+      if (pointsResponse.ok && pointsResult.success) setMemberPoints(pointsResult.points || { balance: 0, entries: {} });
     } catch (error) {
       console.error('取消訂單失敗:', error);
       alert(error instanceof Error ? error.message : '取消訂單失敗，請稍後再試');

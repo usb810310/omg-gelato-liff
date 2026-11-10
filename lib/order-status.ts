@@ -3,6 +3,7 @@ export type OrderStateRecord = {
   payment?: unknown;
   paymentStatus?: unknown;
   refundStatus?: unknown;
+  cancelled?: unknown;
   refunded?: unknown;
   refundedAt?: unknown;
   refundCompletedAt?: unknown;
@@ -12,13 +13,14 @@ export type OrderStateRecord = {
   cancelledBy?: unknown;
 };
 
-const CANCELLED_ORDER_STATUSES = new Set(['cancelled', 'canceled', '已取消', '取消']);
-const REJECTED_ORDER_STATUSES = new Set(['rejected', '拒單', '拒絕', '店家無法接單']);
+const CANCELLED_ORDER_STATUSES = new Set(['cancelled', 'canceled', 'voided', '已取消', '取消']);
+const REJECTED_ORDER_STATUSES = new Set(['rejected', '拒單', '已拒單', '拒絕', '店家無法接單']);
 const CANCELLED_PAYMENT_STATUSES = new Set(['cancelled', 'canceled', 'voided', '已取消', '取消']);
 const PAID_STATUSES = new Set(['paid', '已付款', '已確認']);
 const PROCESSING_STATUSES = new Set(['processing', '付款處理中']);
 const FAILED_STATUSES = new Set(['failed', '付款失敗']);
 const REFUNDED_STATUSES = new Set(['refunded', 'refund_completed', 'refund_succeeded', '已退款', '退款完成', '退款成功']);
+const COMPLETED_REFUND_STATUSES = new Set([...REFUNDED_STATUSES, 'refund', 'success', 'succeeded', 'completed']);
 
 function normalize(value: unknown) {
   return String(value ?? '').trim().toLowerCase();
@@ -29,7 +31,8 @@ function isTruthy(value: unknown) {
 }
 
 export function isOrderCancelled(order: OrderStateRecord) {
-  return isTruthy(order.voided)
+  return isTruthy(order.cancelled)
+    || isTruthy(order.voided)
     || normalize(order.cancelledBy) === 'customer'
     || CANCELLED_ORDER_STATUSES.has(normalize(order.status));
 }
@@ -39,12 +42,14 @@ export function isOrderRejected(order: OrderStateRecord) {
 }
 
 export function isOrderRefunded(order: OrderStateRecord) {
+  const status = normalize(order.status);
   const refundStatus = normalize(order.refundStatus);
   const paymentStatus = normalize(order.paymentStatus);
   const payment = normalize(order.payment);
   return isTruthy(order.refunded)
     || Boolean(order.refundedAt || order.refundCompletedAt || order.paymentRefundedAt)
-    || REFUNDED_STATUSES.has(refundStatus)
+    || REFUNDED_STATUSES.has(status)
+    || COMPLETED_REFUND_STATUSES.has(refundStatus)
     || REFUNDED_STATUSES.has(paymentStatus)
     || REFUNDED_STATUSES.has(payment);
 }

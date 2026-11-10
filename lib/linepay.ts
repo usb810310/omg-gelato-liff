@@ -1,5 +1,5 @@
 import { createHmac, randomUUID } from 'node:crypto';
-import { getPaymentDisplayStatus, isOrderTerminal } from '@/lib/order-status';
+import { getPaymentDisplayStatus, isOrderRefunded, isOrderTerminal } from '@/lib/order-status';
 import { reverseOrderPoints } from '@/lib/member-points';
 import { adminDatabaseRef } from '@/lib/firebase-admin';
 
@@ -30,8 +30,6 @@ type FirebaseOrder = {
   items?: Array<{ name?: string; price?: number; qty?: number; flavorDisplay?: string }>;
   [key: string]: unknown;
 };
-
-const DEFAULT_DATABASE_URL = 'https://omg-menu-5761a-default-rtdb.asia-southeast1.firebasedatabase.app';
 
 export function getLinePayConfig(): LinePayConfig {
   const channelId = process.env.LINEPAY_CHANNEL_ID;
@@ -97,23 +95,26 @@ export async function callLinePay<T>({
     cache: 'no-store',
   });
   const rawResponse = await response.text();
-  let data: T & { returnCode?: string; returnMessage?: string; statusMessage?: string };
+  let data: T & { returnCode?: string; resultCode?: string | number; returnMessage?: string; statusMessage?: string };
   try {
     data = JSON.parse(encodeLargeIntegers(rawResponse));
   } catch {
     throw new Error(`LINE Pay 回應格式錯誤（HTTP ${response.status}）`);
   }
-  if (!response.ok || data.returnCode !== '0000') {
+  const returnCode = String(data.returnCode ?? data.resultCode ?? '');
+  if (!response.ok || returnCode !== '0000') {
     const message = data.returnMessage || data.statusMessage || 'LINE Pay API 錯誤';
-    throw new Error(`${message}（${data.returnCode || `HTTP ${response.status}`}）`);
+    throw new Error(`${message} (${returnCode || `HTTP ${response.status}`})`);
   }
   return data;
 }
 
 export async function findOrderByNo(orderNo: string | number) {
   const data = (await adminDatabaseRef('orders').get()).val() as Record<string, Omit<FirebaseOrder, 'key'>> | null;
-  const match = Object.entries(data || {}).find(([, order]) => String(order?.orderNo) === String(orderNo));
-  return match ? ({ key: match[0], ...match[1] } as FirebaseOrder) : null;
+  const matches = Object.entries(data || {}).filter(([, order]) => String(order?.orderNo) === String(orderNo));
+  if (matches.length > 1) throw new Error('訂單編號對應多筆訂單，為避免操作錯單已停止處理');
+  const match = matches[0];
+  return match ? ({ ...match[1], key: match[0] } as FirebaseOrder) : null;
 }
 
 export async function updateOrder(order: FirebaseOrder, patch: Record<string, unknown>) {
@@ -131,10 +132,51 @@ async function refundLinePayOrder(order: FirebaseOrder) {
   });
 }
 
-async function completeLinePayRefund(order: FirebaseOrder) {
-  await refundLinePayOrder(order);
+export async function completeLinePayRefund(order: FirebaseOrder, transactionId?: string) {
+  const refundOrder = transactionId ? { ...order, linePayTransactionId: transactionId } : order;
+  const orderRef = adminDatabaseRef(`orders/${order.key}`);
+  const attemptStartedAt = Date.now();
+  let alreadyRefunded = false;
+  let anotherRefundIsInProgress = false;
+  const claim = await orderRef.transaction((current) => {
+    alreadyRefunded = false;
+    anotherRefundIsInProgress = false;
+    if (!current) return;
+    const latest = current as FirebaseOrder;
+    if (isOrderRefunded(latest)) {
+      alreadyRefunded = true;
+      return;
+    }
+    const previousAttemptAt = Number(latest.refundAttemptStartedAt || 0);
+    if (String(latest.refundStatus || '').toLowerCase() === 'pending'
+      && previousAttemptAt > 0 && attemptStartedAt - previousAttemptAt < REFUND_RETRY_DELAY_MS) {
+      anotherRefundIsInProgress = true;
+      return;
+    }
+    return {
+      ...latest,
+      linePayTransactionId: transactionId || latest.linePayTransactionId || refundOrder.linePayTransactionId || null,
+      paymentStatus: 'refund_pending',
+      refundStatus: 'pending',
+      refundAttemptStartedAt: attemptStartedAt,
+      refundError: null,
+    };
+  });
+  if (alreadyRefunded) return { refunded: true, pending: false };
+  if (!claim.committed) {
+    if (anotherRefundIsInProgress) return { refunded: false, pending: true };
+    throw new Error('退款狀態更新失敗，請稍後重試');
+  }
+  const claimedOrder = { ...refundOrder, ...(claim.snapshot.val() || {}), key: order.key } as FirebaseOrder;
+  try {
+    await refundLinePayOrder(claimedOrder);
+  } catch (error) {
+    // LINE Pay code 1165 means this transaction has already been refunded.
+    if (!(error instanceof Error) || !error.message.includes('(1165)')) throw error;
+  }
   const now = new Date().toISOString();
-  await updateOrder(order, {
+  await updateOrder(claimedOrder, {
+    linePayTransactionId: claimedOrder.linePayTransactionId || null,
     payment: '已退款',
     paymentStatus: 'refunded',
     refundStatus: 'refunded',
@@ -142,8 +184,13 @@ async function completeLinePayRefund(order: FirebaseOrder) {
     refundedAt: now,
     refundCompletedAt: now,
     paymentRefundedAt: now,
+    refundAttemptStartedAt: null,
+    refundError: null,
   });
+  return { refunded: true, pending: false };
 }
+
+const REFUND_RETRY_DELAY_MS = 5 * 60 * 1000;
 
 export class OrderCancellationError extends Error {
   constructor(message: string, readonly statusCode: number) {
@@ -152,27 +199,62 @@ export class OrderCancellationError extends Error {
   }
 }
 
-export async function cancelWaitingOrder(orderNo: string, userId: string) {
-  const orders = (await adminDatabaseRef('orders').get()).val() as Record<string, Omit<FirebaseOrder, 'key'>> | null;
-  const match = Object.entries(orders || {}).find(([, order]) => String(order?.orderNo) === orderNo && order?.userId === userId);
-  if (!match) throw new OrderCancellationError('找不到這筆訂單', 404);
-  const [key] = match;
-  const orderRef = adminDatabaseRef(`orders/${key}`);
+export async function cancelWaitingOrder(orderNo: string, orderId: string | undefined, userId: string) {
+  let resolvedOrderId = orderId;
+  if (resolvedOrderId && !/^[A-Za-z0-9_-]{1,128}$/.test(resolvedOrderId)) {
+    throw new OrderCancellationError('雲端訂單 key 格式錯誤', 400);
+  }
+  if (!resolvedOrderId) {
+    const snapshot = await adminDatabaseRef('orders').orderByChild('userId').equalTo(userId).get();
+    const matches: string[] = [];
+    snapshot.forEach((child) => {
+      const candidate = child.val() as FirebaseOrder | null;
+      if (candidate && String(candidate.orderNo) === orderNo && child.key) matches.push(child.key);
+      return false;
+    });
+    if (matches.length > 1) throw new OrderCancellationError('此訂單編號對應多筆會員訂單，請重新整理後重試', 409);
+    resolvedOrderId = matches[0];
+  }
+  if (!resolvedOrderId) throw new OrderCancellationError('找不到這筆訂單', 404);
+  const orderRef = adminDatabaseRef(`orders/${resolvedOrderId}`);
   const snapshot = await orderRef.get();
-  const order = snapshot.val() as FirebaseOrder | null;
+  const orderData = snapshot.val() as Omit<FirebaseOrder, 'key'> | null;
+  const order = orderData ? { ...orderData, key: resolvedOrderId } as FirebaseOrder : null;
   if (!order || order.userId !== userId || String(order.orderNo) !== orderNo) {
     throw new OrderCancellationError('找不到這筆訂單', 404);
   }
   const existingRefundStatus = String(order.refundStatus || '').toLowerCase();
-  if (order.cancelledBy === 'customer' && existingRefundStatus === 'failed') {
-    try {
-      await completeLinePayRefund(order);
-      return { refunded: true, retried: true };
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'LINE Pay 自動退款失敗';
-      await updateOrder(order, { refundStatus: 'failed', refundError: message, refundFailedAt: new Date().toISOString() });
-      throw new OrderCancellationError(`訂單已取消，但自動退款仍未完成：${message}`, 502);
+  if (isOrderTerminal(order)) {
+    let pointsReversalPending = false;
+    const reversalStatus = String(order.pointsReversalStatus || '').toLowerCase();
+    const shouldRetryPointsReversal = !['reversed', 'not_required'].includes(reversalStatus);
+    if (shouldRetryPointsReversal) {
+      try {
+        await reverseOrderPoints(orderNo, order.key);
+      } catch (error) {
+        pointsReversalPending = true;
+        console.error('重試已取消訂單點數回收失敗:', error);
+      }
     }
+    if (order.cancelledBy === 'customer' && ['failed', 'pending'].includes(existingRefundStatus)) {
+      try {
+        const refundResult = await completeLinePayRefund(order);
+        return { refunded: refundResult.refunded, refundPending: refundResult.pending, retried: true, pointsReversalPending };
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'LINE Pay 自動退款失敗';
+        await updateOrder(order, { refundStatus: 'failed', refundError: message, refundFailedAt: new Date().toISOString() });
+        throw new OrderCancellationError(`訂單已取消，但自動退款仍未完成：${message}`, 502);
+      }
+    }
+    if (order.cancelledBy === 'customer' || shouldRetryPointsReversal) {
+      return {
+        refunded: existingRefundStatus === 'refunded' || order.refunded === true,
+        refundPending: existingRefundStatus === 'pending',
+        retried: true,
+        pointsReversalPending,
+      };
+    }
+    throw new OrderCancellationError('訂單已處理，無需再次取消', 409);
   }
   const status = String(order.status || '').trim();
   if (isOrderTerminal(order) || !['', 'waiting', 'pending', 'waiting_accept', '等待接單', '等待店家接單'].includes(status)) {
@@ -180,19 +262,29 @@ export async function cancelWaitingOrder(orderNo: string, userId: string) {
   }
   const paymentStatus = getPaymentDisplayStatus(order);
   if (paymentStatus === '付款處理中') throw new OrderCancellationError('此訂單付款處理中，請洽客服人員協助取消', 409);
-  const isPaid = paymentStatus === '已付款';
-  if (isPaid && String(order.refundStatus || '').toLowerCase() === 'pending') {
+  const isPaidAtRead = paymentStatus === '已付款';
+  if (isPaidAtRead && String(order.refundStatus || '').toLowerCase() === 'pending') {
     throw new OrderCancellationError('此訂單退款處理中，請稍後重新整理確認', 409);
   }
-  if (isPaid && String(order.refundStatus || '').toLowerCase() === 'refunded') {
+  if (isPaidAtRead && String(order.refundStatus || '').toLowerCase() === 'refunded') {
     throw new OrderCancellationError('此訂單已取消並完成退款', 409);
   }
 
+  let isPaid = false;
+  let paymentProcessingAtCancellation = false;
   const result = await orderRef.transaction((current) => {
+    isPaid = false;
+    paymentProcessingAtCancellation = false;
     const latest = current as FirebaseOrder | null;
     if (!latest || latest.userId !== userId || String(latest.orderNo) !== orderNo) return;
     const latestStatus = String(latest.status || '').trim();
     if (isOrderTerminal(latest) || !['', 'waiting', 'pending', 'waiting_accept', '等待接單', '等待店家接單'].includes(latestStatus)) return;
+    const latestPaymentStatus = getPaymentDisplayStatus(latest);
+    if (latestPaymentStatus === '付款處理中') {
+      paymentProcessingAtCancellation = true;
+      return;
+    }
+    isPaid = latestPaymentStatus === '已付款';
     return {
       ...latest,
       status: 'cancelled',
@@ -201,18 +293,26 @@ export async function cancelWaitingOrder(orderNo: string, userId: string) {
       cancelledAt: new Date().toISOString(),
       paymentStatus: isPaid ? 'refund_pending' : 'cancelled',
       refundStatus: isPaid ? 'pending' : null,
+      pointsReversalStatus: 'pending',
+      pointsReversalError: null,
     };
   });
-  if (!result.committed) throw new OrderCancellationError('訂單狀態已更新，請重新整理後確認；如店家已接單，請洽客服人員', 409);
+  if (!result.committed) {
+    if (paymentProcessingAtCancellation) throw new OrderCancellationError('此訂單付款處理中，請洽客服人員協助取消', 409);
+    throw new OrderCancellationError('訂單狀態已更新，請重新整理後確認；如店家已接單，請洽客服人員', 409);
+  }
+  let pointsReversalPending = false;
   try {
-    await reverseOrderPoints(orderNo);
+    await reverseOrderPoints(orderNo, order.key);
   } catch (error) {
+    pointsReversalPending = true;
     console.error('顧客取消後撤銷點數失敗:', error);
   }
   if (isPaid) {
-    const cancelledOrder = { ...order, status: 'cancelled', voided: true, cancelledBy: 'customer', paymentStatus: 'refund_pending' };
+    const cancelledOrder = { key: order.key, ...(result.snapshot.val() || {}) } as FirebaseOrder;
     try {
-      await completeLinePayRefund(cancelledOrder);
+      const refundResult = await completeLinePayRefund(cancelledOrder);
+      if (refundResult.pending) return { refunded: false, refundPending: true, retried: false, pointsReversalPending };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'LINE Pay 自動退款失敗';
       await updateOrder(order, {
@@ -224,6 +324,6 @@ export async function cancelWaitingOrder(orderNo: string, userId: string) {
       throw new OrderCancellationError(`訂單已取消，但自動退款尚未完成：${message}`, 502);
     }
   }
-  return { refunded: isPaid, retried: false };
+  return { refunded: isPaid, retried: false, pointsReversalPending };
 }
 export type { FirebaseOrder };

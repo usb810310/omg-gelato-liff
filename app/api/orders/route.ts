@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     snapshot.forEach((child) => {
       const value = child.val();
       if (value && typeof value === 'object' && value.userId === member.userId) {
-        orders.push({ id: child.key, ...value });
+        orders.push({ ...value, id: child.key });
       }
       return false;
     });

@@ -2316,12 +2316,31 @@
         }
 
         function isCustomerOrderWaiting(order) {
-            return !order.voided && !order.rejected && ['', 'waiting', 'pending', 'waiting_accept', '等待接單', '等待店家接單'].includes(String(order.status || '').trim());
+            return !isCustomerOrderTerminal(order) && ['', 'waiting', 'pending', 'waiting_accept', '等待接單', '等待店家接單'].includes(String(order.status || '').trim());
+        }
+
+        function isCustomerOrderTerminal(order) {
+            const status = String(order.status || '').trim().toLowerCase();
+            const paymentStatus = String(order.paymentStatus || '').trim().toLowerCase();
+            const payment = String(order.payment || '').trim().toLowerCase();
+            const refundStatus = String(order.refundStatus || '').trim().toLowerCase();
+            return Boolean(order.cancelled || order.voided || order.rejected || order.refunded || order.refundedAt || order.refundCompletedAt || order.paymentRefundedAt)
+                || order.cancelledBy === 'customer'
+                || ['cancelled', 'canceled', 'voided', 'rejected', 'refunded', 'refund_completed', 'refund_succeeded', '已取消', '拒單', '退款完成', '退款成功', '已退款'].includes(status)
+                || ['cancelled', 'canceled', 'voided', 'refunded', '已取消', '退款完成', '退款成功', '已退款'].includes(paymentStatus)
+                || ['cancelled', 'canceled', 'voided', '已取消', '取消', '已退款'].includes(payment)
+                || ['refunded', 'refund', 'success', 'succeeded', 'completed', 'refund_completed', 'refund_succeeded', '退款完成', '退款成功'].includes(refundStatus);
+        }
+
+        function needsCustomerOrderRecoveryRetry(order) {
+            const pointsNeedRetry = !['reversed', 'not_required'].includes(String(order.pointsReversalStatus || '').trim().toLowerCase());
+            const refundNeedsRetry = order.cancelledBy === 'customer' && ['failed', 'pending'].includes(String(order.refundStatus || '').trim().toLowerCase());
+            return isCustomerOrderTerminal(order) && (pointsNeedRetry || refundNeedsRetry);
         }
 
         function getCustomerOrderStatus(order) {
             if (order.cancelledBy === 'customer') return '您已取消';
-            if (order.voided || order.rejected || ['cancelled', 'rejected', '已取消', '拒單'].includes(order.status || '')) return '已取消';
+            if (isCustomerOrderTerminal(order)) return '已取消';
             const status = String(order.status || '').trim();
             if (['accepted', '接單'].includes(status)) return '店家已接單';
             if (['preparing', '製作中'].includes(status)) return '製作中';
@@ -2392,8 +2411,22 @@
                         cancelButton.addEventListener('click', () => cancelCustomerOrder(order));
                         card.appendChild(cancelButton);
                     }
-                } else if (['accepted', 'preparing', 'ready', '接單', '製作中', '可取餐'].includes(status)) {
+                } else if (['accepted', 'preparing', 'ready', '接單', '製作中', '可取餐'].includes(status) && !needsCustomerOrderRecoveryRetry(order)) {
                     card.appendChild(createOrderText('p', 'customer-order-notice', '店家已接單；如需取消，請洽客服人員。'));
+                } else if (needsCustomerOrderRecoveryRetry(order)) {
+                    const refundStatus = String(order.refundStatus || '').toLowerCase();
+                    card.appendChild(createOrderText(
+                        'p',
+                        'customer-order-notice',
+                        refundStatus === 'failed' ? '訂單已取消，但退款或點數回收尚未完成。請重試，或聯絡客服。' : refundStatus === 'pending' ? 'LINE Pay 退款仍在處理中；稍後可安全重試退款與點數回收。' : '訂單已取消，但點數回收尚未完成。請重試，或聯絡客服。',
+                    ));
+                    const retryButton = createOrderText('button', 'customer-order-cancel', cancellingCustomerOrder === String(order.orderNo) ? '處理中…' : ['failed', 'pending'].includes(refundStatus) ? '重試退款與點數回收' : '重試點數回收');
+                    retryButton.type = 'button';
+                    retryButton.disabled = cancellingCustomerOrder === String(order.orderNo);
+                    retryButton.addEventListener('click', () => cancelCustomerOrder(order));
+                    card.appendChild(retryButton);
+                } else if (String(order.refundStatus || '').toLowerCase() === 'pending') {
+                    card.appendChild(createOrderText('p', 'customer-order-notice', 'LINE Pay 款項退款仍在處理中，請稍後確認；若長時間未更新，請洽客服。'));
                 } else if (order.cancelledBy === 'customer') {
                     card.appendChild(createOrderText('p', 'customer-order-notice', '此訂單已由您取消。'));
                 }
@@ -2415,7 +2448,7 @@
                 const snapshot = await get(ordersQuery);
                 const orders = [];
                 snapshot.forEach(child => {
-                    const order = { id: child.key, ...child.val() };
+                    const order = { ...child.val(), id: child.key };
                     if (isRecentCustomerOrder(order)) orders.push(order);
                 });
                 orders.sort((a, b) => new Date(b.time || 0).getTime() - new Date(a.time || 0).getTime());
@@ -2433,8 +2466,12 @@
 
         async function cancelCustomerOrder(order) {
             const orderNo = String(order.orderNo || '');
-            if (!orderNo || !isCustomerOrderWaiting(order) || cancellingCustomerOrder) return;
-            if (!window.confirm('確定要取消這筆尚未接單的訂單嗎？取消後無法復原。')) return;
+            const recoveryRetry = needsCustomerOrderRecoveryRetry(order);
+            if (!orderNo || (!isCustomerOrderWaiting(order) && !recoveryRetry) || cancellingCustomerOrder) return;
+            const confirmation = recoveryRetry
+                ? '要重新處理這筆訂單的退款與點數回收嗎？'
+                : '確定要取消這筆尚未接單的訂單嗎？取消後無法復原。';
+            if (!window.confirm(confirmation)) return;
             const accessToken = liff?.getAccessToken?.();
             if (!accessToken) {
                 showToast('登入驗證已失效，請重新從 LINE 開啟', '⚠️');
@@ -2447,11 +2484,17 @@
                 const response = await fetch('https://omg-gelato-omg-liff.vercel.app/api/cancel-order', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ orderNo: order.orderNo, accessToken }),
+                    body: JSON.stringify({ orderNo: order.orderNo, orderId: order.id, accessToken }),
                 });
                 const result = await response.json().catch(() => ({}));
                 if (!response.ok || !result.success) throw new Error(result.error || `取消失敗（HTTP ${response.status}）`);
-                showToast('訂單已取消', '✅');
+                if (result.pointsReversalPending) {
+                    showToast(result.refundPending ? '訂單已取消，點數回收與 LINE Pay 退款仍待處理' : '訂單已取消，點數回收仍待處理；請稍後重試', '⚠️');
+                } else if (result.refundPending) {
+                    showToast('點數回收已完成，但 LINE Pay 款項退款仍在處理中；稍後可安全重試', '⚠️');
+                } else {
+                    showToast(recoveryRetry ? (result.refunded ? '退款與點數回收已完成' : '點數回收完成，會員點數已更新') : '訂單已取消', '✅');
+                }
             } catch (error) {
                 console.error('取消顧客訂單失敗:', error);
                 showToast(error instanceof Error ? error.message : '取消訂單失敗，請稍後再試', '❌');
@@ -3337,7 +3380,7 @@
                         const pointsResponse = await fetch('/api/points/award-order', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ accessToken: window.liffAccessToken, orderNo: serverOrderNo }),
+                            body: JSON.stringify({ accessToken: window.liffAccessToken, orderNo: serverOrderNo, orderId: createdOrder.orderId }),
                         });
                         const pointsResult = await pointsResponse.json().catch(() => ({}));
                         if (!pointsResponse.ok || !pointsResult.success) throw new Error(pointsResult.error || '點數發送失敗');

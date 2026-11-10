@@ -1,7 +1,8 @@
 import { createHash } from 'node:crypto';
 import { adminDatabaseRef } from '@/lib/firebase-admin';
+import { isOrderTerminal } from '@/lib/order-status';
+import { DEFAULT_POS_POINT_RULES, parsePosPointRules, resolvePosPointMultiplier } from '@/lib/pos-point-rules';
 
-const DEFAULT_DATABASE_URL = 'https://omg-menu-5761a-default-rtdb.asia-southeast1.firebasedatabase.app';
 const ELIGIBLE_PRODUCTS = new Set(['OMG獨享杯', 'OMG雙重奏']);
 
 export type LineMember = { userId: string; displayName: string; pictureUrl?: string };
@@ -11,8 +12,13 @@ export type MemberPointEntry = {
   sourceLabel: string;
   createdAt: number;
   orderNo: string;
+  orderId?: string;
   channel: 'pos' | 'online' | 'pos_migration';
   idempotencyKey: string;
+  basePoints?: number;
+  multiplier?: number;
+  ruleSource?: 'manual' | 'campaign' | 'standard';
+  ruleLabel?: string;
 };
 export type MemberPointsAccount = {
   balance?: number;
@@ -32,7 +38,19 @@ export type PointOrder = {
   rejected?: boolean;
   voided?: boolean;
   refunded?: boolean;
+  refundedAt?: string;
+  refundCompletedAt?: string;
+  paymentRefundedAt?: string;
   refundStatus?: string;
+  cancelledBy?: string;
+  pointsAwardStatus?: string;
+  pointsReversalStatus?: string;
+  isTest?: boolean;
+  time?: string;
+  paidAt?: string;
+  completedAt?: string;
+  createdAt?: string | number;
+  date?: string;
   items?: PointOrderItem[];
   source?: string;
   channel?: string;
@@ -74,14 +92,30 @@ export async function getLineMember(accessToken: string): Promise<LineMember> {
   return { userId: profile.userId, displayName: profile.displayName || 'LINE 會員', pictureUrl: profile.pictureUrl };
 }
 
-export async function consumeMemberQrClaim(token: string, expectedMode: 'member' | 'legacy' = 'member'): Promise<LineMember> {
+export async function consumeMemberQrClaim(token: string, expectedMode: 'member' | 'legacy' = 'member', orderNo?: string, orderId?: string): Promise<LineMember> {
   const match = /^gelato-member-claim:(member|legacy):([A-Za-z0-9_-]{20,})$/.exec(String(token || '').trim());
   if (!match || match[1] !== expectedMode) throw new Error('會員條碼無效或已過期');
   const claimHash = createHash('sha256').update(match[2]).digest('hex');
   const claimRef = adminDatabaseRef(`memberQrClaims/${claimHash}`);
+  const retryUntil = Date.now() + 15 * 60 * 1000;
   const result = await claimRef.transaction((current) => {
-    if (!current || current.usedAt || Number(current.expiresAt || 0) < Date.now()) return;
-    return { ...current, usedAt: Date.now() };
+    if (!current) return;
+    if (current.usedAt) {
+      if (orderNo && orderId
+        && String(current.usedForOrderNo || '') === String(orderNo)
+        && String(current.usedForOrderId || '') === String(orderId)
+        && Number(current.usedRetryUntil || 0) >= Date.now()) return current;
+      return;
+    }
+    if (Number(current.expiresAt || 0) < Date.now()) return;
+    const now = Date.now();
+    return {
+      ...current,
+      usedAt: now,
+      ...(orderNo ? { usedForOrderNo: String(orderNo) } : {}),
+      ...(orderId ? { usedForOrderId: String(orderId) } : {}),
+      ...(orderNo && orderId ? { usedRetryUntil: retryUntil } : {}),
+    };
   });
   if (!result.committed) throw new Error('會員條碼無效或已使用');
   const claim = result.snapshot.val() as { userId?: string } | null;
@@ -103,14 +137,37 @@ export async function getMemberPoints(userId: string) {
   return result.value || { balance: 0, entries: {} };
 }
 
-export async function findOrderByNo(orderNo: string) {
+export async function findOrderByNo(orderNo: string, orderId?: string) {
+  if (orderId) {
+    if (!/^[A-Za-z0-9_-]{1,128}$/.test(orderId)) return null;
+    const snapshot = await adminDatabaseRef(`orders/${orderId}`).get();
+    const order = snapshot.val() as Omit<PointOrder, 'key'> | null;
+    if (!order || String(order.orderNo) !== String(orderNo)) return null;
+    return { ...order, key: orderId } as PointOrder;
+  }
   const result = await firebaseJson<Record<string, Omit<PointOrder, 'key'>> | null>('orders');
-  const match = Object.entries(result.value || {}).find(([, order]) => String(order?.orderNo) === orderNo);
+  const matches = Object.entries(result.value || {}).filter(([, order]) => String(order?.orderNo) === String(orderNo));
+  if (matches.length > 1) throw new Error('訂單編號對應多筆記錄，請重新整理後以雲端訂單 key 操作');
+  const match = matches[0];
   return match ? ({ key: match[0], ...match[1] } as PointOrder) : null;
 }
 
+async function isUniqueOrderNoForId(orderNo: string, orderId: string) {
+  const snapshot = await adminDatabaseRef('orders').get();
+  const orders = snapshot.val() as Record<string, { orderNo?: string | number }> | null;
+  let matchCount = 0;
+  let matchedId = '';
+  for (const [key, order] of Object.entries(orders || {})) {
+    if (String(order?.orderNo ?? '') !== String(orderNo)) continue;
+    matchCount += 1;
+    matchedId = key;
+    if (matchCount > 1) return false;
+  }
+  return matchCount === 1 && matchedId === orderId;
+}
+
 function orderIsSettled(order: PointOrder) {
-  if (order.cancelled || order.rejected || order.voided || order.refunded) return false;
+  if (isOrderTerminal(order)) return false;
   const refund = String(order.refundStatus || '').toLowerCase();
   if (['refunded', 'refund', 'success', 'succeeded', 'completed'].includes(refund)) return false;
   const status = String(order.status || '').toLowerCase();
@@ -120,109 +177,344 @@ function orderIsSettled(order: PointOrder) {
   return order.paid === true || ['paid', 'success', 'succeeded', 'completed'].includes(payment);
 }
 
-export async function earnPosPoints({ accessToken, orderNo }: { accessToken: string; orderNo: string }) {
-  const member = accessToken.startsWith('gelato-member-claim:')
-    ? await consumeMemberQrClaim(accessToken, 'member')
-    : await getLineMember(accessToken);
-  const order = await findOrderByNo(orderNo);
-  if (!order) throw new Error('找不到現場訂單，請先完成交易同步');
-  if (order.userId && order.userId !== member.userId) throw new Error('訂單會員與掃描會員不一致');
+function orderPurchaseTimestamp(order: PointOrder) {
+  for (const value of [order.paidAt, order.time, order.completedAt, order.createdAt]) {
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+    if (typeof value === 'string' && value.trim()) {
+      const parsed = Date.parse(value);
+      if (Number.isFinite(parsed)) return parsed;
+    }
+  }
+  if (typeof order.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(order.date)) {
+    const parsed = Date.parse(`${order.date}T12:00:00+08:00`);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return null;
+}
+
+
+export async function earnPosPoints({ accessToken, orderNo, orderId }: { accessToken: string; orderNo: string; orderId: string }) {
+  if (!orderId) throw new Error('缺少 POS 雲端訂單識別碼');
+  const order = await findOrderByNo(orderNo, orderId);
+  if (!order) throw new Error('找不到相符的 POS 雲端訂單');
+  if (order.isTest === true) throw new Error('測試訂單不能發送會員點數');
+  if (order.channel === 'online' || order.source === 'LIFF') throw new Error('線上訂單不能使用 POS 現場入點');
+  if (order.channel !== 'store' && order.source !== 'POS') throw new Error('只允許 POS 現場訂單發送點數');
   if (!order.userId) throw new Error('這筆訂單尚未綁定會員，請重新結帳並掃描會員');
   if (!orderIsSettled(order)) throw new Error('訂單尚未完成付款，暫時不能發送點數');
 
-  const points = calculatePosPoints(order.items);
-  if (points <= 0) return { member, points: 0, balance: Math.max(0, Number((await getMemberPoints(member.userId)).balance || 0)), alreadyProcessed: false };
+  const member = accessToken.startsWith('gelato-member-claim:')
+    ? await consumeMemberQrClaim(accessToken, 'member', orderNo, orderId)
+    : await getLineMember(accessToken);
+  if (order.userId !== member.userId) throw new Error('訂單會員與掃描會員不一致');
 
+  const basePoints = calculatePosPoints(order.items);
+  if (basePoints <= 0) return { member, points: 0, basePoints: 0, multiplier: 1, ruleSource: 'standard', ruleLabel: '一般倍率 1x', balance: Math.max(0, Number((await getMemberPoints(member.userId)).balance || 0)), alreadyProcessed: false };
+
+  const rulesSnapshot = await adminDatabaseRef('posPointSettings/current').get();
+  const rules = rulesSnapshot.val() ? parsePosPointRules(rulesSnapshot.val()) : DEFAULT_POS_POINT_RULES;
+  const appliedRule = resolvePosPointMultiplier(rules, orderPurchaseTimestamp(order));
+  const points = basePoints * appliedRule.multiplier;
   const orderKey = String(order.orderNo || orderNo);
-  const entryId = `pos_${createHash('sha256').update(`${member.userId}:${orderKey}`).digest('hex').slice(0, 24)}`;
+  const entryId = `pos_${createHash('sha256').update(`${member.userId}:${orderId}`).digest('hex').slice(0, 24)}`;
+  const legacyEntryId = `pos_${createHash('sha256').update(`${member.userId}:${orderKey}`).digest('hex').slice(0, 24)}`;
   const path = `memberPoints/${encodeURIComponent(memberKey(member.userId))}`;
+  const before = (await adminDatabaseRef(path).get()).val() as MemberPointsAccount | null;
+  const legacyEntryExists = Boolean(before?.entries?.[legacyEntryId]);
+  const legacyEntryMatches = legacyEntryExists && await isUniqueOrderNoForId(orderKey, orderId);
+  if (legacyEntryExists && !legacyEntryMatches && !before?.entries?.[entryId]) {
+    throw new Error('此取餐編號已有舊點數紀錄且對應訂單不唯一，為避免重複入點請管理員核對');
+  }
 
   let alreadyProcessed = false;
+  let processedEntryId = entryId;
+  let ambiguousLegacyEntryDetected = false;
   const result = await adminDatabaseRef(path).transaction((current) => {
+    alreadyProcessed = false;
+    processedEntryId = entryId;
+    ambiguousLegacyEntryDetected = false;
     const account = (current || { balance: 0, entries: {} }) as MemberPointsAccount;
     const entries = account.entries || {};
-    if (entries[entryId]) { alreadyProcessed = true; return account; }
-    const entry: MemberPointEntry = { delta: points, type: 'pos_purchase', sourceLabel: '現場購買獨享杯／雙重奏', createdAt: Date.now(), orderNo: orderKey, channel: 'pos', idempotencyKey: entryId };
+    if (entries[entryId]) {
+      alreadyProcessed = true;
+      processedEntryId = entryId;
+      return account;
+    }
+    if (entries[legacyEntryId]) {
+      if (legacyEntryMatches) {
+        alreadyProcessed = true;
+        processedEntryId = legacyEntryId;
+      } else {
+        ambiguousLegacyEntryDetected = true;
+      }
+      return account;
+    }
+    const entry: MemberPointEntry = {
+      delta: points,
+      type: 'pos_purchase',
+      sourceLabel: `現場購買獨享杯／雙重奏（${appliedRule.multiplier}x）`,
+      createdAt: Date.now(),
+      orderNo: orderKey,
+      orderId,
+      channel: 'pos',
+      idempotencyKey: entryId,
+      basePoints,
+      multiplier: appliedRule.multiplier,
+      ruleSource: appliedRule.source,
+      ruleLabel: appliedRule.label,
+    };
     return { balance: Math.max(0, Number(account.balance || 0)) + points, updatedAt: Date.now(), entries: { ...entries, [entryId]: entry } };
   });
   if (!result.committed) throw new Error('會員點數正在被其他交易更新，請重新操作一次');
+  if (ambiguousLegacyEntryDetected) throw new Error('此取餐編號已有舊點數紀錄且無法唯一對應，請管理員核對後再操作');
   const account = result.snapshot.val() as MemberPointsAccount;
-  return { member, points: alreadyProcessed ? Number(account.entries?.[entryId]?.delta || 0) : points, balance: Math.max(0, Number(account.balance || 0)), alreadyProcessed };
+  await reverseIfOrderIsTerminal(orderKey, orderId);
+  let orderBecameTerminal = false;
+  const statusResult = await adminDatabaseRef(`orders/${orderId}`).transaction((current) => {
+    orderBecameTerminal = false;
+    if (!current) return;
+    if (isOrderTerminal(current)) { orderBecameTerminal = true; return; }
+    return {
+      ...current,
+      pointsAwardStatus: 'awarded',
+      pointsAwardedAt: new Date().toISOString(),
+      pointsAwardMultiplier: appliedRule.multiplier,
+      pointsAwardRuleSource: appliedRule.source,
+    };
+  });
+  const pointsReversed = !statusResult.committed && orderBecameTerminal;
+  if (pointsReversed) await reverseOrderPoints(orderKey, orderId);
+  const ledgerEntry = account.entries?.[processedEntryId];
+  const latestAccount = await getMemberPoints(member.userId);
+  return {
+    member,
+    points: pointsReversed ? 0 : alreadyProcessed ? Number(ledgerEntry?.delta || 0) : points,
+    pointsReversed,
+    basePoints: alreadyProcessed ? Number(ledgerEntry?.basePoints || ledgerEntry?.delta || 0) : basePoints,
+    multiplier: alreadyProcessed ? Number(ledgerEntry?.multiplier || 1) : appliedRule.multiplier,
+    ruleSource: alreadyProcessed ? ledgerEntry?.ruleSource || 'standard' : appliedRule.source,
+    ruleLabel: alreadyProcessed ? ledgerEntry?.ruleLabel || '一般倍率 1x' : appliedRule.label,
+    balance: Math.max(0, Number(latestAccount.balance || 0)),
+    alreadyProcessed,
+  };
 }
 
-function isTerminalOrderStatus(status?: string) {
-  return ['cancelled', 'canceled', 'rejected', 'refunded', 'voided'].includes(String(status || '').toLowerCase());
+async function reverseIfOrderIsTerminal(orderNo: string, orderId: string) {
+  const latestOrder = await findOrderByNo(orderNo, orderId);
+  if (!latestOrder || !isOrderTerminal(latestOrder)) return;
+  await reverseOrderPoints(orderNo, orderId);
 }
 
-export async function earnOnlineOrderPoints({ accessToken, orderNo }: { accessToken: string; orderNo: string }) {
+type PointsReversalStatus = 'pending' | 'failed' | 'reversed' | 'not_required';
+
+function canTransitionPointsReversalStatus(currentValue: unknown, nextStatus: PointsReversalStatus) {
+  const currentStatus = String(currentValue || '').trim().toLowerCase();
+  // 已完成回收是吸收終態；「不需回收」只可在入點競態後升級，不能被舊失敗結果覆寫。
+  if (currentStatus === 'reversed') return nextStatus === 'reversed';
+  if (currentStatus === 'not_required' && nextStatus === 'failed') return false;
+  return true;
+}
+
+async function updatePointsReversalStatus(
+  orderKey: string,
+  nextStatus: PointsReversalStatus,
+  fields: Record<string, unknown>,
+) {
+  let transitionBlocked = false;
+  const result = await adminDatabaseRef(`orders/${orderKey}`).transaction((current) => {
+    transitionBlocked = false;
+    if (!current || typeof current !== 'object') return;
+    const order = current as Record<string, unknown>;
+    if (!canTransitionPointsReversalStatus(order.pointsReversalStatus, nextStatus)) {
+      transitionBlocked = true;
+      return;
+    }
+    return { ...order, ...fields, pointsReversalStatus: nextStatus };
+  });
+  if (!result.committed && !transitionBlocked) {
+    throw new Error('訂單點數回收狀態更新失敗，請稍後重試');
+  }
+  return result.snapshot.val();
+}
+
+export async function earnOnlineOrderPoints({ accessToken, orderNo, orderId }: { accessToken: string; orderNo: string; orderId: string }) {
   const member = await getLineMember(accessToken);
-  const order = await findOrderByNo(String(orderNo));
-  if (!order) throw new Error('找不到線上訂單');
+  const order = await findOrderByNo(String(orderNo), orderId);
+  if (!order) throw new Error('找不到相符的線上訂單');
+  if (order.isTest === true) throw new Error('測試訂單不能發送會員點數');
   if (order.channel !== 'online' && order.source !== 'LIFF') throw new Error('這不是線上會員訂單');
+  if (order.userId == null) throw new Error('訂單未綁定 LINE 會員');
+  if (isOrderTerminal(order)) throw new Error('訂單已取消或退款，不能發送點數');
   if (order.userId !== member.userId) throw new Error('訂單會員與登入會員不一致');
-  if (order.cancelled || order.rejected || order.voided || order.refunded || isTerminalOrderStatus(order.status)) throw new Error('訂單已取消或退款，不能發送點數');
   const points = calculatePosPoints(order.items);
   if (points <= 0) return { member, points: 0, balance: Math.max(0, Number((await getMemberPoints(member.userId)).balance || 0)), alreadyProcessed: false };
 
   const orderKey = String(order.orderNo || orderNo);
-  const entryId = `order_${createHash('sha256').update(`${member.userId}:${orderKey}`).digest('hex').slice(0, 24)}`;
+  const entryId = `order_${createHash('sha256').update(`${member.userId}:${orderId}`).digest('hex').slice(0, 24)}`;
+  const legacyEntryId = `order_${createHash('sha256').update(`${member.userId}:${orderKey}`).digest('hex').slice(0, 24)}`;
   const path = `memberPoints/${encodeURIComponent(memberKey(member.userId))}`;
+  const before = (await adminDatabaseRef(path).get()).val() as MemberPointsAccount | null;
+  const legacyEntryExists = Boolean(before?.entries?.[legacyEntryId]);
+  const legacyEntryMatches = legacyEntryExists && await isUniqueOrderNoForId(orderKey, orderId);
+  if (legacyEntryExists && !legacyEntryMatches && !before?.entries?.[entryId]) {
+    throw new Error('此訂單編號已有舊點數紀錄且對應訂單不唯一，為避免重複入點請管理員核對');
+  }
   let alreadyProcessed = false;
+  let processedEntryId = entryId;
+  let ambiguousLegacyEntryDetected = false;
   const result = await adminDatabaseRef(path).transaction((current) => {
+    alreadyProcessed = false;
+    processedEntryId = entryId;
+    ambiguousLegacyEntryDetected = false;
     const account = (current || { balance: 0, entries: {} }) as MemberPointsAccount;
     const entries = account.entries || {};
-    if (entries[entryId]) { alreadyProcessed = true; return account; }
-    const entry: MemberPointEntry = { delta: points, type: 'order_reward', sourceLabel: '線上訂單獨享杯／雙重奏集點', createdAt: Date.now(), orderNo: orderKey, channel: 'online', idempotencyKey: entryId };
+    if (entries[entryId]) {
+      alreadyProcessed = true;
+      processedEntryId = entryId;
+      return account;
+    }
+    if (entries[legacyEntryId]) {
+      if (legacyEntryMatches) {
+        alreadyProcessed = true;
+        processedEntryId = legacyEntryId;
+      } else {
+        ambiguousLegacyEntryDetected = true;
+      }
+      return account;
+    }
+    const entry: MemberPointEntry = {
+      delta: points,
+      type: 'order_reward',
+      sourceLabel: '線上訂單獨享杯／雙重奏集點',
+      createdAt: Date.now(),
+      orderNo: orderKey,
+      orderId,
+      channel: 'online',
+      idempotencyKey: entryId,
+    };
     return { balance: Math.max(0, Number(account.balance || 0)) + points, updatedAt: Date.now(), entries: { ...entries, [entryId]: entry } };
   });
   if (!result.committed) throw new Error('會員點數正在被其他交易更新，請重新操作一次');
+  if (ambiguousLegacyEntryDetected) throw new Error('此訂單編號已有舊點數紀錄且無法唯一對應，請管理員核對後再操作');
   const account = result.snapshot.val() as MemberPointsAccount;
-  return { member, points: alreadyProcessed ? Number(account.entries?.[entryId]?.delta || 0) : points, balance: Math.max(0, Number(account.balance || 0)), alreadyProcessed };
+  await reverseIfOrderIsTerminal(orderKey, orderId);
+  return { member, points: alreadyProcessed ? Number(account.entries?.[processedEntryId]?.delta || 0) : points, balance: Math.max(0, Number(account.balance || 0)), alreadyProcessed };
 }
 
-export async function reverseOrderPoints(orderNo: string) {
-  const order = await findOrderByNo(String(orderNo));
+export async function reverseOrderPoints(orderNo: string, orderId: string) {
+  if (!orderId) throw new Error('缺少雲端訂單 key，無法安全回收點數');
+  const order = await findOrderByNo(String(orderNo), orderId);
   if (!order) throw new Error('找不到要撤銷點數的訂單');
-  const status = String(order.status || '').toLowerCase();
-  const refund = String(order.refundStatus || '').toLowerCase();
-  const terminal = order.cancelled || order.rejected || order.voided || order.refunded
-    || ['cancelled', 'canceled', 'rejected', 'refunded', 'voided'].includes(status)
-    || ['refunded', 'refund', 'success', 'succeeded', 'completed'].includes(refund);
-  if (!terminal) throw new Error('訂單尚未取消或退款，不能撤銷點數');
-  if (!order.userId) return { points: 0, alreadyReversed: false };
+  if (!isOrderTerminal(order)) throw new Error('訂單尚未取消或退款，不能撤銷點數');
+  if (!order.userId) {
+    await updatePointsReversalStatus(order.key, 'not_required', {
+      pointsReversalPoints: 0,
+      pointsReversalCheckedAt: Date.now(),
+      pointsReversalError: null,
+    });
+    return { points: 0, balance: 0, alreadyReversed: false };
+  }
 
   const path = `memberPoints/${encodeURIComponent(memberKey(order.userId))}`;
   let points = 0;
   let alreadyReversed = false;
-  const result = await adminDatabaseRef(path).transaction((current) => {
-    const account = (current || { balance: 0, entries: {} }) as MemberPointsAccount;
-    const entries = account.entries || {};
-    const earned = Object.entries(entries).filter(([, entry]) =>
-      Number(entry.delta || 0) > 0 && String(entry.orderNo || '') === String(orderNo)
+  try {
+    let allowLegacyFallback = false;
+    const before = (await adminDatabaseRef(path).get()).val() as MemberPointsAccount | null;
+    const beforeEntries = Object.values(before?.entries || {});
+    const hasExactLedgerEntry = beforeEntries.some((entry) =>
+      Number(entry.delta || 0) > 0 && entry.orderId === orderId
         && (entry.type === 'pos_purchase' || entry.type === 'order_reward'),
     );
-    if (!earned.length) return account;
-    const reversible = earned.filter(([entryId]) => !entries[`reversal_${entryId}`]);
-    if (!reversible.length) { alreadyReversed = true; return account; }
-    points = reversible.reduce((sum, [, entry]) => sum + Number(entry.delta || 0), 0);
-    const now = Date.now();
-    const nextEntries = { ...entries } as Record<string, MemberPointEntry>;
-    for (const [entryId, entry] of reversible) {
-      nextEntries[`reversal_${entryId}`] = {
-        delta: -Math.abs(Number(entry.delta || 0)),
-        type: 'order_reward_reversal',
-        sourceLabel: '訂單取消／退款，撤銷原集點',
-        createdAt: now,
-        orderNo: String(orderNo),
-        channel: entry.channel || 'pos',
-        idempotencyKey: `reversal_${entryId}`,
-      };
+    const legacyEntries = beforeEntries.filter((entry) =>
+      Number(entry.delta || 0) > 0 && !entry.orderId && String(entry.orderNo || '') === String(orderNo)
+        && (entry.type === 'pos_purchase' || entry.type === 'order_reward'),
+    );
+    if (!hasExactLedgerEntry && legacyEntries.length) {
+      allowLegacyFallback = await isUniqueOrderNoForId(String(orderNo), orderId);
+      if (!allowLegacyFallback) {
+        throw new Error('此取餐編號有舊點數流水但對應多筆訂單，為避免撤錯點數已停止自動回收，請管理員核對');
+      }
     }
-    return { balance: Math.max(0, Number(account.balance || 0) - points), updatedAt: now, entries: nextEntries };
-  });
-  if (!result.committed) throw new Error('會員點數正在被其他交易更新，請重新操作一次');
-  const account = result.snapshot.val() as MemberPointsAccount;
-  return { points, balance: Math.max(0, Number(account.balance || 0)), alreadyReversed };
+    const matchesOrder = (entry: MemberPointEntry) => {
+      if (entry.orderId) return entry.orderId === orderId;
+      return allowLegacyFallback && String(entry.orderNo || '') === String(orderNo);
+    };
+    let ambiguousLegacyEntryDetected = false;
+    const result = await adminDatabaseRef(path).transaction((current) => {
+      points = 0;
+      alreadyReversed = false;
+      ambiguousLegacyEntryDetected = false;
+      const account = (current || { balance: 0, entries: {} }) as MemberPointsAccount;
+      const entries = account.entries || {};
+      if (!allowLegacyFallback) {
+        const values = Object.values(entries);
+        const exactExists = values.some((entry) => Number(entry.delta || 0) > 0 && entry.orderId === orderId
+          && (entry.type === 'pos_purchase' || entry.type === 'order_reward'));
+        const legacyExists = values.some((entry) => Number(entry.delta || 0) > 0 && !entry.orderId
+          && String(entry.orderNo || '') === String(orderNo)
+          && (entry.type === 'pos_purchase' || entry.type === 'order_reward'));
+        if (!exactExists && legacyExists) {
+          ambiguousLegacyEntryDetected = true;
+          return account;
+        }
+      }
+      const earned = Object.entries(entries).filter(([, entry]) =>
+        Number(entry.delta || 0) > 0 && matchesOrder(entry)
+          && (entry.type === 'pos_purchase' || entry.type === 'order_reward'),
+      );
+      if (!earned.length) return account;
+      const reversible = earned.filter(([entryId]) => !entries[`reversal_${entryId}`]);
+      if (!reversible.length) { alreadyReversed = true; return account; }
+      points = reversible.reduce((sum, [, entry]) => sum + Number(entry.delta || 0), 0);
+      const now = Date.now();
+      const nextEntries = { ...entries } as Record<string, MemberPointEntry>;
+      for (const [entryId, entry] of reversible) {
+        nextEntries[`reversal_${entryId}`] = {
+          delta: -Math.abs(Number(entry.delta || 0)),
+          type: 'order_reward_reversal',
+          sourceLabel: '訂單取消／退款，撤銷原集點',
+          createdAt: now,
+          orderNo: String(orderNo),
+          orderId: entry.orderId || orderId,
+          channel: entry.channel || 'pos',
+          idempotencyKey: `reversal_${entryId}`,
+        };
+      }
+      return { balance: Math.max(0, Number(account.balance || 0) - points), updatedAt: now, entries: nextEntries };
+    });
+    if (!result.committed) throw new Error('會員點數正在被其他交易更新，請重新操作一次');
+    if (ambiguousLegacyEntryDetected) throw new Error('此取餐編號有舊點數流水且無法唯一對應，為避免撤錯點數已停止自動回收，請管理員核對');
+    const account = result.snapshot.val() as MemberPointsAccount;
+    const entries = account.entries || {};
+    const earned = Object.entries(entries).filter(([, entry]) =>
+      Number(entry.delta || 0) > 0 && matchesOrder(entry)
+        && (entry.type === 'pos_purchase' || entry.type === 'order_reward'),
+    );
+    const reversedPoints = earned.reduce((sum, [entryId]) => sum + Math.abs(Number(entries[`reversal_${entryId}`]?.delta || 0)), 0);
+    const allReversed = earned.length > 0 && earned.every(([entryId]) => entries[`reversal_${entryId}`]);
+    const nextStatus: PointsReversalStatus = allReversed ? 'reversed' : earned.length ? 'pending' : 'not_required';
+    const reversalPatch: Record<string, unknown> = {
+      pointsReversalPoints: reversedPoints,
+      pointsReversalCheckedAt: Date.now(),
+      pointsReversalCompletedAt: allReversed ? Date.now() : null,
+      pointsReversalError: null,
+    };
+    if (allReversed) reversalPatch.pointsAwardStatus = 'reversed';
+    await updatePointsReversalStatus(order.key, nextStatus, reversalPatch);
+    return { points, balance: Math.max(0, Number(account.balance || 0)), alreadyReversed };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '會員點數回收失敗';
+    try {
+      await updatePointsReversalStatus(order.key, 'failed', {
+        pointsReversalError: message.slice(0, 300),
+        pointsReversalFailedAt: Date.now(),
+      });
+    } catch (statusError) {
+      console.error('記錄訂單點數回收失敗狀態時發生錯誤:', statusError);
+    }
+    throw error;
+  }
 }
 
 export async function migrateLegacyLinePoints({ accessToken, points, operator }: { accessToken: string; points: number; operator?: string }) {

@@ -34,8 +34,9 @@ export async function POST(request: Request) {
     const orderNo = typeof body?.orderNo === 'string' || typeof body?.orderNo === 'number'
       ? String(body.orderNo).trim()
       : '';
+    const orderId = typeof body?.orderId === 'string' ? body.orderId.trim() : '';
     const accessToken = typeof body.accessToken === 'string' ? body.accessToken : '';
-    if (!orderNo || !accessToken || accessToken.length > 8192) {
+    if (!orderNo || (orderId && !/^[A-Za-z0-9_-]{1,128}$/.test(orderId)) || !accessToken || accessToken.length > 8192) {
       return NextResponse.json({ success: false, error: '缺少有效的訂單或登入資訊' }, { status: 400, headers: corsHeaders });
     }
 
@@ -44,8 +45,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: '登入驗證已失效，請重新開啟 LINE 頁面' }, { status: 401, headers: corsHeaders });
     }
 
-    const result = await cancelWaitingOrder(orderNo, lineUser.userId);
-    return NextResponse.json({ success: true, refunded: Boolean(result?.refunded), retried: Boolean(result?.retried) }, { headers: corsHeaders });
+    const result = await cancelWaitingOrder(orderNo, orderId || undefined, lineUser.userId);
+    return NextResponse.json({
+      success: true,
+      refunded: Boolean(result?.refunded),
+      refundPending: Boolean(result?.refundPending),
+      retried: Boolean(result?.retried),
+      pointsReversalPending: Boolean(result?.pointsReversalPending),
+    }, { headers: corsHeaders });
   } catch (error) {
     if (error instanceof OrderCancellationError) {
       return NextResponse.json({ success: false, error: error.message }, { status: error.statusCode, headers: corsHeaders });

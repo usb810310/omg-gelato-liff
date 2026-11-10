@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
-import { callLinePay, findOrderByNo, getLiffReturnUrl, updateOrder } from '@/lib/linepay';
-import { getPaymentDisplayStatus, isOrderRefunded, isOrderTerminal } from '@/lib/order-status';
+import { adminDatabaseRef } from '@/lib/firebase-admin';
+import { completeLinePayRefund, callLinePay, findOrderByNo, getLiffReturnUrl, updateOrder } from '@/lib/linepay';
+import { reverseOrderPoints } from '@/lib/member-points';
+import { getPaymentDisplayStatus, isOrderCancelled, isOrderRefunded, isOrderRejected, isOrderTerminal } from '@/lib/order-status';
 import { buildPaymentSuccessCard, pushLineMessage } from '@/lib/line-notify';
 
 export const runtime = 'nodejs';
@@ -56,15 +58,71 @@ export async function GET(request: Request) {
       body: { amount, currency: 'TWD' },
       timeoutMs: 45000,
     });
-
-    await updateOrder(order, {
-      payment: '已付款',
-      paymentStatus: 'paid',
-      linePayTransactionId: String(linePayResponse.info?.transactionId || transactionId),
-      linePayConfirmedAt: new Date().toISOString(),
-      linePayResult: linePayResponse.info?.payInfo || null,
+    const confirmedTransactionId = String(linePayResponse.info?.transactionId || transactionId);
+    const confirmedAt = new Date().toISOString();
+    const orderRef = adminDatabaseRef(`orders/${order.key}`);
+    const transition = await orderRef.transaction((current) => {
+      if (!current) return;
+      if (isOrderTerminal(current)) {
+        const alreadyRefunded = isOrderRefunded(current);
+        const hasOrderTerminalState = isOrderCancelled(current) || isOrderRejected(current) || alreadyRefunded;
+        return {
+          ...current,
+          ...(!hasOrderTerminalState ? { status: 'cancelled', voided: true, cancelledBy: 'customer', cancelledAt: confirmedAt } : {}),
+          linePayTransactionId: confirmedTransactionId,
+          linePayConfirmedAt: confirmedAt,
+          linePayResult: linePayResponse.info?.payInfo || null,
+          ...(alreadyRefunded ? {} : { paymentStatus: 'refund_pending', refundStatus: 'pending' }),
+        };
+      }
+      return {
+        ...current,
+        payment: '已付款',
+        paymentStatus: 'paid',
+        linePayTransactionId: confirmedTransactionId,
+        linePayConfirmedAt: confirmedAt,
+        linePayResult: linePayResponse.info?.payInfo || null,
+      };
     });
-    await notifyPaymentSuccess({ ...order, payment: '已付款', paymentStatus: 'paid' });
+    if (!transition.committed) throw new Error('訂單狀態更新失敗，請稍後確認付款狀態');
+
+    const updatedOrder = { key: order.key, ...(transition.snapshot.val() || {}) } as NonNullable<typeof order>;
+    if (isOrderTerminal(updatedOrder)) {
+      try {
+        await reverseOrderPoints(orderNo, updatedOrder.key);
+      } catch (reverseError) {
+        console.error('付款確認與取消競速後點數回收失敗:', reverseError);
+      }
+      if (isOrderRefunded(updatedOrder)) {
+        returnUrl.searchParams.set('payment', 'refunded');
+        returnUrl.searchParams.set('message', '訂單已取消，款項已退款');
+        return NextResponse.redirect(returnUrl);
+      }
+      try {
+        const refundResult = await completeLinePayRefund(updatedOrder, confirmedTransactionId);
+        if (refundResult.pending) {
+          returnUrl.searchParams.set('payment', 'cancelled');
+          returnUrl.searchParams.set('message', 'LINE Pay 退款仍在處理中，請稍後確認');
+          return NextResponse.redirect(returnUrl);
+        }
+        returnUrl.searchParams.set('payment', 'refunded');
+        returnUrl.searchParams.set('message', '訂單已取消，LINE Pay 款項已自動退款');
+      } catch (refundError) {
+        const message = refundError instanceof Error ? refundError.message : 'LINE Pay 自動退款失敗';
+        await updateOrder(updatedOrder, {
+          linePayTransactionId: confirmedTransactionId,
+          paymentStatus: 'refund_failed',
+          refundStatus: 'failed',
+          refundError: message,
+          refundFailedAt: new Date().toISOString(),
+        });
+        returnUrl.searchParams.set('payment', 'cancelled');
+        returnUrl.searchParams.set('message', `訂單已取消，但 LINE Pay 退款尚未完成：${message}`);
+      }
+      return NextResponse.redirect(returnUrl);
+    }
+
+    await notifyPaymentSuccess({ ...updatedOrder, payment: '已付款', paymentStatus: 'paid' });
     returnUrl.searchParams.set('payment', 'success');
     return NextResponse.redirect(returnUrl);
   } catch (error) {
