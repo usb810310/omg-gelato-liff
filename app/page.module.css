@@ -246,11 +246,6 @@
 
 /* Member center redesign */
 .memberPageView { padding-top: 12px; padding-bottom: 24px; }
-.memberPageHeader { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; padding: 8px 2px 20px; }
-.memberPageHeader h1 { margin: 7px 0 7px; font-family: Georgia, serif; font-size: 35px; font-weight: 500; letter-spacing: -.07em; }
-.memberPageHeader > div:first-child > p:last-child { margin:0; max-width:270px; color:var(--muted); font-size:11px; line-height:1.6; }
-.memberMiniAvatar { flex:0 0 52px; width:52px; height:52px; display:grid; place-items:center; overflow:hidden; border:3px solid #fff; border-radius:50%; background:#dfb887; color:#fff; font-size:14px; font-weight:800; box-shadow:0 5px 16px rgba(92,68,42,.12); }
-.memberMiniAvatar img { width:100%; height:100%; object-fit:cover; }
 .pointsOverview { margin:0 -2px 13px; padding:20px 20px 17px; border-radius:23px; color:#fff; background:linear-gradient(140deg,#3d302b 0%,#654f43 57%,#8d6b54 100%); box-shadow:0 13px 25px rgba(59,43,34,.18); }
 .pointsOverviewTop,.pointsMeta { display:flex; align-items:center; justify-content:space-between; }
 .pointsOverviewTop { color:#dfd3ca; font-size:11px; font-weight:700; }
@@ -296,7 +291,7 @@
 .rewardGuideCard { display:flex; align-items:center; gap:14px; margin-bottom:13px; padding:17px; border-radius:20px; background:#f7eee2; }
 .rewardGuideBadge { display:grid; flex:0 0 54px; width:54px; height:54px; place-items:center; border:2px solid #a16b4d; border-radius:50%; color:#8c5a40; font-size:25px; font-weight:900; transform:rotate(-8deg); }
 .rewardGuideCard h2 { margin:5px 0 6px; font-size:15px; line-height:1.3; }.rewardGuideCard > div:last-child > p:last-child { margin:0; color:var(--muted); font-size:10px; line-height:1.6; }
-@media (max-width:360px) { .memberPageHeader h1 { font-size:30px; }.pointsNumber { font-size:46px; }.subsectionHeading > span { display:none; } }
+@media (max-width:360px) { .pointsNumber { font-size:46px; }.subsectionHeading > span { display:none; } }
 
 /* Landscape phone safety layout: keep the LIFF usable when the device is rotated. */
 
@@ -307,7 +302,7 @@
   .content { width:min(100%,760px); height:calc(100dvh - 118px); box-sizing:border-box; padding:8px 22px 22px; }
   .heroCard { min-height:230px; border-radius:23px; padding:22px 24px; }.heroCopy h1 { margin:13px 0 10px; font-size:clamp(28px,6vw,42px); }.heroDescription { margin-bottom:15px; }.heroArt { width:43%; }.sunShape { width:140px; height:140px; top:25px; }.scoop { transform:scale(.8); transform-origin:center; }.scoopPistachio { right:0; top:30px; }.scoopStrawberry { right:50px; top:82px; }.cone { right:25px; top:140px; transform:scale(.8) rotate(4deg); transform-origin:top center; }
   .welcomeRow { padding:12px 5px 10px; }.quickGrid { gap:9px; }.quickCard { min-height:72px; padding:12px; }.noteCard { min-height:66px; padding:14px 18px; }
-  .memberPageView { padding-top:5px; }.memberPageHeader { padding-bottom:12px; }.memberPageHeader h1 { font-size:29px; }.pointsOverview { padding:15px 18px 13px; }.pointsNumber { margin:5px 0 8px; font-size:42px; }.memberActionCard,.howToCollect,.memberHistoryCard { padding:14px 16px; }.qrReveal { flex-direction:row; justify-content:center; gap:16px; }.qrReveal .memberQrImage,.qrReveal .memberQrLoading { width:150px; height:150px; }.qrReveal p { margin:0; text-align:left; }
+  .memberPageView { padding-top:5px; }.pointsOverview { padding:15px 18px 13px; }.pointsNumber { margin:5px 0 8px; font-size:42px; }.memberActionCard,.howToCollect,.memberHistoryCard { padding:14px 16px; }.qrReveal { flex-direction:row; justify-content:center; gap:16px; }.qrReveal .memberQrImage,.qrReveal .memberQrLoading { width:150px; height:150px; }.qrReveal p { margin:0; text-align:left; }
   .bottomNav { height:56px; padding-top:4px; }.bottomNav button span { font-size:19px; line-height:19px; }.bottomNav button small { font-size:9px; }
 }
 
@@ -438,7 +433,7 @@
   box-shadow: 0 6px 18px rgba(83, 59, 42, .045);
 }
 .homeSectionLabel { margin: 0 3px 10px; }
-.homeSectionLabel h2, .ordersHero h1, .memberPageHeader h1 { color: var(--ink); }
+.homeSectionLabel h2, .ordersHero h1 { color: var(--ink); }
 .homeActionGrid { grid-template-columns: 1.12fr .88fr; gap: 10px; }
 .homeActionCard {
   min-height: 128px;
@@ -482,9 +477,6 @@
 .linePayButton { min-height: 38px; padding: 8px 14px; border-radius: 13px; }
 .cancelOrderButton { min-height: 42px; }
 .memberPageView { padding-top: 4px; }
-.memberPageHeader { padding: 7px 3px 18px; }
-.memberPageHeader h1 { font-size: 37px; }
-.memberMiniAvatar { border-color: var(--cream); }
 .pointsNotice { position:relative; overflow:hidden; margin:0 0 14px; padding:16px 16px 14px; border:1px solid #e3ebe6; border-radius:20px; background:#fff; box-shadow:0 8px 22px rgba(31,55,45,.07); }.pointsNotice::after { content:'✦'; position:absolute; right:-18px; top:-34px; color:rgba(6,199,85,.07); font-size:130px; line-height:1; pointer-events:none; }.pointsNoticeCampaign { border-color:#c9e8d5; background:linear-gradient(145deg,#fff,#f4fbf6); }.pointsNoticeHeader { position:relative; z-index:1; display:flex; align-items:center; gap:10px; }.pointsNoticeIcon { display:grid; flex:0 0 34px; width:34px; height:34px; place-items:center; border-radius:12px; color:#fff; background:#06c755; font-size:15px; font-weight:900; box-shadow:0 5px 10px rgba(6,199,85,.2); }.pointsNoticeCampaign .pointsNoticeIcon { background:#12a85a; }.pointsNoticeTitle { flex:1; min-width:0; }.pointsNoticeMeta { display:flex; align-items:center; gap:7px; }.pointsNoticeMeta .kicker { margin:0; color:#83938a; font-size:8px; letter-spacing:.12em; }.pointsNoticeMeta > span { padding:3px 7px; border-radius:999px; background:#e7f7ed; color:#159447; font-size:9px; font-weight:800; }.pointsNoticeCampaign .pointsNoticeMeta > span { background:#d8f3e1; color:#118348; }.pointsNotice h2 { margin:4px 0 0; color:#1f2b25; font-size:16px; letter-spacing:-.04em; }.pointsNoticeArrow { position:relative; z-index:1; color:#a4b4aa; font-size:24px; font-weight:300; }.pointsNoticeList { position:relative; z-index:1; display:grid; gap:8px; margin:15px 0 0; padding:14px 0 0; border-top:1px solid #edf2ee; list-style:none; }.pointsNoticeList li { display:flex; align-items:flex-start; gap:9px; color:#53635a; font-size:11px; line-height:1.55; }.pointsNoticeList li b { flex:0 0 21px; color:#06a94c; font-size:9px; letter-spacing:.04em; }.pointsNoticeList li span { flex:1; }.pointsNotice small { position:relative; z-index:1; display:inline-block; margin-top:12px; padding:5px 9px; border-radius:7px; background:#f0f8f2; color:#4b8a61; font-size:9px; font-weight:800; }
 .pointsOverview {
   margin: 0 0 14px;
@@ -524,7 +516,7 @@
   .appHero { min-height: 330px; padding-left: 17px; padding-right: 17px; }
   .appHero h1 { font-size: 35px; }
   .homeActionCard { min-height: 116px; padding: 13px; }
-  .memberPageHeader h1, .ordersHero h1 { font-size: 32px; }
+  .ordersHero h1 { font-size: 32px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .homeActionCard, .orderListItem { transition: none; }

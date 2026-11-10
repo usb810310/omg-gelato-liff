@@ -946,15 +946,6 @@ export default function Home() {
 
         {activeTab === 'member' && (
           <section className={styles.memberPageView}>
-            <header className={styles.memberPageHeader}>
-              <div>
-                <p className={styles.kicker}>GELATO CLUB</p>
-                <h1>我的會員中心</h1>
-                <p>每一口喜歡的味道，都替下一份獎勵靠近一點。</p>
-              </div>
-              <div className={styles.memberMiniAvatar}>{profile?.pictureUrl ? <Image src={profile.pictureUrl} alt="會員頭像" width={52} height={52} /> : <span>OG</span>}</div>
-            </header>
-
             <section className={`${styles.pointsNotice} ${pointCampaign ? styles.pointsNoticeCampaign : ''}`} aria-label="點數規則公告">
               <div className={styles.pointsNoticeHeader}>
                 <div className={styles.pointsNoticeIcon}>{pointCampaign ? '!' : '✦'}</div>
