@@ -721,18 +721,18 @@ export default function Home() {
             </header>
 
             <section className={`${styles.pointsNotice} ${pointCampaign ? styles.pointsNoticeCampaign : ''}`} aria-label="點數規則公告">
-              <div className={styles.pointsNoticeIcon}>{pointCampaign ? '!' : '✦'}</div>
-              <div>
-                <p className={styles.kicker}>{pointCampaign ? 'POINTS UPDATE · 活動公告' : 'POINTS RULE · 點數公告'}</p>
-                <h2>{pointCampaign?.name || '目前點數發送規則'}</h2>
-                <ul className={styles.pointsNoticeList}>
-                  <li>線上消費「獨享杯」「雙重奏」，每件累積 1 點。</li>
-                  <li>線上消費贈點由系統自動累入會員帳戶。</li>
-                  <li>當次消費累積點數，限下次消費兌換使用。</li>
-                  <li>店家保有活動、獎項修改之權利。</li>
-                </ul>
-                {pointCampaign?.date && <small>適用日期：{pointCampaign.date}</small>}
+              <div className={styles.pointsNoticeHeader}>
+                <div className={styles.pointsNoticeIcon}>{pointCampaign ? '!' : '✦'}</div>
+                <div className={styles.pointsNoticeTitle}><div className={styles.pointsNoticeMeta}><p className={styles.kicker}>{pointCampaign ? 'POINTS UPDATE' : 'POINTS RULE'}</p><span>{pointCampaign ? '活動中' : '會員專屬'}</span></div><h2>{pointCampaign?.name || '點數公告'}</h2></div>
+                <span className={styles.pointsNoticeArrow}>›</span>
               </div>
+              <ul className={styles.pointsNoticeList}>
+                <li><b>01</b><span>線上消費「獨享杯」「雙重奏」，每件累積 1 點。</span></li>
+                <li><b>02</b><span>線上消費贈點由系統自動累入會員帳戶。</span></li>
+                <li><b>03</b><span>當次消費累積點數，限下次消費兌換使用。</span></li>
+                <li><b>04</b><span>店家保有活動、獎項修改之權利。</span></li>
+              </ul>
+              {pointCampaign?.date && <small>適用日期 · {pointCampaign.date}</small>}
             </section>
 
             <section className={styles.pointsOverview} aria-label="目前集點進度">
