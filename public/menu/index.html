@@ -1723,8 +1723,11 @@
         .flow-step-label.is-current .flow-step-guide { display: inline-flex; align-items: center; }
         .flow-step-label.is-current .flow-step-guide::before { content: '↳'; margin-right: 4px; font-size: 13px; }
         @keyframes flowGuidePulse { 0%, 100% { box-shadow: 0 7px 18px rgba(201,104,81,.09); } 50% { box-shadow: 0 7px 22px rgba(201,104,81,.24); } }
+        .flow-target { transition: border-color .25s ease, box-shadow .25s ease, background .25s ease; }
+        .flow-target.is-flow-target { border-color: rgba(201,104,81,.72) !important; box-shadow: 0 0 0 3px rgba(231,143,105,.13), 0 12px 28px rgba(201,104,81,.16) !important; animation: flowTargetPulse 1.8s ease-in-out infinite; }
+        @keyframes flowTargetPulse { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.035); } }
         @media (max-width: 480px) { .flow-step-guide { font-size: 9px; padding: 5px 7px; } }
-        @media (prefers-reduced-motion: reduce) { .flow-step-label.is-current { animation: none; } }
+        @media (prefers-reduced-motion: reduce) { .flow-step-label.is-current, .flow-target.is-flow-target { animation: none; } }
         .order-panel, .summary-section, .today-section { border-radius: 22px; border-color: var(--border-light); background: var(--bg-card); box-shadow: var(--shadow-card); }
         .order-panel { padding: 18px 14px 16px; }
         .panel-header { color: var(--text-secondary); }
@@ -1791,7 +1794,7 @@
         <div class="shop-status-bar" id="shopStatusBar"><span class="dot"></span><div><span id="shopStatusLabel">確認營業狀態中…</span><small id="shopStatusDetail"></small></div></div>
         <div class="order-lock-note" id="orderLockNote">今天與明天都不營業，下單區已暫時鎖定；仍可瀏覽今日口味。</div>
         <div class="flow-step-label" data-flow-step="1"><span class="flow-step-number">01</span><span>選擇盛裝容器</span><span class="flow-step-guide">先選一個容器開始</span><small>CHOOSE YOUR SERVE</small></div>
-        <div class="order-panel" id="orderPanel">
+        <div class="order-panel flow-target" id="orderPanel">
             <!-- 第一行：標題 -->
             <div class="panel-header">
                 先選擇盛裝容器，再進入口味配對
@@ -1852,14 +1855,8 @@
 
         <!-- ===== 第二步：選擇口味 ===== -->
         <div class="flow-step-label" data-flow-step="2"><span class="flow-step-number">02</span><span>選擇口味窗口</span><span class="flow-step-guide">再點口味完成配對</span><small>BUILD YOUR FLAVOR</small></div>
-        <div class="brand-sub-title" id="todaySectionTitle">🪧今日口味查看 & 同步店內冰櫃🪧</div>
-
-        <!-- ===== ✨開始訂購 & 模擬試用✨口味 ===== -->
-        <div class="today-section" id="todaySection">
-            <div class="section-header">
-                <div class="flavor-window-heading"><strong>今日口味</strong><small>可重複點選同一口味</small></div>
-                <div class="scroll-indicator"><span class="hint-text"><span class="arrow">→ 左右滑動查看更多口味</span><span class="arrow">→</span></span><div class="track"><div class="fill" id="scrollFill"></div></div></div>
-            </div>
+        <!-- ===== 今日口味 ===== -->
+        <div class="today-section flow-target" id="todaySection">
             <div class="today-scroll-wrapper">
                 <div class="finger-swipe" id="fingerSwipe">⬅️👆➡️</div>
                 <div class="today-scroll" id="todayScroll"><div class="today-scroll-content"><div class="today-grid" id="todayGrid"><div class="loading">⏳ 載入中...</div></div></div></div>
@@ -1867,8 +1864,8 @@
         </div>
 
         <!-- ===== 訂單明細 ===== -->
-        <div class="flow-step-label" data-flow-step="3"><span class="flow-step-number">03</span><span>購物清單</span><span class="flow-step-guide">確認明細後送出訂單</span><small>CHECK YOUR ORDER</small></div>
-        <div class="summary-section" id="summarySection">
+        <div class="flow-step-label" data-flow-step="3"><span class="flow-step-number">03</span><span>購物清單</span><span class="flow-step-guide">確認後送出；想繼續買可回到第一步</span><small>CHECK YOUR ORDER</small></div>
+        <div class="summary-section flow-target" id="summarySection">
             <!-- 修改：標題獨立並置中，移除原本的 0 項徽章 -->
             
             <div class="summary-list" id="summaryList">
@@ -3042,6 +3039,11 @@
 
         // ---- 訂單核心 ----
         const flowStepLabels = [...document.querySelectorAll('[data-flow-step]')];
+        const flowTargets = {
+            1: document.getElementById('orderPanel'),
+            2: document.getElementById('todaySection'),
+            3: document.getElementById('summarySection'),
+        };
         function updateFlowGuide() {
             const hasItems = duetPairs.length > 0 || Object.keys(cupMap).length > 0 || shareBoxes.length > 0;
             const currentStep = activeTarget || pendingDuetFlavor !== null ? 2 : hasItems ? 3 : 1;
@@ -3049,6 +3051,9 @@
                 const step = Number(label.dataset.flowStep);
                 label.classList.toggle('is-current', step === currentStep);
                 label.classList.toggle('is-done', step < currentStep);
+            });
+            Object.entries(flowTargets).forEach(([step, target]) => {
+                target?.classList.toggle('is-flow-target', Number(step) === currentStep);
             });
         }
 
