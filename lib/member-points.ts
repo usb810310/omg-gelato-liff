@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { adminDatabaseRef } from '@/lib/firebase-admin';
 import { isOrderTerminal } from '@/lib/order-status';
-import { DEFAULT_POS_POINT_RULES, parsePosPointRules, resolvePosPointMultiplier } from '@/lib/pos-point-rules';
+import { DEFAULT_POS_POINT_RULES, isDouble11CampaignAt, parsePosPointRules, resolvePosPointMultiplier } from '@/lib/pos-point-rules';
 
 const ELIGIBLE_PRODUCTS = new Set(['OMG獨享杯', 'OMG雙重奏']);
 
@@ -205,6 +205,21 @@ function orderPurchaseTimestamp(order: PointOrder) {
   return null;
 }
 
+function orderCreatedTimestamp(order: PointOrder) {
+  for (const value of [order.createdAt, order.time]) {
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+    if (typeof value === 'string' && value.trim()) {
+      const parsed = Date.parse(value);
+      if (Number.isFinite(parsed)) return parsed;
+    }
+  }
+  if (typeof order.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(order.date)) {
+    const parsed = Date.parse(`${order.date}T12:00:00+08:00`);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return orderPurchaseTimestamp(order);
+}
+
 
 export async function earnPosPoints({ accessToken, orderNo, orderId }: { accessToken: string; orderNo: string; orderId: string }) {
   if (!orderId) throw new Error('缺少 POS 雲端訂單識別碼');
@@ -226,7 +241,10 @@ export async function earnPosPoints({ accessToken, orderNo, orderId }: { accessT
 
   const rulesSnapshot = await adminDatabaseRef('posPointSettings/current').get();
   const rules = rulesSnapshot.val() ? parsePosPointRules(rulesSnapshot.val()) : DEFAULT_POS_POINT_RULES;
-  const appliedRule = resolvePosPointMultiplier(rules, orderPurchaseTimestamp(order));
+  const orderTimestamp = orderCreatedTimestamp(order);
+  const appliedRule = isDouble11CampaignAt(orderTimestamp)
+    ? { multiplier: 1, source: 'standard' as const, label: '雙11活動限線上訂單，門市固定 1x' }
+    : resolvePosPointMultiplier(rules, orderTimestamp);
   const points = basePoints * appliedRule.multiplier;
   const orderKey = String(order.orderNo || orderNo);
   const entryId = `pos_${createHash('sha256').update(`${member.userId}:${orderId}`).digest('hex').slice(0, 24)}`;
@@ -359,8 +377,10 @@ export async function earnOnlineOrderPoints({ accessToken, orderNo, orderId }: {
   if (order.userId == null) throw new Error('訂單未綁定 LINE 會員');
   if (isOrderTerminal(order)) throw new Error('訂單已取消或退款，不能發送點數');
   if (order.userId !== member.userId) throw new Error('訂單會員與登入會員不一致');
-  const points = calculatePosPoints(order.items);
-  if (points <= 0) return { member, points: 0, balance: Math.max(0, Number((await getMemberPoints(member.userId)).balance || 0)), alreadyProcessed: false };
+  const basePoints = calculatePosPoints(order.items);
+  const multiplier = isDouble11CampaignAt(orderCreatedTimestamp(order)) ? 2 : 1;
+  const points = basePoints * multiplier;
+  if (points <= 0) return { member, points: 0, basePoints: 0, multiplier: 1, balance: Math.max(0, Number((await getMemberPoints(member.userId)).balance || 0)), alreadyProcessed: false };
 
   const orderKey = String(order.orderNo || orderNo);
   const entryId = `order_${createHash('sha256').update(`${member.userId}:${orderId}`).digest('hex').slice(0, 24)}`;
@@ -398,12 +418,16 @@ export async function earnOnlineOrderPoints({ accessToken, orderNo, orderId }: {
     const entry: MemberPointEntry = {
       delta: points,
       type: 'order_reward',
-      sourceLabel: '線上訂單獨享杯／雙重奏集點',
+      sourceLabel: multiplier === 2 ? '雙11線上訂單獨享杯／雙重奏加碼' : '線上訂單獨享杯／雙重奏集點',
       createdAt: Date.now(),
       orderNo: orderKey,
       orderId,
       channel: 'online',
       idempotencyKey: entryId,
+      basePoints,
+      multiplier,
+      ruleSource: multiplier === 2 ? 'campaign' : 'standard',
+      ruleLabel: multiplier === 2 ? '雙11線上限定 2x' : '一般倍率 1x',
     };
     return { ...account, balance: Math.max(0, Number(account.balance || 0)) + points, updatedAt: Date.now(), entries: { ...entries, [entryId]: entry } };
   });
@@ -411,7 +435,17 @@ export async function earnOnlineOrderPoints({ accessToken, orderNo, orderId }: {
   if (ambiguousLegacyEntryDetected) throw new Error('此訂單編號已有舊點數紀錄且無法唯一對應，請管理員核對後再操作');
   const account = result.snapshot.val() as MemberPointsAccount;
   await reverseIfOrderIsTerminal(orderKey, orderId);
-  return { member, points: alreadyProcessed ? Number(account.entries?.[processedEntryId]?.delta || 0) : points, balance: Math.max(0, Number(account.balance || 0)), alreadyProcessed };
+  const ledgerEntry = account.entries?.[processedEntryId];
+  return {
+    member,
+    points: alreadyProcessed ? Number(ledgerEntry?.delta || 0) : points,
+    basePoints: alreadyProcessed ? Number(ledgerEntry?.basePoints || ledgerEntry?.delta || 0) : basePoints,
+    multiplier: alreadyProcessed ? Number(ledgerEntry?.multiplier || 1) : multiplier,
+    ruleSource: alreadyProcessed ? ledgerEntry?.ruleSource || 'standard' : multiplier === 2 ? 'campaign' : 'standard',
+    ruleLabel: alreadyProcessed ? ledgerEntry?.ruleLabel || '一般倍率 1x' : multiplier === 2 ? '雙11線上限定 2x' : '一般倍率 1x',
+    balance: Math.max(0, Number(account.balance || 0)),
+    alreadyProcessed,
+  };
 }
 
 export async function reverseOrderPoints(orderNo: string, orderId: string) {

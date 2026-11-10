@@ -22,15 +22,22 @@ export type ResolvedPosPointMultiplier = {
   label: string;
 };
 
+export const DOUBLE_11_CAMPAIGN_START_AT = Date.parse('2026-11-10T16:00:00.000Z');
+export const DOUBLE_11_CAMPAIGN_END_AT = Date.parse('2026-11-11T16:00:00.000Z');
+
+export function isDouble11CampaignAt(timestamp: number | null) {
+  return timestamp !== null && Number.isFinite(timestamp)
+    && timestamp >= DOUBLE_11_CAMPAIGN_START_AT && timestamp < DOUBLE_11_CAMPAIGN_END_AT;
+}
+
 export const DEFAULT_POS_POINT_RULES: PosPointRules = {
   standardMultiplier: 1,
   campaign: {
-    enabled: true,
-    name: '雙11獨享杯／雙重奏加碼',
-    multiplier: 2,
-    // Asia/Taipei 2026-11-11 00:00 至 2026-11-12 00:00，endAt 採不包含。
-    startAt: Date.parse('2026-11-10T16:00:00.000Z'),
-    endAt: Date.parse('2026-11-11T16:00:00.000Z'),
+    enabled: false,
+    name: '雙11線上限定（POS 不適用）',
+    multiplier: 1,
+    startAt: DOUBLE_11_CAMPAIGN_START_AT,
+    endAt: DOUBLE_11_CAMPAIGN_END_AT,
   },
   manualOverride: {
     enabled: false,

@@ -932,7 +932,7 @@ export default function Home() {
                 <span className={styles.pointsNoticeArrow}>›</span>
               </div>
               <ul className={styles.pointsNoticeList}>
-                <li><b>01</b><span>線上消費「獨享杯」「雙重奏」，每件累積 1 點。</span></li>
+                <li><b>01</b><span>指定品項一般每件 1 點；11/11 雙11加碼僅限線上訂單，每件共 2 點，門市仍為 1 點。</span></li>
                 <li><b>02</b><span>線上消費贈點由系統自動累入會員帳戶。</span></li>
                 <li><b>03</b><span>當次消費累積點數，限下次消費兌換使用。</span></li>
                 <li><b>04</b><span>店家保有活動、獎項修改之權利。</span></li>
@@ -950,7 +950,7 @@ export default function Home() {
 
             <section className={styles.memberActionCard} aria-label="到店集點">
               <div className={styles.actionCardHeading}><span className={styles.actionIcon}>⌁</span><div><p className={styles.kicker}>到店集點</p><h2>結帳前，出示會員條碼</h2></div></div>
-              <p className={styles.actionCardDescription}>讓店員掃描一次，購買「獨享杯／雙重奏」就會自動累積 1 點。</p>
+              <p className={styles.actionCardDescription}>讓店員掃描一次，購買「獨享杯／雙重奏」就會自動累積 1 點；11/11 雙11加碼僅限線上訂單。</p>
               <button type="button" className={styles.qrActionButton} onClick={() => setMemberQrOpen((open) => !open)} aria-expanded={memberQrOpen}>
                 <span>{memberQrOpen ? '收起會員 QR Code' : '出示會員 QR Code'}</span><b>{memberQrOpen ? '⌃' : '↗'}</b>
               </button>

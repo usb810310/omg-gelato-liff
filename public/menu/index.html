@@ -2102,7 +2102,6 @@
         // 點數由 Vercel 後端統一寫入；前端只保留顯示用的規則設定。
         const POINTS_REWARDS_ENABLED = true;
         const BASE_REWARD_POINTS_PER_CUP = 1;
-        const CAMPAIGN_BONUS_POINTS = 0;
 
         // DOM
         const todayGrid = document.getElementById('todayGrid'),
@@ -2232,14 +2231,17 @@
             return currentMember;
         }
 
-        function getOrderRewardPoints(items, campaignBonus = 0) {
+        function getOrderRewardPoints(items) {
             const basePoints = (Array.isArray(items) ? items : []).reduce((total, item) => {
                 const name = String(item?.name || '');
                 const qty = Math.max(0, Number(item?.qty || 0));
                 return total + (/獨享杯|雙重奏/.test(name) ? qty * BASE_REWARD_POINTS_PER_CUP : 0);
             }, 0);
-            // 集點規則固定：只有獨享杯／雙重奏，且每件 1 點；不再疊加活動加點。
             return basePoints > 0 ? basePoints : 0;
+        }
+
+        function isDouble11OnlineOrderDate(date = new Date()) {
+            return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei' }).format(date) === '2026-11-11';
         }
 
         function getPickupDateKey(pickupAbs) {
@@ -3324,8 +3326,8 @@
                 const total = itemsForFirebase.reduce((sum, item) => sum + item.price * item.qty, 0);
                 const pickupDateKey = getPickupDateKey(pickupAbs);
                 const pointCampaign = await getPointCampaignForDate(pickupDateKey);
-                const baseRewardPoints = getOrderRewardPoints(itemsForFirebase, 0);
-                const campaignBonusPoints = 0;
+                const baseRewardPoints = getOrderRewardPoints(itemsForFirebase);
+                const campaignBonusPoints = isDouble11OnlineOrderDate() ? baseRewardPoints : 0;
                 const rewardPoints = POINTS_REWARDS_ENABLED ? baseRewardPoints + campaignBonusPoints : 0;
                 const orderNo = 'WEB-' + Date.now().toString(36).slice(-7).toUpperCase();
                 const orderPayload = {
