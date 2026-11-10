@@ -1493,23 +1493,23 @@
         }
 
         /* ===== 現代化付款方式卡片 ===== */
-        .pay-options { gap: 12px; margin: 14px 0 6px; }
-        .pay-option { position: relative; overflow: hidden; grid-template-columns: 46px minmax(0, 1fr) 30px; gap: 13px; min-height: 78px; padding: 13px 14px; border: 1.5px solid #e8dfd5; border-radius: 22px; box-shadow: 0 5px 14px rgba(72, 51, 34, .06); transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease; }
+        .pay-options { gap: 13px; margin: 14px 0 18px; }
+        .pay-option { position: relative; overflow: hidden; grid-template-columns: 58px minmax(0, 1fr) 36px; gap: 14px; min-height: 92px; padding: 14px 16px; border: 1.5px solid #e8dfd5; border-radius: 25px; box-shadow: 0 6px 16px rgba(72, 51, 34, .07); transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease, background .2s ease; }
         .pay-option::before { content: ''; position: absolute; inset: 0 auto 0 0; width: 4px; background: #d8b180; }
         .pay-option:hover { transform: translateY(-2px); border-color: #d5b895; box-shadow: 0 10px 22px rgba(72, 51, 34, .11); }
         .pay-option:focus-visible { outline: 3px solid rgba(223,138,81,.28); outline-offset: 2px; }
         .pay-option:active { transform: scale(.985); }
-        .pay-option-icon { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 15px; font-weight: 800; line-height: 1; }
+        .pay-option-icon { display: grid; place-items: center; width: 58px; height: 58px; border-radius: 18px; font-weight: 800; line-height: 1; }
         .pay-option-icon-cash { background: #fff0dc; color: #bc7432; font-size: 21px; box-shadow: inset 0 0 0 1px #f4d8b7; }
         .pay-option-icon-line { background: #06c755; color: #fff; font-size: 10px; letter-spacing: -.04em; box-shadow: 0 4px 9px rgba(6,199,85,.2); }
-        .pay-option-icon svg { display: block; width: 25px; height: 25px; }
-        .pay-option-icon-cash svg { width: 42px; height: 42px; stroke: #9b5d24; }
-        .pay-option-icon img { display: block; width: 42px; height: 42px; object-fit: contain; }
-        .pay-option-icon-line { padding: 0; background: #06c755; }
-        .pay-option-text { gap: 4px; }
-        .pay-option-text b { font-size: 16px; letter-spacing: -.02em; }
-        .pay-option-text small { font-size: 11px; line-height: 1.35; }
-        .pay-option-arrow { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: #f3eee8; color: #9a8877; font-size: 20px; line-height: 1; transition: transform .2s ease, background .2s ease; }
+        .pay-option-icon svg { display: block; width: 48px; height: 48px; }
+        .pay-option-icon-cash svg { stroke: #9b5d24; }
+        .pay-option-icon img { display: block; width: 54px; height: auto; max-height: 54px; object-fit: contain; }
+        .pay-option-icon-line { padding: 0 2px; background: #06c755; }
+        .pay-option-text { gap: 5px; }
+        .pay-option-text b { font-size: 18px; letter-spacing: -.03em; }
+        .pay-option-text small { font-size: 12px; line-height: 1.35; }
+        .pay-option-arrow { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: #f3eee8; color: #9a8877; font-size: 25px; line-height: 1; transition: transform .2s ease, background .2s ease; }
         .pay-option:hover .pay-option-arrow { transform: translateX(2px); background: #e9dfd4; }
         .pay-option-linepay { border-color: #bce8c8; background: linear-gradient(110deg, #f6fff8, #fff); }
         .pay-option-linepay::before { background: #06c755; }
@@ -1519,7 +1519,7 @@
         .pay-option-disabled, .pay-option-disabled:hover { opacity: 0.55; transform: none; box-shadow: 0 5px 14px rgba(72, 51, 34, .06); border-color: #e8dfd5; filter: grayscale(0.35); }
         .pay-option-disabled::before { background: #cbb8a4; }
         .pay-option-disabled .pay-option-arrow { display: none; }
-        @media (max-width: 480px) { .pay-option { min-height: 72px; padding: 11px 12px; grid-template-columns: 42px minmax(0, 1fr) 28px; gap: 11px; } .pay-option-icon { width: 42px; height: 42px; } }
+        @media (max-width: 480px) { .pay-option { min-height: 86px; padding: 12px 13px; grid-template-columns: 54px minmax(0, 1fr) 32px; gap: 12px; } .pay-option-icon { width: 54px; height: 54px; border-radius: 17px; } .pay-option-icon svg { width: 45px; height: 45px; } .pay-option-icon img { width: 50px; } .pay-option-text b { font-size: 17px; } .pay-option-arrow { width: 32px; height: 32px; } }
 
         /* ===== 分享盒重複選取與送單確認 ===== */
         .modal-picked-list { display: flex; flex-wrap: wrap; gap: 7px; min-height: 0; margin: 4px 0 8px; }
@@ -1959,11 +1959,6 @@
                 <button class="modal-close" id="payModalClose">✕</button>
             </div>
             <div class="modal-sub" id="paySummary">請選擇付款方式</div>
-            <div class="customer-note-wrap">
-                <label for="customerNoteInput">給店家的備註 <span>選填</span></label>
-                <textarea id="customerNoteInput" maxlength="120" rows="3"></textarea>
-                <div class="customer-note-hint">最多 120 字，店家接單時會一起看到</div>
-            </div>
             <div class="pay-options">
                 <button type="button" class="pay-option" data-pay="onsite_cash">
                     <span class="pay-option-icon pay-option-icon-cash" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><rect x="3.5" y="7" width="25" height="18" rx="3" stroke="currentColor" stroke-width="2"/><circle cx="16" cy="16" r="4" stroke="currentColor" stroke-width="2"/><path d="M8 11h.01M24 21h.01" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg></span>
@@ -1975,6 +1970,11 @@
                     <span class="pay-option-text"><b>LINE Pay</b><small>線上付款</small></span>
                     <span class="pay-option-arrow" aria-hidden="true">›</span>
                 </button>
+            </div>
+            <div class="customer-note-wrap">
+                <label for="customerNoteInput">給店家的備註 <span>選填</span></label>
+                <textarea id="customerNoteInput" maxlength="120" rows="3"></textarea>
+                <div class="customer-note-hint">最多 120 字，店家接單時會一起看到</div>
             </div>
             <div class="modal-error" id="payError"></div>
             <div class="modal-actions">
