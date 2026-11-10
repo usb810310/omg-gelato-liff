@@ -873,6 +873,11 @@
             font-size: 12px;
             margin-right: 4px;
         }
+        .summary-remove-btn { flex: 0 0 auto; margin-left: 8px; padding: 4px 8px; border: 1px solid #eaded3; border-radius: 8px; background: #fffaf5; color: #9c7c6a; font: inherit; font-size: 10px; line-height: 1.2; cursor: pointer; transition: background .18s ease, border-color .18s ease, color .18s ease, transform .18s ease; }
+        .summary-remove-btn:hover { border-color: #d8a98d; background: #fff0e5; color: #a95f48; }
+        .summary-remove-btn:active { transform: scale(.94); }
+        .summary-remove-btn:focus-visible { outline: 2px solid rgba(213,169,87,.55); outline-offset: 2px; }
+        @media (max-width: 480px) { .summary-item { align-items: flex-start; } .summary-item .right { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; } .summary-remove-btn { margin-top: 2px; } }
         .summary-empty {
             color: var(--text-muted);
             font-size: 14px;
@@ -3162,6 +3167,27 @@
             if (showMessage) showToast('已清空', '🧹');
         }
 
+        function removeOneItem(type, encodedKey) {
+            const key = decodeURIComponent(encodedKey || '');
+            if (type === 'cup') {
+                if (!cupMap[key]) return;
+                cupMap[key] -= 1;
+                if (cupMap[key] <= 0) delete cupMap[key];
+                showToast(`已移除獨享杯：${key}`, '↩️');
+            } else if (type === 'duet') {
+                const index = duetPairs.findIndex(([a, b]) => [a, b].sort().join('+') === key);
+                if (index < 0) return;
+                duetPairs.splice(index, 1);
+                showToast(`已移除雙重奏：${key.replace('+', ' + ')}`, '↩️');
+            } else if (type === 'share') {
+                const index = Number(key);
+                if (!Number.isInteger(index) || !shareBoxes[index]) return;
+                shareBoxes.splice(index, 1);
+                showToast('已移除一盒分享盒', '↩️');
+            }
+            updateOrderDisplay();
+        }
+
         function updateOrderDisplay() {
             if (duetPairs.length === 0) { duetOrderDisplay.textContent = '尚未選取';
                 duetOrderDisplay.className = 'content empty'; } else { const pairMap = {};
@@ -3206,7 +3232,7 @@
                     const subtotal = count * PRICE_MAP.duet;
                     total += subtotal;
                     items.push({ emoji: '', label: `雙重奏 × ${count}杯`, detail: `${f1} + ${f2}`, count,
-                    subtotal });
+                    subtotal, removeType: 'duet', removeKey: key });
                 }
             }
             const cupKeys = Object.keys(cupMap);
@@ -3214,7 +3240,7 @@
                 for (const [flavor, count] of Object.entries(cupMap)) {
                     const subtotal = count * PRICE_MAP.cup;
                     total += subtotal;
-                    items.push({ emoji: '', label: `獨享杯 × ${count}杯`, detail: flavor, count, subtotal });
+                    items.push({ emoji: '', label: `獨享杯 × ${count}杯`, detail: flavor, count, subtotal, removeType: 'cup', removeKey: flavor });
                 }
             }
             if (shareBoxes.length > 0) {
@@ -3222,7 +3248,7 @@
                     const flavors = box.flavors.join(' + ');
                     const subtotal = PRICE_MAP.share;
                     total += subtotal;
-                    items.push({ emoji: '', label: `分享盒 #${idx+1}`, detail: flavors, count: 1, subtotal });
+                    items.push({ emoji: '', label: `分享盒 #${idx+1}`, detail: flavors, count: 1, subtotal, removeType: 'share', removeKey: idx });
                 });
             }
             const totalItems = duetPairs.length + Object.values(cupMap).reduce((a, b) => a + b, 0) + shareBoxes.length;
@@ -3242,6 +3268,7 @@
                             <div class="right">
                                 <span class="qty">×${item.count}</span>
                                 $${item.subtotal}
+                                <button type="button" class="summary-remove-btn" data-remove-type="${item.removeType}" data-remove-key="${encodeURIComponent(item.removeKey)}" aria-label="移除${escapeHtml(item.label)}">移除</button>
                             </div>
                         </div>
                     `;
@@ -3515,6 +3542,11 @@
         modeCup.addEventListener('click', () => setActiveMode('cup'));
         modeShare.addEventListener('click', () => setActiveMode('share'));
         clearAllBtn.addEventListener('click', clearAll);
+        summaryList.addEventListener('click', (event) => {
+            const button = event.target.closest('.summary-remove-btn');
+            if (!button) return;
+            removeOneItem(button.dataset.removeType, button.dataset.removeKey);
+        });
 
         sendLineBtn.addEventListener('click', () => {
             if (!shopIsOpen) { showToast('今天與明天都不營業，暫停線上點餐', '🔒'); return; }
