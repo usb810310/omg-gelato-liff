@@ -1502,6 +1502,9 @@
         .pay-option-icon { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 15px; font-weight: 800; line-height: 1; }
         .pay-option-icon-cash { background: #fff0dc; color: #bc7432; font-size: 21px; box-shadow: inset 0 0 0 1px #f4d8b7; }
         .pay-option-icon-line { background: #06c755; color: #fff; font-size: 10px; letter-spacing: -.04em; box-shadow: 0 4px 9px rgba(6,199,85,.2); }
+        .pay-option-icon svg { display: block; width: 25px; height: 25px; }
+        .pay-option-icon-cash svg { stroke: #9b5d24; }
+        .pay-option-icon-line svg { width: 29px; height: 29px; }
         .pay-option-text { gap: 4px; }
         .pay-option-text b { font-size: 16px; letter-spacing: -.02em; }
         .pay-option-text small { font-size: 11px; line-height: 1.35; }
@@ -1709,23 +1712,33 @@
         .control-item:hover, .wish-btn-inline:hover, .theme-toggle-btn:hover { background: var(--bg-card-hover); }
         .my-orders-btn { border-color: var(--border-light); background: var(--bg-card); font-size: 10px; }
         .shop-status-bar { margin: 3px 0 11px; padding: 9px 3px 10px; border-bottom-color: var(--border-light); color: #66745f; }
+        .brand { margin-bottom: 2px; }
+        .brand-title-box::before { margin-bottom: 2px; }
+        .shop-status-bar { display: grid; grid-template-columns: 10px minmax(0, 1fr); align-items: center; gap: 10px; margin: 0 0 14px; padding: 12px 14px; border: 1px solid #e6ddd2; border-radius: 16px; background: linear-gradient(135deg, #fffdf9, #f7f2e9); color: #536950; box-shadow: 0 5px 14px rgba(72,52,39,.05); }
+        .shop-status-bar > div { min-width: 0; display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+        .shop-status-bar #shopStatusLabel { color: var(--text-primary); font-size: 13px; font-weight: 850; letter-spacing: -.02em; }
+        .shop-status-bar small { display: block; margin: 0; color: var(--text-secondary); font-size: 10px; font-weight: 600; line-height: 1.45; text-align: right; }
+        .shop-status-bar.closed { border-color: #eadbd3; background: linear-gradient(135deg, #fffaf6, #f8eee9); color: #8d5d50; }
+        .shop-status-bar.closed #shopStatusLabel { color: #704b42; }
+        .shop-status-bar.closed .dot { background: #c9695b; }
+        .order-lock-note { margin: -7px 0 13px; padding: 8px 11px; border: 1px solid #ead9b7; border-radius: 12px; background: #fff8e9; color: #8a6a2f; font-size: 11px; line-height: 1.45; text-align: left; }
         .flow-step-label { margin: 18px 2px 9px; font-size: 14px; letter-spacing: -.02em; }
         .flow-step-label .flow-step-number { width: 29px; height: 29px; border-color: #ead1be; color: #b66b51; background: #fffaf3; }
         .flow-step-label small { color: var(--text-muted); }
         .flow-step-label { position: relative; min-height: 38px; padding: 5px 8px 5px 5px; border: 1px solid transparent; border-radius: 15px; transition: background .25s ease, border-color .25s ease, box-shadow .25s ease, opacity .25s ease; }
-        .flow-step-label.is-current { border-color: rgba(201,104,81,.34); background: linear-gradient(105deg, rgba(255,246,235,.95), rgba(255,253,248,.72)); box-shadow: 0 7px 18px rgba(201,104,81,.12); animation: flowGuidePulse 1.8s ease-in-out infinite; }
+        .flow-step-label.is-current { border-color: rgba(213,169,87,.58); background: linear-gradient(105deg, rgba(255,249,226,.96), rgba(255,253,248,.78)); box-shadow: 0 7px 18px rgba(213,169,87,.13); animation: flowGuidePulse 2.8s ease-in-out infinite; }
         .flow-step-label.is-done { color: #63815f; }
         .flow-step-label.is-done .flow-step-number { border-color: #a9c6a2; color: #557c50; background: #edf7ea; }
         .flow-step-label.is-done .flow-step-number::after { content: '✓'; font-size: 12px; }
         .flow-step-label.is-done .flow-step-number { font-size: 0; }
         .flow-step-label:not(.is-current):not(.is-done) { opacity: .68; }
-        .flow-step-guide { display: none; margin-left: 2px; padding: 5px 9px; border-radius: 9px; background: #fff0df; color: #a35d3f; font-size: 10px; font-weight: 800; line-height: 1.35; letter-spacing: 0; white-space: nowrap; }
+        .flow-step-guide { display: none; margin-left: 2px; padding: 5px 9px; border: 1px solid #ead59c; border-radius: 9px; background: #fff8dc; color: #876a2b; font-size: 10px; font-weight: 800; line-height: 1.35; letter-spacing: 0; white-space: nowrap; }
         .flow-step-label.is-current .flow-step-guide { display: inline-flex; align-items: center; }
         .flow-step-label.is-current .flow-step-guide::before { content: '↳'; margin-right: 4px; font-size: 13px; }
-        @keyframes flowGuidePulse { 0%, 100% { box-shadow: 0 7px 18px rgba(201,104,81,.09); } 50% { box-shadow: 0 7px 22px rgba(201,104,81,.24); } }
+        @keyframes flowGuidePulse { 0%, 100% { box-shadow: 0 7px 18px rgba(213,169,87,.08); } 50% { box-shadow: 0 7px 22px rgba(213,169,87,.25); } }
         .flow-target { transition: border-color .25s ease, box-shadow .25s ease, background .25s ease; }
-        .flow-target.is-flow-target { border-color: rgba(201,104,81,.72) !important; box-shadow: 0 0 0 3px rgba(231,143,105,.13), 0 12px 28px rgba(201,104,81,.16) !important; animation: flowTargetPulse 1.8s ease-in-out infinite; }
-        @keyframes flowTargetPulse { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.035); } }
+        .flow-target.is-flow-target { border-color: rgba(213,169,87,.78) !important; box-shadow: 0 0 0 3px rgba(213,169,87,.16), 0 12px 28px rgba(213,169,87,.18) !important; animation: flowTargetPulse 2.8s ease-in-out infinite; }
+        @keyframes flowTargetPulse { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.028); } }
         @media (max-width: 480px) { .flow-step-guide { font-size: 9px; padding: 5px 7px; } }
         @media (prefers-reduced-motion: reduce) { .flow-step-label.is-current, .flow-target.is-flow-target { animation: none; } }
         .order-panel, .summary-section, .today-section { border-radius: 22px; border-color: var(--border-light); background: var(--bg-card); box-shadow: var(--shadow-card); }
@@ -1864,7 +1877,7 @@
         </div>
 
         <!-- ===== 訂單明細 ===== -->
-        <div class="flow-step-label" data-flow-step="3"><span class="flow-step-number">03</span><span>購物清單</span><span class="flow-step-guide">確認後送出；想繼續買可回到第一步</span><small>CHECK YOUR ORDER</small></div>
+        <div class="flow-step-label" data-flow-step="3"><span class="flow-step-number">03</span><span>購物清單</span><span class="flow-step-guide">確認送出／可回第一步續購</span><small>CHECK YOUR ORDER</small></div>
         <div class="summary-section flow-target" id="summarySection">
             <!-- 修改：標題獨立並置中，移除原本的 0 項徽章 -->
             
@@ -1947,17 +1960,17 @@
             <div class="modal-sub" id="paySummary">請選擇付款方式</div>
             <div class="customer-note-wrap">
                 <label for="customerNoteInput">給店家的備註 <span>選填</span></label>
-                <textarea id="customerNoteInput" maxlength="120" rows="3" placeholder="例如：請幫我分開裝、希望提早準備…"></textarea>
+                <textarea id="customerNoteInput" maxlength="120" rows="3"></textarea>
                 <div class="customer-note-hint">最多 120 字，店家接單時會一起看到</div>
             </div>
             <div class="pay-options">
                 <button type="button" class="pay-option" data-pay="onsite_cash">
-                    <span class="pay-option-icon pay-option-icon-cash" aria-hidden="true">現</span>
+                    <span class="pay-option-icon pay-option-icon-cash" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><rect x="3.5" y="7" width="25" height="18" rx="3" stroke="currentColor" stroke-width="2"/><circle cx="16" cy="16" r="4" stroke="currentColor" stroke-width="2"/><path d="M8 11h.01M24 21h.01" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg></span>
                     <span class="pay-option-text"><b>現場付款</b><small>到店取餐時付款</small></span>
                     <span class="pay-option-arrow">›</span>
                 </button>
                 <button type="button" class="pay-option pay-option-linepay" data-pay="onsite_linepay">
-                    <span class="pay-option-icon pay-option-icon-line" aria-hidden="true">LINE</span>
+                    <span class="pay-option-icon pay-option-icon-line" aria-hidden="true"><svg viewBox="0 0 40 40" fill="none"><rect x="3" y="5" width="34" height="30" rx="10" fill="white"/><path d="M10 19.5c0-5.1 4.5-9 10-9s10 3.9 10 9c0 4.8-4.1 8.6-9.3 9l-3.5 2.5.7-2.8c-4.5-.8-7.9-3.9-7.9-7.7Z" fill="#06C755"/><path d="M15 18h1.8M19.1 18h1.8M23.2 18H25" stroke="white" stroke-width="1.7" stroke-linecap="round"/></svg></span>
                     <span class="pay-option-text"><b>LINE Pay</b><small>線上付款</small></span>
                     <span class="pay-option-arrow" aria-hidden="true">›</span>
                 </button>
