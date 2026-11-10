@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { callLinePay, findOrderByNo, updateOrder } from '@/lib/linepay';
-import { getPaymentDisplayStatus, isOrderRefunded } from '@/lib/order-status';
+import { isOrderRefunded } from '@/lib/order-status';
 
 export const runtime = 'nodejs';
 
@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     if (isOrderRefunded(order) || String(order.refundStatus || '').toLowerCase() === 'refunded') {
       return NextResponse.json({ success: true, alreadyRefunded: true, orderNo, amount: expectedAmount });
     }
-    if (getPaymentDisplayStatus(order) !== '已付款' || String(order.paymentStatus || '').toLowerCase() !== 'paid') {
+    if (String(order.paymentStatus || '').toLowerCase() !== 'paid') {
       return NextResponse.json({ success: false, error: '訂單不是可補退款的已付款狀態' }, { status: 409 });
     }
     if (String(order.status || '').toLowerCase() !== 'rejected') {
