@@ -18,6 +18,7 @@ type FirebaseOrder = {
   status?: string;
   payment?: string;
   paymentStatus?: string;
+  linePayTransactionId?: string | number | null;
   refundStatus?: string;
   refunded?: boolean;
   refundedAt?: string;
@@ -119,6 +120,31 @@ export async function updateOrder(order: FirebaseOrder, patch: Record<string, un
   await adminDatabaseRef(`orders/${order.key}`).update(patch);
 }
 
+async function refundLinePayOrder(order: FirebaseOrder) {
+  const transactionId = String(order.linePayTransactionId || '').trim();
+  if (!transactionId) throw new Error('找不到 LINE Pay 交易編號，無法自動退款');
+  await callLinePay({
+    method: 'POST',
+    path: `/v4/payments/${encodeURIComponent(transactionId)}/refund`,
+    body: {},
+    timeoutMs: 45000,
+  });
+}
+
+async function completeLinePayRefund(order: FirebaseOrder) {
+  await refundLinePayOrder(order);
+  const now = new Date().toISOString();
+  await updateOrder(order, {
+    payment: '已退款',
+    paymentStatus: 'refunded',
+    refundStatus: 'refunded',
+    refunded: true,
+    refundedAt: now,
+    refundCompletedAt: now,
+    paymentRefundedAt: now,
+  });
+}
+
 export class OrderCancellationError extends Error {
   constructor(message: string, readonly statusCode: number) {
     super(message);
@@ -137,13 +163,30 @@ export async function cancelWaitingOrder(orderNo: string, userId: string) {
   if (!order || order.userId !== userId || String(order.orderNo) !== orderNo) {
     throw new OrderCancellationError('找不到這筆訂單', 404);
   }
+  const existingRefundStatus = String(order.refundStatus || '').toLowerCase();
+  if (order.cancelledBy === 'customer' && existingRefundStatus === 'failed') {
+    try {
+      await completeLinePayRefund(order);
+      return { refunded: true, retried: true };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'LINE Pay 自動退款失敗';
+      await updateOrder(order, { refundStatus: 'failed', refundError: message, refundFailedAt: new Date().toISOString() });
+      throw new OrderCancellationError(`訂單已取消，但自動退款仍未完成：${message}`, 502);
+    }
+  }
   const status = String(order.status || '').trim();
   if (isOrderTerminal(order) || !['', 'waiting', 'pending', 'waiting_accept', '等待接單', '等待店家接單'].includes(status)) {
     throw new OrderCancellationError('店家已接單或訂單已處理，請洽客服人員協助取消', 409);
   }
   const paymentStatus = getPaymentDisplayStatus(order);
-  if (paymentStatus === '已付款') throw new OrderCancellationError('此訂單已付款，請洽客服人員辦理取消與退款', 409);
   if (paymentStatus === '付款處理中') throw new OrderCancellationError('此訂單付款處理中，請洽客服人員協助取消', 409);
+  const isPaid = paymentStatus === '已付款';
+  if (isPaid && String(order.refundStatus || '').toLowerCase() === 'pending') {
+    throw new OrderCancellationError('此訂單退款處理中，請稍後重新整理確認', 409);
+  }
+  if (isPaid && String(order.refundStatus || '').toLowerCase() === 'refunded') {
+    throw new OrderCancellationError('此訂單已取消並完成退款', 409);
+  }
 
   const result = await orderRef.transaction((current) => {
     const latest = current as FirebaseOrder | null;
@@ -156,7 +199,8 @@ export async function cancelWaitingOrder(orderNo: string, userId: string) {
       voided: true,
       cancelledBy: 'customer',
       cancelledAt: new Date().toISOString(),
-      paymentStatus: 'cancelled',
+      paymentStatus: isPaid ? 'refund_pending' : 'cancelled',
+      refundStatus: isPaid ? 'pending' : null,
     };
   });
   if (!result.committed) throw new OrderCancellationError('訂單狀態已更新，請重新整理後確認；如店家已接單，請洽客服人員', 409);
@@ -165,5 +209,21 @@ export async function cancelWaitingOrder(orderNo: string, userId: string) {
   } catch (error) {
     console.error('顧客取消後撤銷點數失敗:', error);
   }
+  if (isPaid) {
+    const cancelledOrder = { ...order, status: 'cancelled', voided: true, cancelledBy: 'customer', paymentStatus: 'refund_pending' };
+    try {
+      await completeLinePayRefund(cancelledOrder);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'LINE Pay 自動退款失敗';
+      await updateOrder(order, {
+        paymentStatus: 'refund_failed',
+        refundStatus: 'failed',
+        refundError: message,
+        refundFailedAt: new Date().toISOString(),
+      });
+      throw new OrderCancellationError(`訂單已取消，但自動退款尚未完成：${message}`, 502);
+    }
+  }
+  return { refunded: isPaid, retried: false };
 }
 export type { FirebaseOrder };

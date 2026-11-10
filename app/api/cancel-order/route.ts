@@ -44,8 +44,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: '登入驗證已失效，請重新開啟 LINE 頁面' }, { status: 401, headers: corsHeaders });
     }
 
-    await cancelWaitingOrder(orderNo, lineUser.userId);
-    return NextResponse.json({ success: true }, { headers: corsHeaders });
+    const result = await cancelWaitingOrder(orderNo, lineUser.userId);
+    return NextResponse.json({ success: true, refunded: Boolean(result?.refunded), retried: Boolean(result?.retried) }, { headers: corsHeaders });
   } catch (error) {
     if (error instanceof OrderCancellationError) {
       return NextResponse.json({ success: false, error: error.message }, { status: error.statusCode, headers: corsHeaders });

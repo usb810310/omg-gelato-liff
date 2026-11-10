@@ -3394,12 +3394,13 @@
                 );
 
                 if (payMethod === 'onsite_linepay') {
+                    const paymentOrderNo = String(serverOrderNo);
                     if (window.top !== window.self) {
-                        window.parent.postMessage({ type: 'OMG_LINEPAY_START', orderNo }, window.location.origin);
+                        window.parent.postMessage({ type: 'OMG_LINEPAY_START', orderNo: paymentOrderNo }, window.location.origin);
                         return;
                     }
                     window.setTimeout(() => {
-                        window.location.assign(`/?orderNo=${encodeURIComponent(orderNo)}&action=pay`);
+                        window.location.assign(`/?orderNo=${encodeURIComponent(paymentOrderNo)}&action=pay`);
                     }, 800);
                     return;
                 }

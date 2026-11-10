@@ -537,7 +537,11 @@ export default function Home() {
       const paymentUrl = liff.isInClient()
         ? appPaymentUrl || webPaymentUrl || fallbackPaymentUrl
         : webPaymentUrl || appPaymentUrl || fallbackPaymentUrl;
-      window.location.href = paymentUrl;
+      if (liff.isInClient() && typeof liff.openWindow === 'function') {
+        liff.openWindow({ url: paymentUrl, external: true });
+      } else {
+        window.location.assign(paymentUrl);
+      }
     } catch (err) {
       console.error('LINE Pay 付款請求失敗:', err);
       alert(err instanceof Error ? err.message : 'LINE Pay 付款失敗，請稍後再試');
@@ -561,6 +565,8 @@ export default function Home() {
       if (!response.ok || !result.success) {
         throw new Error(result.error || '取消訂單失敗，請稍後再試');
       }
+      alert(result.refunded ? '訂單已取消，LINE Pay 款項已自動退款。' : '訂單已取消。');
+      await loadOrders();
     } catch (error) {
       console.error('取消訂單失敗:', error);
       alert(error instanceof Error ? error.message : '取消訂單失敗，請稍後再試');
