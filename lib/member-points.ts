@@ -186,8 +186,10 @@ function orderIsSettled(order: PointOrder) {
   const status = String(order.status || '').toLowerCase();
   if (['cancelled', 'canceled', 'rejected', 'refunded', 'voided'].includes(status)) return false;
   const payment = String(order.paymentStatus || '').toLowerCase();
-  if (order.payment === '現場付款') return ['completed', 'complete', '已完成', 'paid', ''].includes(status) || order.paid === true;
-  return order.paid === true || ['paid', 'success', 'succeeded', 'completed'].includes(payment);
+  // 現金訂單只能由 POS 明確完成取餐／收款後贈點；不接受空白狀態或 paid 殘留欄位。
+  if (order.payment === '現場付款') return ['completed', 'complete', '已完成'].includes(status);
+  // LINE Pay 只接受付款確認回寫的 paid 狀態。
+  return order.paid === true || ['paid', 'success', 'succeeded'].includes(payment);
 }
 
 function orderPurchaseTimestamp(order: PointOrder) {
