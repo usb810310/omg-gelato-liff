@@ -3541,7 +3541,6 @@
                 showToast(
                     notificationWarning
                         ? `訂單已送出；LINE 通知失敗：${notificationWarning}`
-                        : pointsWarning ? `訂單已送出，${pointsWarning}`
                         : payMethod === 'onsite_linepay' ? '訂單已送出，正在前往 LINE Pay 付款' : '訂單已送出，請到 LINE 查看訂單小卡',
                     notificationWarning ? '⚠️' : '✅',
                 );
