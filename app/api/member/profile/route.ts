@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { createHash } from 'node:crypto';
 import { getLineMember } from '@/lib/member-points';
 import { firebaseGet, firebasePut } from '@/lib/firebase-server';
 
@@ -28,7 +29,7 @@ export async function POST(request: Request) {
     if (memberType === 'guest' && existing.lineUserId) return NextResponse.json({ success: false, error: '會員識別資料不一致' }, { status: 403 });
     const profile = {
       ...existing,
-      memberNo: clean(existing.memberNo) || `M${Date.now().toString(36).slice(-6).toUpperCase()}`,
+      memberNo: clean(existing.memberNo) || `M${createHash('sha256').update(memberKey).digest('hex').slice(0, 8).toUpperCase()}`,
       memberKey,
       memberType,
       lineUserId: userId || existing.lineUserId || null,

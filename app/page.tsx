@@ -24,7 +24,7 @@ const dailyData = [
 ];
 // ===================================
 
-type Profile = { userId: string; displayName: string; pictureUrl?: string };
+type Profile = { userId: string; displayName: string; pictureUrl?: string; memberNo?: string };
 type LineFriendStatus = 'checking' | 'friend' | 'not-friend' | 'unavailable';
 
 type PointCampaign = {
@@ -380,7 +380,19 @@ export default function Home() {
         setStatus('載入中...');
         const p = await liff.getProfile();
         if (cancelled) return;
-        setProfile(p);
+        let memberNo = '';
+        try {
+          const accessToken = liff.getAccessToken();
+          if (accessToken) {
+            const response = await fetch('/api/member/profile', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accessToken }), cache: 'no-store' });
+            const result = await response.json().catch(() => ({}));
+            if (response.ok && result.success && result.profile?.memberNo) memberNo = String(result.profile.memberNo);
+          }
+        } catch (profileError) {
+          console.warn('會員編號同步失敗，稍後會自動重試：', profileError);
+        }
+        if (cancelled) return;
+        setProfile({ ...p, memberNo });
         setStatus('');
       } catch (err: unknown) {
         if (cancelled) return;
@@ -964,7 +976,7 @@ export default function Home() {
             <section className={styles.pointsOverview} aria-label="目前OMG點數">
               <div className={styles.pointsOverviewTop}><span>目前OMG點數</span><span className={styles.pointsLive}><i />即時同步</span></div>
               <div className={styles.pointsNumber}>{pointsBalance}<small> 點</small></div>
-              <div className={styles.pointsMeta}><span>無使用期限</span></div>
+              <div className={styles.pointsMeta}><span>會員編號：{profile?.memberNo || '建立中…'}</span><span>無使用期限</span></div>
             </section>
 
             <section className={styles.memberActionCard} aria-label="限門市消費集點">
