@@ -2361,6 +2361,8 @@
 
         const CUSTOMER_ORDER_HISTORY_DAYS = 30;
         const CUSTOMER_ORDER_HISTORY_MS = CUSTOMER_ORDER_HISTORY_DAYS * 24 * 60 * 60 * 1000;
+        // 只補登集點功能啟用後建立的訂單，歷史訂單一律不追溯。
+        const ONLINE_POINTS_ACTIVATED_AT = Date.parse('2026-11-11T00:23:00.000Z');
 
         function isRecentCustomerOrder(order) {
             const rawDate = order.time || order.createdAt || order.date;
@@ -2493,9 +2495,11 @@
 
         function isEligibleForOnlineOrderPoints(order) {
             if (!POINTS_REWARDS_ENABLED || !window.liffAccessToken || isCustomerOrderTerminal(order)) return false;
+            const createdAt = new Date(order.createdAt || order.time || '').getTime();
+            if (!Number.isFinite(createdAt) || createdAt < ONLINE_POINTS_ACTIVATED_AT) return false;
             const status = String(order.status || '').trim().toLowerCase();
             const paymentStatus = String(order.paymentStatus || '').trim().toLowerCase();
-            if (order.payment === '現場付款') return ['completed', 'complete', '已完成'].includes(status) || order.paid === true;
+            if (order.payment === '現場付款') return ['completed', 'complete', '已完成'].includes(status);
             return order.paid === true || ['paid', 'success', 'succeeded', 'completed'].includes(paymentStatus);
         }
         async function awardEligibleOnlineOrderPoints(orders) {
