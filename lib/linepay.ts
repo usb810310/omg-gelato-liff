@@ -1,5 +1,5 @@
 import { createHmac, randomUUID } from 'node:crypto';
-import { getPaymentDisplayStatus, isOrderRefunded, isOrderTerminal } from '@/lib/order-status';
+import { getPaymentDisplayStatus, isOrderRefunded, isOrderRejected, isOrderTerminal } from '@/lib/order-status';
 import { reverseOrderPoints } from '@/lib/member-points';
 import { adminDatabaseRef } from '@/lib/firebase-admin';
 
@@ -339,6 +339,22 @@ export async function rejectOrderByStaff(orderNo: string, orderId: string | unde
     order = await findOrderByNo(orderNo);
   }
   if (!order) throw new OrderCancellationError('找不到這筆訂單', 404);
+  if (isOrderRejected(order)) {
+    const refundStatus = String(order.refundStatus || '').trim().toLowerCase();
+    const paymentStatus = String(order.paymentStatus || '').trim().toLowerCase();
+    const needsRefundRetry = Boolean(order.linePayTransactionId)
+      && !isOrderRefunded(order)
+      && (['', 'failed', 'pending'].includes(refundStatus) || ['paid', '已付款', '已確認'].includes(paymentStatus));
+    if (!needsRefundRetry) throw new OrderCancellationError('此訂單已處理，不能重複拒單', 409);
+    try {
+      const refundResult = await completeLinePayRefund(order);
+      return { rejected: true, refunded: refundResult.refunded, refundPending: refundResult.pending, retried: true, pointsReversalPending: false };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'LINE Pay 自動退款失敗';
+      await updateOrder(order, { paymentStatus: 'refund_failed', refundStatus: 'failed', refundError: message, refundFailedAt: new Date().toISOString() });
+      throw new OrderCancellationError(`訂單已拒絕，但自動退款尚未完成：${message}`, 502);
+    }
+  }
   if (isOrderTerminal(order)) throw new OrderCancellationError('此訂單已處理，不能重複拒單', 409);
   const currentStatus = String(order.status || '').trim();
   if (!['', 'waiting', 'pending', 'waiting_accept', '等待接單', '等待店家接單'].includes(currentStatus)) {
