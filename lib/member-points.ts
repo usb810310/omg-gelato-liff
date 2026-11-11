@@ -377,6 +377,7 @@ export async function earnOnlineOrderPoints({ accessToken, orderNo, orderId }: {
   if (order.userId == null) throw new Error('訂單未綁定 LINE 會員');
   if (isOrderTerminal(order)) throw new Error('訂單已取消或退款，不能發送點數');
   if (order.userId !== member.userId) throw new Error('訂單會員與登入會員不一致');
+  if (!orderIsSettled(order)) throw new Error('訂單尚未完成付款或取餐，暫時不能發送點數');
   const basePoints = calculatePosPoints(order.items);
   const multiplier = isDouble11CampaignAt(orderCreatedTimestamp(order)) ? 2 : 1;
   const points = basePoints * multiplier;

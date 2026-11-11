@@ -2470,6 +2470,30 @@
             });
         }
 
+        function isEligibleForOnlineOrderPoints(order) {
+            if (!POINTS_REWARDS_ENABLED || !window.liffAccessToken || isCustomerOrderTerminal(order)) return false;
+            const status = String(order.status || '').trim().toLowerCase();
+            const paymentStatus = String(order.paymentStatus || '').trim().toLowerCase();
+            if (order.payment === '現場付款') return ['completed', 'complete', '已完成'].includes(status) || order.paid === true;
+            return order.paid === true || ['paid', 'success', 'succeeded', 'completed'].includes(paymentStatus);
+        }
+        async function awardEligibleOnlineOrderPoints(orders) {
+            const eligible = orders.filter(isEligibleForOnlineOrderPoints).filter(order => String(order.pointsAwardStatus || '').toLowerCase() !== 'awarded');
+            for (const order of eligible) {
+                try {
+                    const response = await fetch('/api/points/award-order', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ accessToken: window.liffAccessToken, orderNo: order.orderNo, orderId: order.id }),
+                    });
+                    const result = await response.json().catch(() => ({}));
+                    if (!response.ok || !result.success) throw new Error(result.error || '點數發送失敗');
+                    const index = orders.findIndex(item => item.id === order.id);
+                    if (index >= 0) orders[index] = { ...orders[index], pointsAwardStatus: 'awarded' };
+                } catch (error) {
+                    console.warn('完成訂單點數補登稍後重試:', error);
+                }
+            }
+        }
         async function loadCustomerOrders(requestedOrderNo = '') {
             if (!window.liffUserId) {
                 customerOrdersHint.textContent = '請從 LINE 開啟此頁面並登入，才能查看您的訂單。';
@@ -2491,6 +2515,7 @@
                     const requestedIndex = orders.findIndex(order => String(order.orderNo) === requestedOrderNo);
                     if (requestedIndex > 0) orders.unshift(orders.splice(requestedIndex, 1)[0]);
                 }
+                await awardEligibleOnlineOrderPoints(orders);
                 renderCustomerOrders(orders, requestedOrderNo);
             } catch (error) {
                 console.error('讀取顧客訂單失敗:', error);
@@ -3453,21 +3478,6 @@
                 const serverOrderNo = createdOrder.orderNo || orderNo;
                 const pickupNo = createdOrder.pickupNo;
 
-                let pointsWarning = '';
-                if (POINTS_REWARDS_ENABLED && rewardPoints && window.liffAccessToken) {
-                    try {
-                        const pointsResponse = await fetch('/api/points/award-order', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ accessToken: window.liffAccessToken, orderNo: serverOrderNo, orderId: createdOrder.orderId }),
-                        });
-                        const pointsResult = await pointsResponse.json().catch(() => ({}));
-                        if (!pointsResponse.ok || !pointsResult.success) throw new Error(pointsResult.error || '點數發送失敗');
-                    } catch (error) {
-                        console.error('訂單已建立，但後端點數入帳失敗:', error);
-                        pointsWarning = '點數稍後由系統補登';
-                    }
-                }
                 let notificationWarning = '';
                 if (payMethod !== 'onsite_linepay') {
                     const pickupDay = pickupRel.includes('明天') ? 'tomorrow' : 'today';
