@@ -6,6 +6,10 @@ import { isMemberRewardType, MEMBER_REWARD_OPTIONS, type MemberRewardType } from
 
 const ELIGIBLE_PRODUCTS = new Set(['OMG獨享杯', 'OMG雙重奏']);
 
+// 新版點數制度正式啟用時間：2026/11/11 12:27:02（Asia/Taipei）。
+// 這個時間以前建立的訂單不追溯、不補發點數，線上與 POS 現場一致。
+export const POINTS_ACTIVATED_AT = Date.parse('2026-11-11T04:27:02.000Z');
+
 export type LineMember = { userId: string; displayName: string; pictureUrl?: string };
 export type MemberPointEntry = {
   delta: number;
@@ -231,6 +235,8 @@ export async function earnPosPoints({ accessToken, orderNo, orderId }: { accessT
   if (order.channel === 'online' || order.source === 'LIFF') throw new Error('線上訂單不能使用 POS 現場入點');
   if (order.channel !== 'store' && order.source !== 'POS') throw new Error('只允許 POS 現場訂單發送點數');
   if (!order.userId) throw new Error('這筆訂單尚未綁定會員，請重新結帳並掃描會員');
+  const orderCreatedAt = orderCreatedTimestamp(order);
+  if (!orderCreatedAt || orderCreatedAt < POINTS_ACTIVATED_AT) throw new Error('此訂單建立於新版點數制度啟用前，不追溯發送點數');
   if (!orderIsSettled(order)) throw new Error('訂單尚未完成付款，暫時不能發送點數');
 
   const member = accessToken.startsWith('gelato-member-claim:')
@@ -336,9 +342,6 @@ async function reverseIfOrderIsTerminal(orderNo: string, orderId: string) {
   await reverseOrderPoints(orderNo, orderId);
 }
 
-// 線上集點正式啟用時間；此前建立的歷史訂單不得追溯補發點數。
-const ONLINE_POINTS_ACTIVATED_AT = Date.parse('2026-11-11T00:23:00.000Z');
-
 type PointsReversalStatus = 'pending' | 'failed' | 'reversed' | 'not_required';
 
 function canTransitionPointsReversalStatus(currentValue: unknown, nextStatus: PointsReversalStatus) {
@@ -381,7 +384,7 @@ export async function earnOnlineOrderPoints({ accessToken, orderNo, orderId }: {
   if (isOrderTerminal(order)) throw new Error('訂單已取消或退款，不能發送點數');
   if (order.userId !== member.userId) throw new Error('訂單會員與登入會員不一致');
   const orderCreatedAt = orderCreatedTimestamp(order);
-  if (!orderCreatedAt || orderCreatedAt < ONLINE_POINTS_ACTIVATED_AT) throw new Error('此訂單建立於線上集點啟用前，不追溯發送點數');
+  if (!orderCreatedAt || orderCreatedAt < POINTS_ACTIVATED_AT) throw new Error('此訂單建立於新版點數制度啟用前，不追溯發送點數');
   if (!orderIsSettled(order)) throw new Error('訂單尚未完成付款或取餐，暫時不能發送點數');
   const basePoints = calculatePosPoints(order.items);
   const rulesSnapshot = await adminDatabaseRef('posPointSettings/current').get();
