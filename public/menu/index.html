@@ -1003,6 +1003,25 @@
         .customer-order-cancel { width: 100%; min-height: 38px; margin-top: 10px; border: 1px solid #e6c7c1; border-radius: 12px; background: #fff8f6; color: #a33b32; font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
         .customer-order-cancel:disabled { opacity: .55; cursor: wait; }
         .customer-orders-empty { padding: 24px 12px; color: var(--text-secondary); font-size: 13px; text-align: center; }
+        .customer-orders-box { max-width: 520px; padding: 0; overflow: hidden; gap: 0; }
+        .customer-orders-box > .modal-header { padding: 22px 22px 8px; margin: 0; }
+        .customer-orders-box > .modal-header h3 { letter-spacing: -.02em; }
+        .customer-orders-box > .modal-sub { margin: 0; padding: 0 22px 14px; color: var(--text-muted); line-height: 1.55; }
+        .customer-orders-list { max-height: min(62vh, 620px); margin: 0; padding: 0 16px 14px; gap: 12px; overscroll-behavior: contain; }
+        .customer-order-card { padding: 16px; border: 1px solid rgba(115, 85, 64, .14); border-radius: 20px; background: linear-gradient(145deg, #fffdfb, #faf4ee); box-shadow: 0 8px 20px rgba(73, 45, 27, .07); }
+        .customer-order-heading { align-items: center; gap: 12px; }
+        .customer-order-number { min-width: 0; font-size: 14px; line-height: 1.45; letter-spacing: .01em; }
+        .customer-order-status { padding: 6px 10px; border-radius: 999px; background: #f2e4d5; color: #6b432d; font-size: 11px; white-space: nowrap; }
+        .customer-order-date, .customer-order-payment { display: inline-flex; align-items: center; min-height: 24px; margin: 10px 0 0; padding: 4px 8px; border-radius: 8px; background: rgba(242, 228, 213, .48); color: var(--text-secondary); font-size: 11px; }
+        .customer-order-payment { margin-left: 5px; }
+        .customer-order-items { display: grid; gap: 6px; margin: 13px 0 0; padding: 0; list-style: none; color: var(--text-primary); font-size: 12px; line-height: 1.45; }
+        .customer-order-items li { padding: 8px 10px; border-radius: 10px; background: rgba(255,255,255,.76); overflow-wrap: anywhere; }
+        .customer-order-total { margin: 13px 0 0; padding-top: 11px; border-top: 1px dashed rgba(115, 85, 64, .22); color: var(--text-primary); font-size: 15px; text-align: right; }
+        .customer-order-note { margin: 10px 0 0; padding: 9px 10px; border-left: 3px solid #d6a27e; border-radius: 0 8px 8px 0; background: #fff8f1; color: var(--text-secondary); font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; }
+        .customer-order-notice { margin: 12px 0 0; padding: 9px 10px; border-radius: 10px; background: #fff6e9; color: #946b5f; font-size: 11px; line-height: 1.5; }
+        .customer-order-cancel { min-height: 40px; margin-top: 12px; border-radius: 12px; }
+        .customer-orders-box > .modal-actions { margin: 0; padding: 12px 16px 16px; background: rgba(250, 244, 238, .9); border-top: 1px solid rgba(115, 85, 64, .1); }
+        @media (max-width: 480px) { .modal-overlay { padding: 12px; } .customer-orders-box { max-height: 90vh; border-radius: 24px; } .customer-orders-box > .modal-header { padding: 18px 18px 6px; } .customer-orders-box > .modal-sub { padding: 0 18px 12px; font-size: 12px; } .customer-orders-list { padding: 0 12px 12px; } .customer-order-card { padding: 14px; } .customer-order-heading { align-items: flex-start; } .customer-order-status { margin-top: 1px; } .customer-order-date, .customer-order-payment { font-size: 10px; } }
         .modal-header {
             display: flex;
             justify-content: space-between;
@@ -2415,7 +2434,9 @@
                 const dateText = date && !Number.isNaN(date.getTime())
                     ? new Intl.DateTimeFormat('zh-TW', { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(date)
                     : '時間未提供';
-                card.appendChild(createOrderText('p', 'customer-order-date', dateText));
+                card.appendChild(createOrderText('p', 'customer-order-date', `下單時間 · ${dateText}`));
+                const paymentLabel = order.payment === 'LINE Pay' ? 'LINE Pay' : order.payment === '現場付款' ? '現場付款' : '付款方式待確認';
+                card.appendChild(createOrderText('p', 'customer-order-payment', `付款 · ${paymentLabel}`));
 
                 const items = Array.isArray(order.items) ? order.items : [];
                 const itemList = document.createElement('ul');
