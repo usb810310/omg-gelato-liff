@@ -1,3 +1,4 @@
+import { NextResponse } from 'next/server';
 import { adminDatabaseRef } from '@/lib/firebase-admin';
 
 export const runtime = 'nodejs';
@@ -13,57 +14,61 @@ type Account = {
   [key: string]: unknown;
 };
 
-function authorized(request: Request) {
-  return request.headers.get('x-omg-one-time-reset-token') === ONE_TIME_TOKEN;
-}
-
 export async function POST(request: Request) {
-  if (!authorized(request)) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  if (request.headers.get('x-omg-one-time-reset-token') !== ONE_TIME_TOKEN) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
-  const body = await request.json().catch(() => ({})) as { execute?: boolean };
-  const snapshot = await adminDatabaseRef('memberPoints').get();
-  const accounts = (snapshot.val() || {}) as Record<string, Account>;
+  try {
+    const body = await request.json().catch(() => ({})) as { execute?: boolean };
+    const snapshot = await adminDatabaseRef('memberPoints').get();
+    const accounts = (snapshot.val() || {}) as Record<string, Account>;
 
-  let memberCount = 0;
-  let totalBalance = 0;
-  let issuedVoucherCount = 0;
-  let redeemedVoucherCount = 0;
-  const updates: Record<string, unknown> = {};
+    let memberCount = 0;
+    let totalBalance = 0;
+    let issuedVoucherCount = 0;
+    let redeemedVoucherCount = 0;
+    const updates: Record<string, unknown> = {};
 
-  for (const [memberKey, rawAccount] of Object.entries(accounts)) {
-    const account = rawAccount || {};
-    memberCount += 1;
-    const balance = Number(account.balance || 0);
-    if (Number.isFinite(balance)) totalBalance += balance;
+    for (const [memberKey, rawAccount] of Object.entries(accounts)) {
+      const account = rawAccount || {};
+      memberCount += 1;
+      const balance = Number(account.balance || 0);
+      if (Number.isFinite(balance)) totalBalance += balance;
 
-    const vouchers = account.rewardVouchers || {};
-    const keptVouchers: Record<string, unknown> = {};
-    for (const [voucherId, voucher] of Object.entries(vouchers)) {
-      if (String(voucher?.status || '').toLowerCase() === 'issued') issuedVoucherCount += 1;
-      else {
-        redeemedVoucherCount += 1;
-        keptVouchers[voucherId] = voucher;
+      const vouchers = account.rewardVouchers || {};
+      const keptVouchers: Record<string, unknown> = {};
+      for (const [voucherId, voucher] of Object.entries(vouchers)) {
+        if (String(voucher?.status || '').toLowerCase() === 'issued') issuedVoucherCount += 1;
+        else {
+          redeemedVoucherCount += 1;
+          keptVouchers[voucherId] = voucher;
+        }
+      }
+
+      if (body.execute === true) {
+        updates[`memberPoints/${memberKey}/balance`] = 0;
+        updates[`memberPoints/${memberKey}/updatedAt`] = Date.now();
+        updates[`memberPoints/${memberKey}/rewardVouchers`] = Object.keys(keptVouchers).length ? keptVouchers : null;
       }
     }
 
-    if (body.execute === true) {
-      updates[`memberPoints/${memberKey}/balance`] = 0;
-      updates[`memberPoints/${memberKey}/updatedAt`] = Date.now();
-      updates[`memberPoints/${memberKey}/rewardVouchers`] = Object.keys(keptVouchers).length ? keptVouchers : null;
+    if (body.execute === true && Object.keys(updates).length) {
+      await adminDatabaseRef('').update(updates);
     }
-  }
 
-  if (body.execute === true && Object.keys(updates).length) {
-    await adminDatabaseRef('').update(updates);
+    return NextResponse.json({
+      ok: true,
+      executed: body.execute === true,
+      memberCount,
+      totalBalanceBefore: totalBalance,
+      issuedVoucherCountBefore: issuedVoucherCount,
+      redeemedVoucherCountPreserved: redeemedVoucherCount,
+      updatedPaths: body.execute === true ? Object.keys(updates).length : 0,
+    }, { headers: { 'Cache-Control': 'no-store' } });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Firebase 清理操作失敗';
+    console.error('一次性點數清理失敗:', error);
+    return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
-
-  return Response.json({
-    ok: true,
-    executed: body.execute === true,
-    memberCount,
-    totalBalanceBefore: totalBalance,
-    issuedVoucherCountBefore: issuedVoucherCount,
-    redeemedVoucherCountPreserved: redeemedVoucherCount,
-    updatedPaths: body.execute === true ? Object.keys(updates).length : 0,
-  }, { headers: { 'Cache-Control': 'no-store' } });
 }
