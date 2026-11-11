@@ -4,9 +4,13 @@ import { getLineMember } from '@/lib/member-points';
 import { adminDatabaseRef } from '@/lib/firebase-admin';
 
 export const runtime = 'nodejs';
+const IN_STORE_MEMBER_QR_ENABLED = false;
 
 export async function POST(request: Request) {
   try {
+    if (!IN_STORE_MEMBER_QR_ENABLED) {
+      return NextResponse.json({ success: false, error: '門市會員 QR 尚未開放' }, { status: 403, headers: { 'Cache-Control': 'no-store' } });
+    }
     const body = await request.json().catch(() => ({}));
     const accessToken = typeof body?.accessToken === 'string' ? body.accessToken.trim() : '';
     const mode = body?.mode === 'legacy' ? 'legacy' : 'member';

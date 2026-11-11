@@ -344,16 +344,12 @@ export default function Home() {
   const [clock, setClock] = useState(() => Date.now());
   const [memberPoints, setMemberPoints] = useState<MemberPointsAccount>({ balance: 0, entries: {} });
   const [pointEntriesExpanded, setPointEntriesExpanded] = useState(false);
-  const [memberQrDataUrl, setMemberQrDataUrl] = useState('');
-  const [memberQrOpen, setMemberQrOpen] = useState(false);
   const [rewardActionType, setRewardActionType] = useState<MemberRewardType | null>(null);
   const [rewardMessage, setRewardMessage] = useState('');
   const [activeRewardVoucherId, setActiveRewardVoucherId] = useState<string | null>(null);
   const [rewardQrByVoucher, setRewardQrByVoucher] = useState<Record<string, { dataUrl: string; expiresAt: number }>>({});
   const [rewardQrLoadingVoucherId, setRewardQrLoadingVoucherId] = useState<string | null>(null);
   const rewardIdempotencyKeysRef = useRef(new Map<MemberRewardType, string>());
-  const [legacyQrDataUrl, setLegacyQrDataUrl] = useState('');
-  const [legacyQrOpen, setLegacyQrOpen] = useState(false);
   const [pointCampaign, setPointCampaign] = useState<PointCampaign | null>(null);
   const [lineFriendStatus, setLineFriendStatus] = useState<LineFriendStatus>('checking');
   const ordersRef = useRef<Order[]>([]);
@@ -541,38 +537,6 @@ export default function Home() {
   useEffect(() => {
     ordersRef.current = orders;
   }, [orders]);
-
-  useEffect(() => {
-    let cancelled = false;
-    const createMemberQr = async () => {
-      if (!profile?.userId) {
-        setMemberQrDataUrl('');
-        return;
-      }
-      try {
-        const accessToken = liff.getAccessToken();
-        if (!accessToken) throw new Error('找不到 LINE 登入 Token');
-        const claim = async (mode: 'member' | 'legacy') => {
-          const response = await fetch('/api/member/qr', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accessToken, mode }), cache: 'no-store' });
-          const result = await response.json().catch(() => ({}));
-          if (!response.ok || !result.success || typeof result.token !== 'string') throw new Error(result.error || '會員條碼產生失敗');
-          return result.token as string;
-        };
-        const [memberClaim, legacyClaim] = await Promise.all([claim('member'), claim('legacy')]);
-        const qrOptions = { errorCorrectionLevel: 'M' as const, margin: 2, width: 320, color: { dark: '#2d1f14', light: '#fffdf9' } };
-        const dataUrl = await QRCode.toDataURL(memberClaim, qrOptions);
-        if (!cancelled) setMemberQrDataUrl(dataUrl);
-        const legacyDataUrl = await QRCode.toDataURL(legacyClaim, qrOptions);
-        if (!cancelled) setLegacyQrDataUrl(legacyDataUrl);
-      } catch (error) {
-        console.error('會員 QR Code 產生失敗:', error);
-        if (!cancelled) setMemberQrDataUrl('');
-        if (!cancelled) setLegacyQrDataUrl('');
-      }
-    };
-    void createMemberQr();
-    return () => { cancelled = true; };
-  }, [profile?.userId]);
 
   useEffect(() => {
     return onValue(ref(getGelatoDatabase(), 'businessHours'), (snapshot) => {
@@ -980,22 +944,8 @@ export default function Home() {
             </section>
 
             <section className={styles.memberActionCard} aria-label="限門市消費集點">
-              <div className={styles.actionCardHeading}><span className={styles.actionIcon}>⌁</span><div><p className={styles.kicker}>限門市消費集點</p><h2>結帳前，優先出示您的會員條碼</h2></div></div>
-              <p className={styles.actionCardDescription}>讓店員掃描，購買「獨享杯／雙重奏」就會自動累積 1 點</p>
-              <button type="button" className={styles.qrActionButton} onClick={() => setMemberQrOpen((open) => !open)} aria-expanded={memberQrOpen}>
-                <span>{memberQrOpen ? '收起會員 QR Code' : '出示會員 QR Code'}</span><b>{memberQrOpen ? '⌃' : '↗'}</b>
-              </button>
-              {memberQrOpen && <div className={styles.qrReveal}>
-                {memberQrDataUrl ? <Image className={styles.memberQrImage} src={memberQrDataUrl} alt="會員 QR Code" width={210} height={210} unoptimized /> : <div className={styles.memberQrLoading}>正在準備會員條碼…</div>}
-                <p>請將此畫面交給店員掃描<br />條碼只供本次會員驗證使用</p>
-              </div>}
-              <button type="button" className={styles.secondaryButton} onClick={() => setLegacyQrOpen((open) => !open)} aria-expanded={legacyQrOpen}>
-                {legacyQrOpen ? '收起舊點卡轉移 QR' : '我要轉入舊集點卡'}
-              </button>
-              {legacyQrOpen && <div className={styles.qrReveal}>
-                {legacyQrDataUrl ? <Image className={styles.memberQrImage} src={legacyQrDataUrl} alt="舊點卡轉移 QR Code" width={210} height={210} unoptimized /> : <div className={styles.memberQrLoading}>正在準備轉移條碼…</div>}
-                <p>請先向店員出示 LINE 官方集點卡的舊點數<br />再讓店員掃描此「舊點卡轉移」條碼</p>
-              </div>}
+              <div className={styles.actionCardHeading}><span className={styles.actionIcon}>⌁</span><div><p className={styles.kicker}>限門市消費集點</p><h2>門市會員 QR 尚未開放</h2></div></div>
+              <p className={styles.actionCardDescription}>目前先準備線上消費功能，現場客人出示條碼給店家掃描的功能將於日後開放。</p>
             </section>
 
             <section className={styles.howToCollect} aria-label="集點使用步驟">
