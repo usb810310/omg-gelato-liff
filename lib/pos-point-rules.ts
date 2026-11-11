@@ -1,4 +1,4 @@
-export type PosPointRules = {
+export type PointChannelRules = {
   standardMultiplier: number;
   campaign: {
     enabled: boolean;
@@ -16,6 +16,11 @@ export type PosPointRules = {
   };
 };
 
+export type PosPointRules = {
+  online: PointChannelRules;
+  pos: PointChannelRules;
+};
+
 export type ResolvedPosPointMultiplier = {
   multiplier: number;
   source: 'manual' | 'campaign' | 'standard';
@@ -25,27 +30,29 @@ export type ResolvedPosPointMultiplier = {
 export const DOUBLE_11_CAMPAIGN_START_AT = Date.parse('2026-11-10T16:00:00.000Z');
 export const DOUBLE_11_CAMPAIGN_END_AT = Date.parse('2026-11-11T16:00:00.000Z');
 
-export function isDouble11CampaignAt(timestamp: number | null) {
-  return timestamp !== null && Number.isFinite(timestamp)
-    && timestamp >= DOUBLE_11_CAMPAIGN_START_AT && timestamp < DOUBLE_11_CAMPAIGN_END_AT;
+function channelDefaults(channel: 'online' | 'pos'): PointChannelRules {
+  return {
+    standardMultiplier: 1,
+    campaign: {
+      enabled: channel === 'online',
+      name: channel === 'online' ? '雙11線上限定' : '門市活動',
+      multiplier: channel === 'online' ? 2 : 1,
+      startAt: DOUBLE_11_CAMPAIGN_START_AT,
+      endAt: DOUBLE_11_CAMPAIGN_END_AT,
+    },
+    manualOverride: {
+      enabled: false,
+      multiplier: 1,
+      startAt: DOUBLE_11_CAMPAIGN_START_AT,
+      endAt: DOUBLE_11_CAMPAIGN_END_AT,
+      reason: '',
+    },
+  };
 }
 
 export const DEFAULT_POS_POINT_RULES: PosPointRules = {
-  standardMultiplier: 1,
-  campaign: {
-    enabled: false,
-    name: '雙11線上限定（POS 不適用）',
-    multiplier: 1,
-    startAt: DOUBLE_11_CAMPAIGN_START_AT,
-    endAt: DOUBLE_11_CAMPAIGN_END_AT,
-  },
-  manualOverride: {
-    enabled: false,
-    multiplier: 1,
-    startAt: Date.parse('2026-11-10T16:00:00.000Z'),
-    endAt: Date.parse('2026-11-11T16:00:00.000Z'),
-    reason: '',
-  },
+  online: channelDefaults('online'),
+  pos: channelDefaults('pos'),
 };
 
 function asRecord(value: unknown, label: string): Record<string, unknown> {
@@ -79,46 +86,55 @@ function validateWindow(startAt: number, endAt: number, label: string) {
   }
 }
 
-export function parsePosPointRules(value: unknown): PosPointRules {
-  const root = asRecord(value, '點數倍率');
-  const campaign = asRecord(root.campaign, '活動');
-  const manual = asRecord(root.manualOverride, '手動倍率');
-  const standardMultiplier = asMultiplier(root.standardMultiplier, '一般倍率');
+function parseChannel(value: unknown, label: string): PointChannelRules {
+  const root = asRecord(value, label);
+  const campaign = asRecord(root.campaign, `${label}活動`);
+  const manual = asRecord(root.manualOverride, `${label}手動倍率`);
+  const standardMultiplier = asMultiplier(root.standardMultiplier, `${label}一般倍率`);
   const normalizedCampaign = {
-    enabled: asBoolean(campaign.enabled, '活動狀態'),
+    enabled: asBoolean(campaign.enabled, `${label}活動狀態`),
     name: String(campaign.name || '').trim(),
-    multiplier: asMultiplier(campaign.multiplier, '活動倍率'),
-    startAt: asTimestamp(campaign.startAt, '活動開始'),
-    endAt: asTimestamp(campaign.endAt, '活動結束'),
+    multiplier: asMultiplier(campaign.multiplier, `${label}活動倍率`),
+    startAt: asTimestamp(campaign.startAt, `${label}活動開始`),
+    endAt: asTimestamp(campaign.endAt, `${label}活動結束`),
   };
   const normalizedManual = {
-    enabled: asBoolean(manual.enabled, '手動倍率狀態'),
-    multiplier: asMultiplier(manual.multiplier, '手動倍率'),
-    startAt: asTimestamp(manual.startAt, '手動倍率開始'),
-    endAt: asTimestamp(manual.endAt, '手動倍率結束'),
+    enabled: asBoolean(manual.enabled, `${label}手動倍率狀態`),
+    multiplier: asMultiplier(manual.multiplier, `${label}手動倍率`),
+    startAt: asTimestamp(manual.startAt, `${label}手動倍率開始`),
+    endAt: asTimestamp(manual.endAt, `${label}手動倍率結束`),
     reason: String(manual.reason || '').trim(),
   };
-  if (!normalizedCampaign.name || normalizedCampaign.name.length > 80) throw new Error('活動名稱必須為 1 至 80 個字元');
-  validateWindow(normalizedCampaign.startAt, normalizedCampaign.endAt, '活動');
-  validateWindow(normalizedManual.startAt, normalizedManual.endAt, '手動倍率');
-  if (normalizedManual.enabled && !normalizedManual.reason) throw new Error('啟用手動倍率時，必須填寫調整原因');
-  if (normalizedManual.reason.length > 200) throw new Error('手動倍率原因不得超過 200 個字元');
+  if (!normalizedCampaign.name || normalizedCampaign.name.length > 80) throw new Error(`${label}活動名稱必須為 1 至 80 個字元`);
+  validateWindow(normalizedCampaign.startAt, normalizedCampaign.endAt, `${label}活動`);
+  validateWindow(normalizedManual.startAt, normalizedManual.endAt, `${label}手動倍率`);
+  if (normalizedManual.enabled && !normalizedManual.reason) throw new Error(`${label}啟用手動倍率時，必須填寫調整原因`);
+  if (normalizedManual.reason.length > 200) throw new Error(`${label}手動倍率原因不得超過 200 個字元`);
+  return { standardMultiplier, campaign: normalizedCampaign, manualOverride: normalizedManual };
+}
+
+export function parsePosPointRules(value: unknown): PosPointRules {
+  const root = asRecord(value, '點數倍率');
+  // Backward compatibility: old records were POS-only. Preserve them for POS,
+  // while giving online orders their own configurable default channel.
+  if (!root.online || !root.pos) {
+    return { online: DEFAULT_POS_POINT_RULES.online, pos: parseChannel(value, '現場 POS') };
+  }
   return {
-    standardMultiplier,
-    campaign: normalizedCampaign,
-    manualOverride: normalizedManual,
+    online: parseChannel(root.online, '網頁訂購'),
+    pos: parseChannel(root.pos, '現場 POS'),
   };
 }
 
-export function resolvePosPointMultiplier(rules: PosPointRules, orderTimestamp: number | null): ResolvedPosPointMultiplier {
+export function resolvePosPointMultiplier(rules: PointChannelRules, orderTimestamp: number | null, channelLabel: string): ResolvedPosPointMultiplier {
   if (orderTimestamp !== null && Number.isFinite(orderTimestamp)) {
     const { manualOverride, campaign } = rules;
     if (manualOverride.enabled && orderTimestamp >= manualOverride.startAt && orderTimestamp < manualOverride.endAt) {
-      return { multiplier: manualOverride.multiplier, source: 'manual', label: `手動調整 ${manualOverride.multiplier}x：${manualOverride.reason}` };
+      return { multiplier: manualOverride.multiplier, source: 'manual', label: `${channelLabel}手動調整 ${manualOverride.multiplier}x：${manualOverride.reason}` };
     }
     if (campaign.enabled && orderTimestamp >= campaign.startAt && orderTimestamp < campaign.endAt) {
-      return { multiplier: campaign.multiplier, source: 'campaign', label: `${campaign.name} ${campaign.multiplier}x` };
+      return { multiplier: campaign.multiplier, source: 'campaign', label: `${channelLabel}${campaign.name} ${campaign.multiplier}x` };
     }
   }
-  return { multiplier: rules.standardMultiplier, source: 'standard', label: `一般倍率 ${rules.standardMultiplier}x` };
+  return { multiplier: rules.standardMultiplier, source: 'standard', label: `${channelLabel}一般倍率 ${rules.standardMultiplier}x` };
 }

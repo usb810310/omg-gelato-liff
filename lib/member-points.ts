@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { adminDatabaseRef } from '@/lib/firebase-admin';
 import { isOrderTerminal } from '@/lib/order-status';
-import { DEFAULT_POS_POINT_RULES, isDouble11CampaignAt, parsePosPointRules, resolvePosPointMultiplier } from '@/lib/pos-point-rules';
+import { DEFAULT_POS_POINT_RULES, parsePosPointRules, resolvePosPointMultiplier } from '@/lib/pos-point-rules';
 import { isMemberRewardType, MEMBER_REWARD_OPTIONS, type MemberRewardType } from '@/lib/member-rewards';
 
 const ELIGIBLE_PRODUCTS = new Set(['OMG獨享杯', 'OMG雙重奏']);
@@ -244,9 +244,7 @@ export async function earnPosPoints({ accessToken, orderNo, orderId }: { accessT
   const rulesSnapshot = await adminDatabaseRef('posPointSettings/current').get();
   const rules = rulesSnapshot.val() ? parsePosPointRules(rulesSnapshot.val()) : DEFAULT_POS_POINT_RULES;
   const orderTimestamp = orderCreatedTimestamp(order);
-  const appliedRule = isDouble11CampaignAt(orderTimestamp)
-    ? { multiplier: 1, source: 'standard' as const, label: '雙11活動限線上訂單，門市固定 1x' }
-    : resolvePosPointMultiplier(rules, orderTimestamp);
+  const appliedRule = resolvePosPointMultiplier(rules.pos, orderTimestamp, '現場 POS ');
   const points = basePoints * appliedRule.multiplier;
   const orderKey = String(order.orderNo || orderNo);
   const entryId = `pos_${createHash('sha256').update(`${member.userId}:${orderId}`).digest('hex').slice(0, 24)}`;
@@ -386,7 +384,10 @@ export async function earnOnlineOrderPoints({ accessToken, orderNo, orderId }: {
   if (!orderCreatedAt || orderCreatedAt < ONLINE_POINTS_ACTIVATED_AT) throw new Error('此訂單建立於線上集點啟用前，不追溯發送點數');
   if (!orderIsSettled(order)) throw new Error('訂單尚未完成付款或取餐，暫時不能發送點數');
   const basePoints = calculatePosPoints(order.items);
-  const multiplier = isDouble11CampaignAt(orderCreatedTimestamp(order)) ? 2 : 1;
+  const rulesSnapshot = await adminDatabaseRef('posPointSettings/current').get();
+  const rules = rulesSnapshot.val() ? parsePosPointRules(rulesSnapshot.val()) : DEFAULT_POS_POINT_RULES;
+  const appliedRule = resolvePosPointMultiplier(rules.online, orderCreatedAt, '網頁訂購 ');
+  const multiplier = appliedRule.multiplier;
   const points = basePoints * multiplier;
   if (points <= 0) return { member, points: 0, basePoints: 0, multiplier: 1, balance: Math.max(0, Number((await getMemberPoints(member.userId)).balance || 0)), alreadyProcessed: false };
 
@@ -426,7 +427,7 @@ export async function earnOnlineOrderPoints({ accessToken, orderNo, orderId }: {
     const entry: MemberPointEntry = {
       delta: points,
       type: 'order_reward',
-      sourceLabel: multiplier === 2 ? '雙11線上訂單獨享杯／雙重奏加碼' : '線上訂單獨享杯／雙重奏集點',
+      sourceLabel: appliedRule.label,
       createdAt: Date.now(),
       orderNo: orderKey,
       orderId,
@@ -434,8 +435,8 @@ export async function earnOnlineOrderPoints({ accessToken, orderNo, orderId }: {
       idempotencyKey: entryId,
       basePoints,
       multiplier,
-      ruleSource: multiplier === 2 ? 'campaign' : 'standard',
-      ruleLabel: multiplier === 2 ? '雙11線上限定 2x' : '一般倍率 1x',
+      ruleSource: appliedRule.source,
+      ruleLabel: appliedRule.label,
     };
     return { ...account, balance: Math.max(0, Number(account.balance || 0)) + points, updatedAt: Date.now(), entries: { ...entries, [entryId]: entry } };
   });
@@ -449,8 +450,8 @@ export async function earnOnlineOrderPoints({ accessToken, orderNo, orderId }: {
     points: alreadyProcessed ? Number(ledgerEntry?.delta || 0) : points,
     basePoints: alreadyProcessed ? Number(ledgerEntry?.basePoints || ledgerEntry?.delta || 0) : basePoints,
     multiplier: alreadyProcessed ? Number(ledgerEntry?.multiplier || 1) : multiplier,
-    ruleSource: alreadyProcessed ? ledgerEntry?.ruleSource || 'standard' : multiplier === 2 ? 'campaign' : 'standard',
-    ruleLabel: alreadyProcessed ? ledgerEntry?.ruleLabel || '一般倍率 1x' : multiplier === 2 ? '雙11線上限定 2x' : '一般倍率 1x',
+    ruleSource: alreadyProcessed ? ledgerEntry?.ruleSource || 'standard' : appliedRule.source,
+    ruleLabel: alreadyProcessed ? ledgerEntry?.ruleLabel || appliedRule.label : appliedRule.label,
     balance: Math.max(0, Number(account.balance || 0)),
     alreadyProcessed,
   };
