@@ -16,5 +16,13 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async rewrites() {
+    return [
+      {
+        source: '/menu/',
+        destination: '/menu/index.html',
+      },
+    ];
+  },
 };
 export default nextConfig;
