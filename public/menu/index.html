@@ -1786,7 +1786,14 @@
         .modal-box { border: 1px solid var(--border-light); border-radius: 26px; background: var(--bg-card); box-shadow: 0 18px 50px rgba(45,31,20,.2); }
         .modal-header h3 { color: var(--text-primary); letter-spacing: -.04em; }
         .modal-close, .btn-cancel { border-radius: 14px; }
-        .app-dock { background: rgba(255,253,248,.9); }
+        /* 與會員中心共用同一套四分頁導覽：位置、尺寸、間距與選取狀態一致。 */
+        .app-dock { left: 50%; bottom: 0; width: min(100%, 520px); height: 73px; padding: 7px 19px max(7px, env(safe-area-inset-bottom)); border: 1px solid rgba(227,216,202,.9); border-bottom: 0; border-radius: 26px 26px 0 0; background: rgba(255,253,248,.91); box-shadow: 0 -8px 24px rgba(72,52,39,.07); }
+        .app-dock a { height: 55px; gap: 3px; }
+        .app-dock a span { font-size: 22px; line-height: 22px; }
+        .app-dock a small { font-size: 9px; font-weight: 800; letter-spacing: .04em; }
+        .app-dock a.active { color: #c96851; background: #fff0e6; }
+        .app-dock a.dock-order { flex: 0 0 64px; height: 64px; margin-top: -19px; border: 5px solid var(--bg-page, #f8f5ee); border-radius: 22px; color: #fff; background: linear-gradient(145deg,#e78f69,#c76851); box-shadow: 0 9px 16px rgba(193,93,70,.25); }
+        .app-dock a.dock-order small { color: #fff; }
         [data-theme="dark"] .app-dock { border-color: rgba(78,65,57,.9); background: rgba(43,39,36,.92); }
         @media (max-width: 480px) {
             body { padding-top: max(68px, calc(60px + env(safe-area-inset-top))); }
@@ -3891,8 +3898,8 @@ s0.parentNode.insertBefore(s1,s0);
     <nav class="app-dock" aria-label="主要導覽">
         <a href="../?tab=home"><span>⌂</span><small>今日</small></a>
         <a class="dock-order active" href="./" aria-current="page" onclick="event.preventDefault();"><span>✦</span><small>點餐</small></a>
-        <a href="../?tab=orders"><span>◷</span><small>足跡</small></a>
-        <a href="../?tab=member"><span>◒</span><small>會員</small></a>
+        <a href="../?tab=orders"><span>◷</span><small>訂單查看</small></a>
+        <a href="../?tab=member"><span>◒</span><small>OMG會員</small></a>
     </nav>
 </body>
 </html>
