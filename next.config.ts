@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
+  trailingSlash: true,
   allowedDevOrigins: ['exterior-frames-hearings-temp.trycloudflare.com'],
   images: {
     remotePatterns: [
