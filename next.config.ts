@@ -8,22 +8,5 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: 'profile.line-scdn.net' },
     ],
   },
-  async redirects() {
-    return [
-      {
-        source: '/menu',
-        destination: '/menu/index.html',
-        permanent: false,
-      },
-    ];
-  },
-  async rewrites() {
-    return [
-      {
-        source: '/menu/',
-        destination: '/menu/index.html',
-      },
-    ];
-  },
 };
 export default nextConfig;
