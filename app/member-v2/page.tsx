@@ -27,8 +27,9 @@ export default function MemberV2Page() {
   const [message, setMessage] = useState('');
   const [redeeming, setRedeeming] = useState<MemberRewardType | null>(null);
   const [rewardView, setRewardView] = useState<'available' | 'earned'>('available');
+  const [insideLine, setInsideLine] = useState(false);
   const demoMode = typeof window !== 'undefined'
-    && (new URLSearchParams(window.location.search).get('preview') === '1' || window.location.pathname.startsWith('/member-center'));
+    && new URLSearchParams(window.location.search).get('preview') === '1';
 
   const accessToken = () => liff.getAccessToken() || '';
 
@@ -60,7 +61,13 @@ export default function MemberV2Page() {
           return;
         }
         await liff.init({ liffId: LIFF_ID });
+        const inClient = liff.isInClient();
+        setInsideLine(inClient);
         if (!liff.isLoggedIn()) {
+          if (inClient) {
+            liff.login({ redirectUri: window.location.href });
+            return;
+          }
           setLoading(false);
           return;
         }
@@ -118,7 +125,10 @@ export default function MemberV2Page() {
       </header>
 
       {!profile ? (
-        <section className={styles.loginCard}><span className={styles.loginIcon}>L</span><h1>加入會員，開始集點</h1><p>登入 LINE 後即可查看集點卡、優惠券與消費紀錄。</p><button type="button" onClick={login} className={styles.primary}>LINE 登入 <b>↗</b></button></section>
+        <>
+          <section className={styles.loginCard}><span className={styles.loginIcon}>L</span><h1>加入會員，開始集點</h1><p>{insideLine ? '正在準備您的會員資料，請稍候…' : '目前以訪客狀態瀏覽；登入 LINE 後即可查看個人集點卡與消費紀錄。'}</p><button type="button" onClick={login} className={styles.primary}>LINE 登入 <b>↗</b></button></section>
+          {!insideLine && !demoMode && <button type="button" className={styles.floatingLogin} onClick={login}><span>LINE</span> 登入會員 <b>↗</b></button>}
+        </>
       ) : <>
         <section className={styles.coverHero}>
           <div className={styles.neonGlow} /><div className={styles.coneArt} aria-hidden="true"><i /><b /><span /></div>
