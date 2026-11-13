@@ -179,6 +179,16 @@ function formatOrderItems(items?: OrderItem[]) {
   });
 }
 
+type OrderHistoryFilter = 'all' | 'processing' | 'completed' | 'cancelled';
+
+function matchesOrderHistoryFilter(order: Order, filter: OrderHistoryFilter): boolean {
+  if (filter === 'all') return true;
+  const status = `${String(order.status || '')} ${getOrderStatus(order)}`.toLowerCase();
+  if (filter === 'cancelled') return /(取消|拒絕|作廢|退款|cancel|reject|void)/.test(status);
+  if (filter === 'completed') return /(完成|已取餐|completed|picked|done)/.test(status);
+  return !matchesOrderHistoryFilter(order, 'cancelled') && !matchesOrderHistoryFilter(order, 'completed');
+}
+
 // ====== 列表用：精簡的可點擊卡片 ======
 function OrderListItem({ order, onSelect }: { order: Order; onSelect: () => void }) {
   const items = formatOrderItems(order.items);
@@ -331,6 +341,7 @@ export default function Home() {
     return requestedTab === 'menu' || requestedTab === 'orders' || requestedTab === 'member' ? requestedTab : 'home';
   });
   const [orders, setOrders] = useState<Order[]>([]);
+  const [orderHistoryFilter, setOrderHistoryFilter] = useState<OrderHistoryFilter>('all');
   const [isLoadingOrders, setIsLoadingOrders] = useState(false);
   const [wishText, setWishText] = useState('');
   const [isSubmittingWish, setIsSubmittingWish] = useState(false);
@@ -852,6 +863,13 @@ export default function Home() {
   const selectedOrder = selectedOrderNo
     ? orders.find((order) => getOrderKey(order) === selectedOrderNo) ?? null
     : null;
+  const filteredOrders = orders.filter((order) => matchesOrderHistoryFilter(order, orderHistoryFilter));
+  const orderFilterCounts = {
+    all: orders.length,
+    processing: orders.filter((order) => matchesOrderHistoryFilter(order, 'processing')).length,
+    completed: orders.filter((order) => matchesOrderHistoryFilter(order, 'completed')).length,
+    cancelled: orders.filter((order) => matchesOrderHistoryFilter(order, 'cancelled')).length,
+  };
   const pointsBalance = Math.max(0, Number(memberPoints.balance || 0));
   const recentPointEntries = Object.entries(memberPoints.entries || {})
     .sort(([, a], [, b]) => Number(b.createdAt || 0) - Number(a.createdAt || 0));
@@ -914,8 +932,15 @@ export default function Home() {
           ) : (
             <section className={styles.ordersPageView}>
               <header className={styles.ordersHero}><div><p className={styles.kicker}>ORDER JOURNEY</p><h1>線上訂單</h1><p>查看您在線上購物的訂單</p></div><button type="button" className={styles.refreshButton} onClick={loadOrders} disabled={isLoadingOrders} aria-label="重新整理訂單">{isLoadingOrders ? '…' : '↻'}</button></header>
-              <div className={styles.orderSummaryBar}><span><b>{orders.length}</b>  筆訂單結果</span><button type="button" onClick={openMenu}>線上預訂 ↗</button></div>
-              {isLoadingOrders ? <div className={styles.emptyState}><span className={styles.loadingDot} /><p>正在找回您的回憶紀錄…</p></div> : orders.length === 0 ? <div className={styles.ordersEmpty}><span>◌</span><h3>目前沒有訂單紀錄</h3><p>今天可以犒賞自己，<br />選個口味好好的享受。</p><button type="button" onClick={openMenu} className={styles.secondaryButton}>慢慢參考喜歡再下單</button></div> : <div className={styles.orderList}>{orders.map((order, index) => <OrderListItem key={`${getOrderKey(order)}-${index}`} order={order} onSelect={() => setSelectedOrderNo(getOrderKey(order))} />)}</div>}
+              <div className={styles.orderHistoryTabs} role="tablist" aria-label="訂單狀態篩選">
+                {([['all', '全部'], ['processing', '進行中'], ['completed', '已完成'], ['cancelled', '已取消']] as Array<[OrderHistoryFilter, string]>).map(([filter, label]) => (
+                  <button key={filter} type="button" role="tab" aria-selected={orderHistoryFilter === filter} className={`${styles.orderHistoryTab} ${orderHistoryFilter === filter ? styles.orderHistoryTabActive : ''}`} onClick={() => setOrderHistoryFilter(filter)}>
+                    <span>{label}</span><em>{orderFilterCounts[filter]}</em>
+                  </button>
+                ))}
+              </div>
+              <div className={styles.orderSummaryBar}><span><b>{filteredOrders.length}</b> 筆{orderHistoryFilter === 'all' ? '歷史訂單' : '符合條件的訂單'}</span><button type="button" onClick={openMenu}>再次預訂 ↗</button></div>
+              {isLoadingOrders ? <div className={styles.emptyState}><span className={styles.loadingDot} /><p>正在找回您的回憶紀錄…</p></div> : orders.length === 0 ? <div className={styles.ordersEmpty}><span>◌</span><h3>目前沒有訂單紀錄</h3><p>今天可以犒賞自己，<br />選個口味好好的享受。</p><button type="button" onClick={openMenu} className={styles.secondaryButton}>慢慢參考喜歡再下單</button></div> : filteredOrders.length === 0 ? <div className={styles.ordersEmpty}><span>⌁</span><h3>這個分類目前沒有訂單</h3><p>切換其他狀態，看看你的訂單足跡。</p><button type="button" className={styles.secondaryButton} onClick={() => setOrderHistoryFilter('all')}>查看全部訂單</button></div> : <div className={styles.orderList}>{filteredOrders.map((order, index) => <OrderListItem key={`${getOrderKey(order)}-${index}`} order={order} onSelect={() => setSelectedOrderNo(getOrderKey(order))} />)}</div>}
             </section>
           )
         )}
