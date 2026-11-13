@@ -1,6 +1,6 @@
 'use client';
 
-import { startTransition, useEffect, useEffectEvent, useRef, useState } from 'react';
+import { startTransition, useCallback, useEffect, useEffectEvent, useRef, useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import liff from '@line/liff';
@@ -53,6 +53,13 @@ type MemberRewardVoucher = {
   issuedAt: number;
   redeemedAt?: number;
 };
+
+type MemberDialog =
+  | { kind: 'history' }
+  | { kind: 'voucher-qr'; voucherId: string }
+  | { kind: 'redeem-confirm'; reward: (typeof MEMBER_REWARD_OPTIONS)[number] }
+  | { kind: 'wish-confirm' }
+  | { kind: 'notice'; title: string; message: string; tone?: 'success' | 'error' | 'info' };
 
 type Order = {
   id?: string; userId?: string;
@@ -345,19 +352,21 @@ export default function Home() {
   const [isLoadingOrders, setIsLoadingOrders] = useState(false);
   const [wishText, setWishText] = useState('');
   const [isSubmittingWish, setIsSubmittingWish] = useState(false);
-  const [wishSuccess, setWishSuccess] = useState(false);
   const [payingOrderNo, setPayingOrderNo] = useState<string | number | null>(null);
   const [cancellingOrderNo, setCancellingOrderNo] = useState<string | number | null>(null);
   const [initAttempt, setInitAttempt] = useState(0);
   const [selectedOrderNo, setSelectedOrderNo] = useState<string | null>(null); // 目前檢視的單張訂單
   const autoPayStarted = useRef(false);
+  const [memberDialog, setMemberDialog] = useState<MemberDialog | null>(null);
+  const dialogOpen = memberDialog !== null;
+  const memberDialogRef = useRef<HTMLDivElement>(null);
+  const memberDialogCloseRef = useRef<HTMLButtonElement>(null);
+  const voucherQrRequestIdRef = useRef(0);
   const [businessHours, setBusinessHours] = useState<BusinessHours | null>(null);
   const [clock, setClock] = useState(() => Date.now());
+  const [qrClock, setQrClock] = useState(() => Date.now());
   const [memberPoints, setMemberPoints] = useState<MemberPointsAccount>({ balance: 0, entries: {} });
-  const [pointEntriesExpanded, setPointEntriesExpanded] = useState(false);
   const [rewardActionType, setRewardActionType] = useState<MemberRewardType | null>(null);
-  const [rewardMessage, setRewardMessage] = useState('');
-  const [activeRewardVoucherId, setActiveRewardVoucherId] = useState<string | null>(null);
   const [rewardQrByVoucher, setRewardQrByVoucher] = useState<Record<string, { dataUrl: string; expiresAt: number }>>({});
   const [rewardQrLoadingVoucherId, setRewardQrLoadingVoucherId] = useState<string | null>(null);
   const rewardIdempotencyKeysRef = useRef(new Map<MemberRewardType, string>());
@@ -368,6 +377,13 @@ export default function Home() {
   const pointsRecoveryInFlightRef = useRef(new Set<string>());
 
   const [todayContent] = useState(() => dailyData[new Date().getDay()]);
+  const isQrDialogOpen = memberDialog?.kind === 'voucher-qr';
+  const closeMemberDialog = useCallback(() => {
+    if (isSubmittingWish || rewardActionType) return;
+    voucherQrRequestIdRef.current += 1;
+    setRewardQrLoadingVoucherId(null);
+    setMemberDialog(null);
+  }, [isSubmittingWish, rewardActionType]);
 
   useEffect(() => {
     let cancelled = false;
@@ -550,6 +566,49 @@ export default function Home() {
   }, [orders]);
 
   useEffect(() => {
+    if (!dialogOpen) return;
+    const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    window.requestAnimationFrame(() => {
+      if (memberDialogCloseRef.current?.disabled) memberDialogRef.current?.focus();
+      else memberDialogCloseRef.current?.focus();
+    });
+    const handleDialogKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        closeMemberDialog();
+        return;
+      }
+      if (event.key !== 'Tab' || !memberDialogRef.current) return;
+      const focusable = Array.from(memberDialogRef.current.querySelectorAll<HTMLElement>('button:not(:disabled), a[href], input:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])'));
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    window.addEventListener('keydown', handleDialogKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleDialogKeyDown);
+      previouslyFocused?.focus();
+    };
+  }, [dialogOpen, closeMemberDialog]);
+
+  useEffect(() => {
+    if (!isQrDialogOpen) return;
+    const updateQrClock = () => setQrClock(Date.now());
+    updateQrClock();
+    const timer = window.setInterval(updateQrClock, 1000);
+    return () => window.clearInterval(timer);
+  }, [isQrDialogOpen]);
+
+  useEffect(() => {
     return onValue(ref(getGelatoDatabase(), 'businessHours'), (snapshot) => {
       setBusinessHours((snapshot.val() as BusinessHours | null) ?? null);
     }, (error) => {
@@ -598,22 +657,22 @@ export default function Home() {
 
   const submitWish = async () => {
     if (!wishText.trim() || !profile) return;
+    const submittedWish = wishText.trim();
     setIsSubmittingWish(true);
     try {
       const accessToken = liff.getAccessToken();
       const response = await fetch('/api/wishlist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ accessToken, wishText: wishText.trim() }),
+        body: JSON.stringify({ accessToken, wishText: submittedWish }),
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok || !result.success) throw new Error(result.error || '許願失敗');
-      setWishSuccess(true);
-      setWishText('');
-      window.setTimeout(() => setWishSuccess(false), 3000);
+      setWishText((current) => current.trim() === submittedWish ? '' : current);
+      setMemberDialog({ kind: 'notice', title: '願望收到', message: '謝謝你的口味提案，我們已記錄下來！', tone: 'success' });
     } catch (err) {
       console.error('許願失敗:', err);
-      alert('許願失敗，請稍後再試');
+      setMemberDialog({ kind: 'notice', title: '送出失敗', message: err instanceof Error ? err.message : '許願失敗，請稍後再試。', tone: 'error' });
     } finally {
       setIsSubmittingWish(false);
     }
@@ -623,14 +682,12 @@ export default function Home() {
     const { type: rewardType, title, pointsCost } = reward;
     if (!profile?.userId || rewardActionType) return;
     if (pointsBalance < pointsCost) {
-      setRewardMessage(`點數不足，兌換「${title}」需要 ${pointsCost} 點。`);
+      setMemberDialog({ kind: 'notice', title: '點數不足', message: `兌換「${title}」需要 ${pointsCost} 點，請累積足夠點數後再試。`, tone: 'info' });
       return;
     }
-    if (!window.confirm(`確定使用 ${pointsCost} 點兌換「${title}」嗎？送出後會立即扣點，兌換券永久有效。`)) return;
     const idempotencyKey = rewardIdempotencyKeysRef.current.get(rewardType) || window.crypto.randomUUID();
     rewardIdempotencyKeysRef.current.set(rewardType, idempotencyKey);
     setRewardActionType(rewardType);
-    setRewardMessage('正在建立兌換券…');
     try {
       const accessToken = liff.getAccessToken();
       if (!accessToken) throw new Error('LINE 登入已失效，請重新開啟會員頁');
@@ -644,27 +701,27 @@ export default function Home() {
       if (!response.ok || !result.success) throw new Error(result.error || '兌換券建立失敗，請稍後重試');
       rewardIdempotencyKeysRef.current.delete(rewardType);
       setMemberPoints(result.points || { balance: 0, entries: {}, rewardVouchers: {} });
-      setActiveRewardVoucherId(null);
-      setRewardMessage(result.alreadyProcessed ? '兌換券已建立；點數不會重複扣除。' : `已扣除 ${pointsCost} 點，「${title}」已放入「我的兌換券」，永久有效。`);
+      const message = result.alreadyProcessed ? '兌換券已建立；點數不會重複扣除。' : `已扣除 ${pointsCost} 點，「${title}」已放入「我的兌換券」，永久有效。`;
+      setMemberDialog({ kind: 'notice', title: '兌換成功', message, tone: 'success' });
     } catch (error) {
       console.error('建立兌換券失敗:', error);
-      setRewardMessage(error instanceof Error ? error.message : '兌換券建立失敗，請稍後重試。');
+      const message = error instanceof Error ? error.message : '兌換券建立失敗，請稍後重試。';
+      setMemberDialog({ kind: 'notice', title: '兌換未完成', message, tone: 'error' });
     } finally {
       setRewardActionType(null);
     }
   };
 
-  const showRewardVoucherQr = async (voucherId: string, forceRefresh = false) => {
-    if (!forceRefresh && activeRewardVoucherId === voucherId) {
-      const currentQr = rewardQrByVoucher[voucherId];
-      if (currentQr && currentQr.expiresAt > clock + 5000) {
-        setActiveRewardVoucherId(null);
-        return;
-      }
-    }
+  const showRewardVoucherQr = async (voucherId: string) => {
+    setMemberDialog({ kind: 'voucher-qr', voucherId });
     if (rewardQrLoadingVoucherId) return;
+    const requestId = ++voucherQrRequestIdRef.current;
+    setRewardQrByVoucher((current) => {
+      const next = { ...current };
+      delete next[voucherId];
+      return next;
+    });
     setRewardQrLoadingVoucherId(voucherId);
-    setRewardMessage('');
     try {
       const accessToken = liff.getAccessToken();
       if (!accessToken) throw new Error('LINE 登入已失效，請重新開啟會員頁');
@@ -677,15 +734,17 @@ export default function Home() {
       const result = await response.json().catch(() => ({}));
       if (!response.ok || !result.success || typeof result.token !== 'string') throw new Error(result.error || '兌換券條碼產生失敗');
       const dataUrl = await QRCode.toDataURL(result.token, { errorCorrectionLevel: 'M', margin: 2, width: 280, color: { dark: '#2d1f14', light: '#fffdf9' } });
+      if (requestId !== voucherQrRequestIdRef.current) return;
       setRewardQrByVoucher((current) => ({ ...current, [voucherId]: { dataUrl, expiresAt: Number(result.expiresAt) } }));
-      setActiveRewardVoucherId(voucherId);
     } catch (error) {
+      if (requestId !== voucherQrRequestIdRef.current) return;
       console.error('兌換券條碼產生失敗:', error);
-      setRewardMessage(error instanceof Error ? error.message : '兌換券條碼產生失敗，請稍後再試。');
+      setMemberDialog({ kind: 'notice', title: '條碼暫時無法載入', message: error instanceof Error ? error.message : '兌換券條碼產生失敗，請稍後再試。', tone: 'error' });
     } finally {
-      setRewardQrLoadingVoucherId(null);
+      if (requestId === voucherQrRequestIdRef.current) setRewardQrLoadingVoucherId(null);
     }
   };
+
 
   const switchTab = (tab: 'home' | 'menu' | 'orders' | 'member') => {
     if (tab === 'menu') {
@@ -875,7 +934,11 @@ export default function Home() {
     .sort(([, a], [, b]) => Number(b.createdAt || 0) - Number(a.createdAt || 0));
   const memberRewardVouchers = Object.entries(memberPoints.rewardVouchers || {})
     .sort(([, a], [, b]) => Number(b.issuedAt || 0) - Number(a.issuedAt || 0));
-  const visiblePointEntries = pointEntriesExpanded ? recentPointEntries : recentPointEntries.slice(0, 3);
+  const visiblePointEntries = recentPointEntries.slice(0, 3);
+  const dialogVoucherId = memberDialog?.kind === 'voucher-qr' ? memberDialog.voucherId : null;
+  const dialogVoucher = dialogVoucherId ? memberRewardVouchers.find(([id]) => id === dialogVoucherId)?.[1] : null;
+  const dialogVoucherQr = dialogVoucherId ? rewardQrByVoucher[dialogVoucherId] : null;
+  const dialogVoucherQrExpired = !dialogVoucherQr || dialogVoucherQr.expiresAt <= qrClock;
   const pageTitle = activeTab === 'menu' ? '線上點餐' : activeTab === 'orders' ? (selectedOrder ? '訂單詳情' : '訂單足跡') : activeTab === 'member' ? '會員與點數' : '今日首頁';
 
   return (
@@ -959,7 +1022,7 @@ export default function Home() {
                 <li><b>03</b><span>當次消費累積點數，限下次消費兌換使用。</span></li>
                 <li><b>04</b><span>店家保有活動、獎項修改之權利。</span></li>
               </ul>
-              {pointCampaign?.date && <small>適用日期 · {pointCampaign.date}</small>}
+              <small className={styles.pointsNoticeDate}>{pointCampaign?.date ? `適用日期 · ${pointCampaign.date}` : '\u00a0'}</small>
             </section>
 
             <section className={styles.pointsOverview} aria-label="目前OMG點數">
@@ -970,23 +1033,24 @@ export default function Home() {
 
             <section className={styles.memberActionCard} aria-label="限門市消費集點">
               <div className={styles.actionCardHeading}><span className={styles.actionIcon}>⌁</span><div><p className={styles.kicker}>限門市消費集點</p><h2>門市會員 QR 尚未開放</h2></div></div>
-              <p className={styles.actionCardDescription}>目前先準備線上消費功能，現場客人出示條碼給店家掃描的功能將於日後開放。</p>
+              <p className={styles.actionCardDescription}>線上訂單可自動累積點數；門市會員 QR 條碼功能尚未開放，開放後會在此提供使用方式。</p>
+
             </section>
 
-            <section className={styles.howToCollect} aria-label="集點使用步驟">
-              <div className={styles.subsectionHeading}><div><p className={styles.kicker}>HOW IT WORKS</p><h2>三步完成集點</h2></div><span>簡單、即時、不漏點</span></div>
+            <section className={styles.howToCollect} aria-label="線上集點使用步驟">
+              <div className={styles.subsectionHeading}><div><p className={styles.kicker}>HOW ONLINE POINTS WORK</p><h2>線上消費自動集點</h2></div><span>會員登入後由系統累入</span></div>
               <div className={styles.stepList}>
-                <div className={styles.stepItem}><span>01</span><div><b>打開會員 QR</b><small>到店結帳前進入會員頁</small></div></div>
-                <div className={styles.stepItem}><span>02</span><div><b>讓店員掃描</b><small>確認會員名稱與目前點數</small></div></div>
-                <div className={styles.stepItem}><span>03</span><div><b>購買指定品項</b><small>獨享杯／雙重奏每杯 1 點</small></div></div>
+                <div className={styles.stepItem}><span>01</span><div><b>使用 LINE 開啟會員中心</b><small>登入後即可查看會員點數</small></div></div>
+                <div className={styles.stepItem}><span>02</span><div><b>線上選購指定品項</b><small>獨享杯／雙重奏每件 1 點</small></div></div>
+                <div className={styles.stepItem}><span>03</span><div><b>點數自動入帳</b><small>符合條件的線上訂單由系統累點</small></div></div>
               </div>
             </section>
 
             <section className={styles.memberHistoryCard} aria-label="最近點數紀錄">
-              <div className={styles.subsectionHeading}><div><p className={styles.kicker}>POINT ACTIVITY</p><h2>最近點數紀錄</h2></div><span>{recentPointEntries.length ? pointEntriesExpanded ? `共 ${recentPointEntries.length} 筆` : `最新 ${Math.min(3, recentPointEntries.length)} 筆` : '尚無紀錄'}</span></div>
+              <div className={styles.subsectionHeading}><div><p className={styles.kicker}>POINT ACTIVITY</p><h2>最近點數紀錄</h2></div><span>{recentPointEntries.length ? `最新 ${Math.min(3, recentPointEntries.length)} 筆` : '尚無紀錄'}</span></div>
               {recentPointEntries.length ? <>
                 <div className={styles.pointActivityList} id="member-point-activity-list">{visiblePointEntries.map(([entryId, entry]) => <div className={styles.pointActivityItem} key={entryId}><span className={styles.activityMark}>✦</span><div><b>{entry.sourceLabel || (entry.type === 'reward_redemption' ? '獎勵兌換' : '點數異動')}</b><small>{entry.orderNo ? `訂單 #${entry.orderNo} · ` : ''}{entry.createdAt ? new Intl.DateTimeFormat('zh-TW', { month: 'numeric', day: 'numeric' }).format(new Date(entry.createdAt)) : '最近更新'}</small></div><strong className={Number(entry.delta || 0) >= 0 ? styles.activityPlus : styles.activityMinus}>{Number(entry.delta || 0) >= 0 ? '+' : ''}{entry.delta || 0}</strong></div>)}</div>
-                {recentPointEntries.length > 3 && <button type="button" className={styles.pointActivityToggle} aria-expanded={pointEntriesExpanded} aria-controls="member-point-activity-list" onClick={() => setPointEntriesExpanded((expanded) => !expanded)}>{pointEntriesExpanded ? '收合紀錄' : `查看全部（${recentPointEntries.length} 筆）`}</button>}
+                {recentPointEntries.length > 3 && <button type="button" className={styles.pointActivityToggle} onClick={() => setMemberDialog({ kind: 'history' })}>查看全部（{recentPointEntries.length} 筆）</button>}
               </> : <div className={styles.noActivity}><span>○</span><p>完成第一次指定品項消費後<br />點數紀錄會顯示在這裡。</p></div>}
             </section>
 
@@ -994,35 +1058,32 @@ export default function Home() {
               <div className={styles.subsectionHeading}><div><p className={styles.kicker}>REWARD MENU</p><h2>點數兌換</h2></div><span>5 點起兌</span></div>
               <p className={styles.memberRedeemIntro}>點數與兌換券皆永久有效，可自行選擇兌換完整商品券（10 點）或 5 折券（5 點）。到店出示條碼由店員核銷；折價券須由店員依券面手動折抵，核銷不會自動調整或綁定 POS 訂單。</p>
               <div className={styles.rewardChoices}>
-                {MEMBER_REWARD_OPTIONS.map((reward) => <div className={styles.rewardChoice} key={reward.type}><div><b>{reward.title}</b><small>{reward.description} · <span className={styles.rewardCost}>{reward.pointsCost}</span> 點</small></div><button type="button" disabled={rewardActionType !== null || pointsBalance < reward.pointsCost} onClick={() => void issueRewardVoucher(reward)}>{rewardActionType === reward.type ? '建立中…' : pointsBalance < reward.pointsCost ? '點數不足' : `${reward.pointsCost} 點兌換`}</button></div>)}
+                {MEMBER_REWARD_OPTIONS.map((reward) => <div className={styles.rewardChoice} key={reward.type}><div><b>{reward.title}</b><small>{reward.description} · <span className={styles.rewardCost}>{reward.pointsCost}</span> 點</small></div><button type="button" disabled={rewardActionType !== null || pointsBalance < reward.pointsCost} onClick={() => setMemberDialog({ kind: 'redeem-confirm', reward })}>{pointsBalance < reward.pointsCost ? '點數不足' : `${reward.pointsCost} 點兌換`}</button></div>)}
               </div>
-              <p className={styles.rewardMessage} aria-live="polite">{rewardMessage || `目前 ${pointsBalance} 點；兌換後可在此查看尚未使用的兌換券。`}</p>
             </section>
 
             <section className={styles.memberVouchersCard} aria-label="我的兌換券">
               <div className={styles.subsectionHeading}><div><p className={styles.kicker}>MY VOUCHERS</p><h2>我的兌換券</h2></div><span>{memberRewardVouchers.filter(([, voucher]) => voucher.status === 'issued').length} 張可使用</span></div>
               {memberRewardVouchers.length ? <div className={styles.voucherList}>{memberRewardVouchers.map(([voucherId, voucher]) => {
                 const qr = rewardQrByVoucher[voucherId];
-                const qrExpired = !qr || qr.expiresAt <= clock;
+                const qrExpired = !qr || qr.expiresAt <= qrClock;
                 return <article className={styles.voucherItem} key={voucherId}>
                   <div className={styles.voucherInfo}><div><b>{voucher.title.includes('券') ? voucher.title : `${voucher.title}兌換券`}</b><span className={`${styles.voucherStatus} ${voucher.status === 'redeemed' ? styles.voucherStatusRedeemed : ''}`}>{voucher.status === 'redeemed' ? '已核銷' : '未使用'}</span></div><small>永久有效 · 兌換時已扣 {voucher.pointsCost} 點</small>{voucher.redeemedAt ? <small>核銷時間 {new Date(voucher.redeemedAt).toLocaleString('zh-TW')}</small> : null}</div>
-                  {voucher.status === 'issued' && <button type="button" className={styles.voucherQrButton} disabled={rewardQrLoadingVoucherId === voucherId} onClick={() => void showRewardVoucherQr(voucherId, Boolean(qrExpired))}>{rewardQrLoadingVoucherId === voucherId ? '準備中…' : activeRewardVoucherId === voucherId ? '收起條碼' : qrExpired ? '顯示／更新店家條碼' : '顯示店家核銷條碼'}</button>}
-                  {activeRewardVoucherId === voucherId && voucher.status === 'issued' && <div className={styles.voucherQrReveal}>{qr?.dataUrl ? <Image src={qr.dataUrl} alt={`${voucher.title}兌換券核銷 QR Code`} width={190} height={190} unoptimized /> : <span>正在準備專屬條碼…</span>}<p>請讓店員在 POS 掃描此條碼<br />此核銷條碼 5 分鐘內有效，兌換券本身永久有效</p><button type="button" onClick={() => void showRewardVoucherQr(voucherId, true)} disabled={rewardQrLoadingVoucherId === voucherId}>重新產生條碼</button></div>}
+                  {voucher.status === 'issued' && <button type="button" className={styles.voucherQrButton} disabled={rewardQrLoadingVoucherId === voucherId} onClick={() => void showRewardVoucherQr(voucherId)}>{qrExpired ? '顯示核銷條碼' : '開啟核銷條碼'}</button>}
                 </article>;
               })}</div> : <div className={styles.voucherEmpty}><span>✦</span><p>還沒有兌換券<br />5 點可兌換指定品項 5 折券，10 點可兌換商品券。</p></div>}
             </section>
 
-            {lineFriendStatus !== 'checking' && lineFriendStatus !== 'friend' && <section className={styles.memberActionCard} aria-label="LINE 官方帳號好友狀態">
-              <div className={styles.actionCardHeading}><span className={styles.actionIcon}>L</span><div><p className={styles.kicker}>{lineFriendStatus === 'not-friend' ? '好友狀態' : 'LINE 官方帳號'}</p><h2>{lineFriendStatus === 'not-friend' ? '加入 OMG 官方帳號好友' : '追蹤 OMG 最新口味'}</h2></div></div>
-              <p className={styles.actionCardDescription}>{lineFriendStatus === 'not-friend' ? '目前尚未加入（或已封鎖）OMG 官方帳號；加入或解除封鎖後，即可接收最新口味與活動資訊。' : '目前無法自動確認好友狀態，你仍可開啟官方帳號頁面查看或加入好友。'}</p>
-              <a href="https://lin.ee/sB558niE" target="_blank" rel="noopener noreferrer" className={styles.lineButton}><span>LINE</span>{lineFriendStatus === 'not-friend' ? '加入好友，接收最新口味' : '開啟 LINE 官方帳號'}<b>↗</b></a>
-            </section>}
+            <section className={`${styles.memberActionCard} ${styles.memberFriendCard}`} aria-label="LINE 官方帳號好友狀態">
+              <div className={styles.actionCardHeading}><span className={styles.actionIcon}>L</span><div><p className={styles.kicker}>{lineFriendStatus === 'checking' ? 'LINE 好友狀態' : lineFriendStatus === 'friend' ? '好友狀態' : lineFriendStatus === 'not-friend' ? '好友狀態' : 'LINE 官方帳號'}</p><h2>{lineFriendStatus === 'checking' ? '正在確認好友狀態' : lineFriendStatus === 'friend' ? '已加入 OMG 官方帳號' : lineFriendStatus === 'not-friend' ? '加入 OMG 官方帳號好友' : '追蹤 OMG 最新口味'}</h2></div></div>
+              <p className={styles.actionCardDescription}>{lineFriendStatus === 'checking' ? '正在同步好友狀態；也可以直接開啟官方帳號頁面。' : lineFriendStatus === 'friend' ? '你已加入好友，可在 LINE 官方帳號查看最新口味與活動。' : lineFriendStatus === 'not-friend' ? '目前尚未加入（或已封鎖）；加入或解除封鎖後即可接收最新消息。' : '目前無法自動確認好友狀態，你仍可開啟官方帳號頁面查看或加入好友。'}</p>
+              <a href="https://lin.ee/sB558niE" target="_blank" rel="noopener noreferrer" className={styles.lineButton}><span>LINE</span>{lineFriendStatus === 'not-friend' ? '加入好友' : '查看 LINE 官方帳號'}<b>↗</b></a>
+            </section>
             <div className={styles.wishCard}>
               <div className={styles.wishHeading}><span>✦</span><div><p className={styles.kicker}>TASTE LAB</p><h2>口味許願池</h2></div></div>
               <p>下一球，也許就是你最想吃的那一球。</p>
               <textarea value={wishText} onChange={(e) => setWishText(e.target.value)} placeholder="例如：海鹽焦糖、開心果…" />
-              <button onClick={submitWish} disabled={isSubmittingWish || !wishText.trim()} className={styles.wishButton}>{isSubmittingWish ? '送出中…' : '送出我的願望 ✦'}</button>
-              {wishSuccess && <p className={styles.successMessage}>✓ 收到了！謝謝你的口味提案。</p>}
+              <button type="button" onClick={() => setMemberDialog({ kind: 'wish-confirm' })} disabled={isSubmittingWish || !wishText.trim()} className={styles.wishButton}>送出我的願望 ✦</button>
             </div>
           </section>
         )}
@@ -1034,6 +1095,45 @@ export default function Home() {
         <button type="button" onClick={() => switchTab('orders')} className={activeTab === 'orders' ? styles.dockActive : ''}><span>◷</span><small>訂單查看</small></button>
         <button type="button" onClick={() => switchTab('member')} className={activeTab === 'member' ? styles.dockActive : ''}><span>◒</span><small>OMG會員</small></button>
       </nav>
+
+      {memberDialog && <div className={styles.memberDialogOverlay} onMouseDown={(event) => { if (event.target === event.currentTarget) closeMemberDialog(); }}>
+        <section className={styles.memberDialog} ref={memberDialogRef} role="dialog" aria-modal="true" aria-labelledby="member-dialog-title" tabIndex={-1}>
+          <header className={styles.memberDialogHeader}>
+            <div><p className={styles.kicker}>ON MY GELATO · CLUB</p><h2 id="member-dialog-title">{memberDialog.kind === 'history' ? '點數紀錄' : memberDialog.kind === 'voucher-qr' ? (dialogVoucher?.title || '兌換券條碼') : memberDialog.kind === 'redeem-confirm' ? '確認兌換' : memberDialog.kind === 'wish-confirm' ? '送出味道許願' : memberDialog.title}</h2></div>
+            <button type="button" ref={memberDialogCloseRef} className={styles.memberDialogClose} onClick={closeMemberDialog} disabled={isSubmittingWish || rewardActionType !== null} aria-label="關閉視窗">×</button>
+          </header>
+
+          <div className={styles.memberDialogBody}>
+            {memberDialog.kind === 'history' && (recentPointEntries.length ? <div className={styles.dialogHistoryList}>{recentPointEntries.map(([entryId, entry]) => <div className={styles.pointActivityItem} key={entryId}><span className={styles.activityMark}>✦</span><div><b>{entry.sourceLabel || (entry.type === 'reward_redemption' ? '獎勵兌換' : '點數異動')}</b><small>{entry.orderNo ? `訂單 #${entry.orderNo} · ` : ''}{entry.createdAt ? new Intl.DateTimeFormat('zh-TW', { year: 'numeric', month: 'numeric', day: 'numeric' }).format(new Date(entry.createdAt)) : '最近更新'}</small></div><strong className={Number(entry.delta || 0) >= 0 ? styles.activityPlus : styles.activityMinus}>{Number(entry.delta || 0) >= 0 ? '+' : ''}{entry.delta || 0}</strong></div>)}</div> : <div className={styles.dialogEmpty}>目前還沒有點數紀錄。</div>)}
+
+            {memberDialog.kind === 'voucher-qr' && <div className={styles.dialogQrContent}>
+              {dialogVoucher && <p className={styles.dialogVoucherName}>{dialogVoucher.title.includes('券') ? dialogVoucher.title : `${dialogVoucher.title}兌換券`}</p>}
+              {dialogVoucherQr?.dataUrl && !dialogVoucherQrExpired ? <Image className={styles.dialogQrImage} src={dialogVoucherQr.dataUrl} alt={`${dialogVoucher?.title || '兌換券'}核銷條碼`} width={250} height={250} unoptimized /> : <div className={styles.dialogQrPlaceholder}>{rewardQrLoadingVoucherId === dialogVoucherId ? '正在準備專屬條碼…' : '請產生一組新的核銷條碼'}</div>}
+              <small>請讓店員在 POS 掃描此條碼；核銷碼 5 分鐘有效，兌換券本身永久有效。</small>
+              <button type="button" className={styles.dialogPrimaryButton} onClick={() => dialogVoucherId && void showRewardVoucherQr(dialogVoucherId)} disabled={!dialogVoucherId || rewardQrLoadingVoucherId === dialogVoucherId}>{rewardQrLoadingVoucherId === dialogVoucherId ? '產生中…' : '重新產生核銷條碼'}</button>
+            </div>}
+
+            {memberDialog.kind === 'redeem-confirm' && <div className={styles.dialogConfirmContent}>
+              <p>你即將兌換</p><h3>{memberDialog.reward.title}</h3>
+              <div className={styles.dialogBalanceRow}><span>本次扣點</span><b>−{memberDialog.reward.pointsCost} 點</b></div>
+              <div className={styles.dialogBalanceRow}><span>目前點數</span><b>{pointsBalance} 點</b></div>
+              <div className={styles.dialogBalanceRow}><span>兌換後餘額</span><b>{Math.max(0, pointsBalance - memberDialog.reward.pointsCost)} 點</b></div>
+              <small>送出後會立即扣點；此兌換券永久有效。</small>
+              <div className={styles.dialogButtonRow}><button type="button" className={styles.dialogSecondaryButton} onClick={closeMemberDialog} disabled={rewardActionType !== null}>再想一下</button><button type="button" className={styles.dialogPrimaryButton} onClick={() => void issueRewardVoucher(memberDialog.reward)} disabled={rewardActionType !== null}>{rewardActionType ? '建立中…' : '確認兌換'}</button></div>
+            </div>}
+
+            {memberDialog.kind === 'wish-confirm' && <div className={styles.dialogConfirmContent}>
+              <p>送出這個口味提案？</p><blockquote className={styles.dialogWishQuote}>{wishText.trim()}</blockquote>
+              <small>送出後店家會收到你的許願內容。</small>
+              <div className={styles.dialogButtonRow}><button type="button" className={styles.dialogSecondaryButton} onClick={closeMemberDialog} disabled={isSubmittingWish}>返回修改</button><button type="button" className={styles.dialogPrimaryButton} onClick={() => void submitWish()} disabled={isSubmittingWish}>{isSubmittingWish ? '送出中…' : '確認送出'}</button></div>
+            </div>}
+
+            {memberDialog.kind === 'notice' && <div className={`${styles.dialogNotice} ${memberDialog.tone === 'error' ? styles.dialogNoticeError : memberDialog.tone === 'success' ? styles.dialogNoticeSuccess : ''}`}>
+              <span aria-hidden="true">{memberDialog.tone === 'error' ? '!' : memberDialog.tone === 'success' ? '✓' : '✦'}</span><p>{memberDialog.message}</p><button type="button" className={styles.dialogPrimaryButton} onClick={closeMemberDialog} disabled={isSubmittingWish || rewardActionType !== null}>知道了</button>
+            </div>}
+          </div>
+        </section>
+      </div>}
     </main>
   );
 }

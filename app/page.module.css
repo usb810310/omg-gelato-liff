@@ -569,3 +569,63 @@
   .rewardChoice { align-items:flex-start; flex-direction:column; }
   .rewardChoice button { width:100%; }
 }
+
+/* 會員中心固定卡片節奏與互動彈窗：操作不再推動頁面內容 */
+.memberPageView { display:grid; gap:12px; }
+.memberPageView > section, .memberPageView > .wishCard { margin:0; }
+.memberPageView > .pointsOverview { margin:0; }
+.memberPageView > .pointsNotice { margin:0; }
+.memberPageView > .memberActionCard, .memberPageView > .howToCollect, .memberPageView > .memberHistoryCard,
+.memberPageView > .memberRedeemCard, .memberPageView > .memberVouchersCard { margin:0; }
+.memberActionCard { padding:18px; border-radius:20px; }
+.memberFriendCard { display:flex; min-height:164px; box-sizing:border-box; flex-direction:column; }
+.memberFriendCard > .lineButton { min-height:42px; margin-top:auto; }
+.pointsNoticeDate { min-height:13px; box-sizing:border-box; }
+.dialogPrimaryButton:active, .dialogSecondaryButton:active { transform:scale(.98); }
+.memberPageView .memberHistoryCard, .memberPageView .howToCollect, .memberPageView .memberActionCard,
+.memberPageView .memberRedeemCard, .memberPageView .memberVouchersCard, .memberPageView .wishCard { border-radius:20px; }
+.memberPageView .rewardChoice { min-height:74px; box-sizing:border-box; }
+.memberPageView .rewardChoice button { min-width:104px; min-height:40px; }
+.memberPageView .voucherItem { min-height:92px; box-sizing:border-box; }
+.memberPageView .pointActivityItem { min-height:44px; box-sizing:border-box; }
+.memberPageView .memberActionCard .actionCardDescription { margin-bottom:0; }
+
+.memberDialogOverlay { position:fixed; z-index:100; inset:0; display:grid; place-items:center; box-sizing:border-box; padding:18px; background:rgba(35,27,22,.56); backdrop-filter:blur(8px); animation:memberDialogFade .18s ease-out; }
+.memberDialog { width:min(100%,420px); max-height:min(84dvh,720px); overflow:auto; overscroll-behavior:contain; border:1px solid rgba(255,255,255,.78); border-radius:26px; background:var(--cream); box-shadow:0 24px 70px rgba(32,23,18,.28); animation:memberDialogRise .22s cubic-bezier(.2,.8,.2,1); outline:none; }
+.memberDialogHeader { position:sticky; top:0; z-index:2; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:18px 19px 14px; border-bottom:1px solid #f0e8de; background:rgba(255,253,248,.96); backdrop-filter:blur(12px); }
+.memberDialogHeader .kicker { color:#a28e7d; font-size:8px; }
+.memberDialogHeader h2 { margin:5px 0 0; color:var(--ink); font-family:Georgia,serif; font-size:22px; font-weight:600; letter-spacing:-.045em; }
+.memberDialogClose { display:grid; flex:0 0 38px; width:38px; height:38px; place-items:center; border:1px solid #eee3d8; border-radius:50%; background:#fff; color:#7b6e63; font-size:24px; line-height:1; cursor:pointer; }
+.memberDialogBody { padding:18px 19px 20px; }
+.dialogQrContent { display:grid; justify-items:center; gap:12px; text-align:center; }
+.dialogQrContent > p { margin:0; max-width:310px; color:var(--muted); font-size:12px; line-height:1.65; }
+.dialogQrImage { display:block; width:min(260px,72vw); height:auto; aspect-ratio:1; padding:10px; box-sizing:border-box; border:1px solid #f0e7dc; border-radius:20px; background:#fff; box-shadow:0 8px 22px rgba(65,47,34,.08); }
+.dialogQrPlaceholder { display:grid; width:min(260px,72vw); aspect-ratio:1; place-items:center; padding:16px; box-sizing:border-box; border:1px dashed #e5d6c5; border-radius:20px; background:#fffaf3; color:#917b67; font-size:12px; }
+.dialogQrContent > small, .dialogConfirmContent > small { color:#8d7e71; font-size:10px; line-height:1.6; text-align:center; }
+.dialogVoucherName { color:var(--ink) !important; font-weight:850; }
+.dialogPrimaryButton, .dialogSecondaryButton { display:inline-flex; align-items:center; justify-content:center; min-height:44px; padding:10px 16px; border:0; border-radius:14px; font:inherit; font-size:12px; font-weight:850; cursor:pointer; transition:transform .16s ease, opacity .16s ease; }
+.dialogPrimaryButton { background:var(--accent); color:#fff; box-shadow:0 6px 14px rgba(193,93,70,.18); }
+.dialogSecondaryButton { border:1px solid #e8dccd; background:#fff; color:#755f4d; }
+.dialogPrimaryButton:disabled, .dialogSecondaryButton:disabled { opacity:.55; cursor:wait; }
+.dialogQrContent > .dialogPrimaryButton { width:100%; }
+.dialogHistoryList { display:grid; gap:3px; max-height:55dvh; overflow:auto; }
+.dialogHistoryList .pointActivityItem { padding:11px 2px; border-bottom:1px solid #f0e9df; }
+.dialogHistoryList .pointActivityItem:last-child { border-bottom:0; }
+.dialogEmpty { padding:25px 8px; color:var(--muted); font-size:12px; text-align:center; }
+.dialogConfirmContent { display:grid; gap:13px; }
+.dialogConfirmContent > p { margin:0; color:var(--muted); font-size:12px; }
+.dialogConfirmContent h3 { margin:-6px 0 2px; color:var(--ink); font-size:19px; }
+.dialogBalanceRow { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:11px 12px; border-radius:12px; background:#f7f2e9; color:#77675a; font-size:11px; }
+.dialogBalanceRow b { color:#a54d2f; font-size:13px; }
+.dialogButtonRow { display:grid; grid-template-columns:1fr 1fr; gap:9px; margin-top:4px; }
+.dialogWishQuote { margin:0; padding:13px 14px; border-left:3px solid #d78d62; border-radius:0 12px 12px 0; background:#fff7ec; color:#624c3b; font-size:15px; font-weight:750; line-height:1.5; overflow-wrap:anywhere; }
+.dialogNotice { display:grid; justify-items:center; gap:12px; padding:8px 2px 2px; text-align:center; }
+.dialogNotice > span { display:grid; width:48px; height:48px; place-items:center; border-radius:16px; background:#f1e5d5; color:#a6764c; font-size:23px; font-weight:900; }
+.dialogNoticeSuccess > span { background:#e5f2e4; color:#558052; }
+.dialogNoticeError > span { background:#fff0ed; color:#ae5548; }
+.dialogNotice p { margin:0 0 3px; color:#695b50; font-size:12px; line-height:1.7; overflow-wrap:anywhere; }
+.dialogNotice .dialogPrimaryButton { width:100%; }
+@keyframes memberDialogFade { from { opacity:0; } to { opacity:1; } }
+@keyframes memberDialogRise { from { opacity:0; transform:translateY(12px) scale(.985); } to { opacity:1; transform:translateY(0) scale(1); } }
+@media (max-width:480px) { .memberDialogOverlay { align-items:end; padding:10px 10px max(10px,env(safe-area-inset-bottom)); }.memberDialog { max-height:min(88dvh,760px); border-radius:25px; }.memberDialogBody { padding:16px; } }
+@media (prefers-reduced-motion:reduce) { .memberDialogOverlay,.memberDialog { animation:none; } }
