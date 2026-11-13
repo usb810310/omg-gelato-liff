@@ -27,7 +27,8 @@ export default function MemberV2Page() {
   const [message, setMessage] = useState('');
   const [redeeming, setRedeeming] = useState<MemberRewardType | null>(null);
   const [rewardView, setRewardView] = useState<'available' | 'earned'>('available');
-  const demoMode = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('preview') === '1';
+  const demoMode = typeof window !== 'undefined'
+    && (new URLSearchParams(window.location.search).get('preview') === '1' || window.location.pathname.startsWith('/member-center'));
 
   const accessToken = () => liff.getAccessToken() || '';
 
