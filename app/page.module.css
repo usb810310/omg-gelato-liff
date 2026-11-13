@@ -451,6 +451,11 @@
 .ordersHero { padding: 7px 3px 16px; }
 .ordersHero h1 { font-size: 37px; }
 .refreshButton { width: 42px; height: 42px; border: 1px solid #dbe8d7; border-radius: 14px; background: var(--sage-soft); color: var(--sage); }
+.orderHistoryTabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; margin: 0 0 12px; padding: 5px; border: 1px solid #e8e1d7; border-radius: 16px; background: #f4f0e9; }
+.orderHistoryTab { display: flex; min-height: 42px; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border: 0; border-radius: 12px; color: #998b7c; background: transparent; font: inherit; font-size: 10px; cursor: pointer; transition: color .18s ease, background .18s ease, box-shadow .18s ease; }
+.orderHistoryTab em { color: #b2a699; font-size: 9px; font-style: normal; font-weight: 800; }
+.orderHistoryTabActive { color: #fff; background: var(--ink); box-shadow: 0 5px 12px rgba(65, 48, 39, .16); }
+.orderHistoryTabActive em { color: rgba(255,255,255,.72); }
 .orderSummaryBar { margin: 0 0 12px; border: 1px solid var(--line); background: rgba(255,253,248,.75); }
 .orderList { gap: 10px; }
 .orderListItem {
