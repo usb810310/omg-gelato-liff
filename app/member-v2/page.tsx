@@ -26,6 +26,7 @@ export default function MemberV2Page() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
   const [redeeming, setRedeeming] = useState<MemberRewardType | null>(null);
+  const [rewardView, setRewardView] = useState<'available' | 'earned'>('available');
 
   const accessToken = () => liff.getAccessToken() || '';
 
@@ -98,56 +99,42 @@ export default function MemberV2Page() {
 
   if (loading) return <main className={styles.loading}><div className={styles.loadingMark}>OMG</div><span>正在準備會員中心…</span></main>;
 
+  const stamps = Array.from({ length: 10 }, (_, index) => index < Math.min(balance, 10));
+
   return (
     <main className={styles.shell}>
       <header className={styles.topbar}>
         <button type="button" className={styles.back} onClick={() => go('/')} aria-label="回到今日首頁">‹</button>
-        <div><p>ON MY GELATO</p><strong>會員中心</strong></div>
-        <button type="button" className={styles.refresh} onClick={() => { setLoading(true); void loadMemberData().finally(() => setLoading(false)); }} aria-label="重新整理">↻</button>
+        <div><p>OMG! GELATO</p><strong>集點卡</strong></div>
+        <button type="button" className={styles.refresh} onClick={() => { setLoading(true); void loadMemberData().finally(() => setLoading(false)); }} aria-label="重新整理">⋮</button>
       </header>
 
       {!profile ? (
-        <section className={styles.loginCard}><span className={styles.loginIcon}>L</span><h1>加入會員，甜一點</h1><p>登入 LINE 後即可查看點數、優惠券與歷史訂單。</p><button type="button" onClick={login} className={styles.primary}>LINE 登入 <b>↗</b></button></section>
+        <section className={styles.loginCard}><span className={styles.loginIcon}>L</span><h1>加入會員，開始集點</h1><p>登入 LINE 後即可查看集點卡、優惠券與消費紀錄。</p><button type="button" onClick={login} className={styles.primary}>LINE 登入 <b>↗</b></button></section>
       ) : <>
-        <section className={styles.memberHero}>
-          <div className={styles.avatar}>{profile.pictureUrl ? <img src={profile.pictureUrl} alt="會員頭像" /> : <span>{profile.displayName.slice(0, 1)}</span>}</div>
-          <div><p className={styles.eyebrow}>WELCOME BACK</p><h1>{profile.displayName}</h1><small>會員編號 {profile.memberNo || '建立中…'}</small></div>
-          <div className={styles.balance}><span>目前點數</span><strong>{balance}<small> 點</small></strong><em>即時同步</em></div>
+        <section className={styles.coverHero}>
+          <div className={styles.neonGlow} /><div className={styles.coneArt} aria-hidden="true"><i /><b /><span /></div>
+          <div className={styles.coverTitle}><p>MEMBER BENEFITS</p><h1>On My Gelato<br /><em>義式冰淇淋</em></h1></div>
+        </section>
+        <section className={styles.stampCard}>
+          <div className={styles.stampCardHead}><div className={styles.memberIdentity}><div className={styles.avatar}>{profile.pictureUrl ? <img src={profile.pictureUrl} alt="會員頭像" /> : <span>{profile.displayName.slice(0, 1)}</span>}</div><div><b>{profile.displayName}</b><small>會員編號 {profile.memberNo || '建立中…'}</small></div></div><span className={styles.cardMenu}>•••</span></div>
+          <h2>OMG！集點拿好禮！</h2><p className={styles.expiry}>點數即時累積 · 下次消費使用</p>
+          <div className={styles.stampReward}><span>★獎勵</span><b>{balance >= 10 ? '已達成兌換資格' : `再 ${10 - balance} 點可得獎勵`}</b><strong>⌃</strong></div>
+          <div className={styles.stampGrid}>{stamps.map((filled, index) => <span key={index} className={`${styles.stamp} ${filled ? styles.stampFilled : ''}`}>{filled ? 'STAMP' : index === 9 ? '★' : 'STAMP'}</span>)}</div>
+          <div className={styles.stampFooter}><span>目前 {balance} 點</span><span>集滿 10 點兌換獎勵</span></div>
         </section>
 
-        <section className={styles.quickGrid} aria-label="會員功能">
-          <button type="button" onClick={() => scrollTo('member-vouchers')}><span className={styles.quickIcon}>◇</span><b>優惠券</b><small>查看可用優惠</small></button>
-          <button type="button" onClick={() => scrollTo('member-redeem')}><span className={styles.quickIcon}>✦</span><b>點數兌換</b><small>以點數換好禮</small></button>
-          <button type="button" onClick={() => scrollTo('member-activity')}><span className={styles.quickIcon}>≋</span><b>點數紀錄</b><small>累積與使用明細</small></button>
-          <button type="button" onClick={() => go('/?tab=orders')}><span className={styles.quickIcon}>◷</span><b>歷史訂單</b><small>查看消費足跡</small></button>
-        </section>
+        <nav className={styles.rewardTabs} aria-label="獎勵分類"><button type="button" className={rewardView === 'available' ? styles.rewardTabActive : ''} onClick={() => setRewardView('available')}>尚未獲得的獎勵</button><button type="button" className={rewardView === 'earned' ? styles.rewardTabActive : ''} onClick={() => setRewardView('earned')}>已獲得的獎勵</button></nav>
 
-        <button type="button" className={styles.orderBanner} onClick={() => go('/menu/')}><span>今天想吃哪一球？</span><strong>開始點餐 ↗</strong></button>
+        {rewardView === 'available' ? <section id="member-redeem" className={styles.rewardPanel}><div className={styles.rewardPanelTitle}><span>✦</span><div><p>REWARD MENU</p><h2>點數兌換</h2></div></div><p className={styles.rewardDescription}>每件指定線上品項累積 1 點；當次累積的點數限下次消費兌換使用。</p><div className={styles.rewardList}>{MEMBER_REWARD_OPTIONS.map((reward) => <div className={styles.reward} key={reward.type}><div><b>{reward.title}</b><small>{reward.description} · {reward.pointsCost} 點</small></div><button type="button" disabled={balance < reward.pointsCost || redeeming !== null} onClick={() => void redeem(reward.type)}>{redeeming === reward.type ? '處理中…' : balance < reward.pointsCost ? `還差 ${reward.pointsCost - balance} 點` : '兌換'}</button></div>)}</div></section> : <section id="member-vouchers" className={styles.rewardPanel}><div className={styles.rewardPanelTitle}><span>✓</span><div><p>MY REWARDS</p><h2>已獲得的獎勵</h2></div></div>{vouchers.length ? <div className={styles.voucherList}>{vouchers.map((voucher) => <div className={styles.voucher} key={voucher.id}><span className={styles.voucherMark}>✦</span><div><b>{voucher.title}</b><small>{voucher.status === 'issued' ? '未使用 · 永久有效' : '已核銷'}</small></div><strong>{voucher.status === 'issued' ? '可使用' : '已使用'}</strong></div>)}</div> : <div className={styles.empty}>尚未獲得獎勵<br /><small>集滿點數後即可在這裡查看。</small></div>}</section>}
 
-        <section id="member-vouchers" className={styles.card}>
-          <div className={styles.sectionHead}><div><p className={styles.eyebrow}>MY BENEFITS</p><h2>我的優惠券</h2></div><span>{vouchers.filter((voucher) => voucher.status === 'issued').length} 張可用</span></div>
-          {vouchers.length ? <div className={styles.voucherList}>{vouchers.map((voucher) => <div className={styles.voucher} key={voucher.id}><span className={styles.voucherMark}>✦</span><div><b>{voucher.title}</b><small>{voucher.status === 'issued' ? '未使用 · 永久有效' : '已核銷'}</small></div><strong>{voucher.status === 'issued' ? '可使用' : '已使用'}</strong></div>)}</div> : <div className={styles.empty}>還沒有優惠券<br /><small>累積點數後即可兌換專屬優惠。</small></div>}
-        </section>
-
-        <section id="member-redeem" className={styles.card}>
-          <div className={styles.sectionHead}><div><p className={styles.eyebrow}>REWARD MENU</p><h2>點數兌換</h2></div><span>5 點起</span></div>
-          <p className={styles.note}>每件指定線上品項累積 1 點，當次累積的點數限下次消費兌換使用。</p>
-          <div className={styles.rewardList}>{MEMBER_REWARD_OPTIONS.map((reward) => <div className={styles.reward} key={reward.type}><div><b>{reward.title}</b><small>{reward.description} · {reward.pointsCost} 點</small></div><button type="button" disabled={balance < reward.pointsCost || redeeming !== null} onClick={() => void redeem(reward.type)}>{redeeming === reward.type ? '處理中…' : balance < reward.pointsCost ? '點數不足' : '兌換'}</button></div>)}</div>
-        </section>
-
-        <section id="member-activity" className={styles.card}>
-          <div className={styles.sectionHead}><div><p className={styles.eyebrow}>POINT ACTIVITY</p><h2>點數紀錄</h2></div><span>{entries.length} 筆</span></div>
-          {entries.length ? <div className={styles.activityList}>{entries.slice(0, 8).map(([id, entry]) => <div className={styles.activity} key={id}><span>✦</span><div><b>{entry.sourceLabel || (entry.type === 'reward_redemption' ? '優惠兌換' : '消費集點')}</b><small>{entry.orderNo ? `訂單 #${entry.orderNo} · ` : ''}{formatDate(entry.createdAt)}</small></div><strong className={Number(entry.delta || 0) >= 0 ? styles.plus : styles.minus}>{Number(entry.delta || 0) >= 0 ? '+' : ''}{entry.delta || 0}</strong></div>)}</div> : <div className={styles.empty}>完成指定品項消費後<br /><small>點數紀錄會顯示在這裡。</small></div>}
-        </section>
-
-        <section className={styles.card}>
-          <div className={styles.sectionHead}><div><p className={styles.eyebrow}>ORDER HISTORY</p><h2>歷史訂單</h2></div><button type="button" className={styles.linkButton} onClick={() => go('/?tab=orders')}>查看全部 ↗</button></div>
-          {orders.length ? <div className={styles.orderList}>{orders.slice(0, 3).map((order, index) => <button type="button" className={styles.order} key={`${order.orderNo || index}`} onClick={() => go('/?tab=orders')}><div><b>訂單 #{order.orderNo || '—'}</b><small>{formatDate(order.time || order.date)} · {order.status || '處理中'}</small></div><strong>NT$ {order.total || 0} ›</strong></button>)}</div> : <div className={styles.empty}>目前沒有歷史訂單<br /><small>選一份喜歡的口味，開始今天的甜。</small></div>}
-        </section>
+        <section id="member-activity" className={styles.infoPanel}><div className={styles.sectionHead}><div><p>POINT ACTIVITY</p><h2>點數紀錄</h2></div><button type="button" onClick={() => scrollTo('member-activity')}>{entries.length} 筆</button></div>{entries.length ? <div className={styles.activityList}>{entries.slice(0, 8).map(([id, entry]) => <div className={styles.activity} key={id}><span>✦</span><div><b>{entry.sourceLabel || (entry.type === 'reward_redemption' ? '優惠兌換' : '消費集點')}</b><small>{entry.orderNo ? `訂單 #${entry.orderNo} · ` : ''}{formatDate(entry.createdAt)}</small></div><strong className={Number(entry.delta || 0) >= 0 ? styles.plus : styles.minus}>{Number(entry.delta || 0) >= 0 ? '+' : ''}{entry.delta || 0}</strong></div>)}</div> : <div className={styles.empty}>完成指定品項消費後，點數紀錄會顯示在這裡。</div>}</section>
+        <section className={styles.infoPanel}><div className={styles.sectionHead}><div><p>ORDER HISTORY</p><h2>歷史訂單</h2></div><button type="button" onClick={() => go('/?tab=orders')}>查看全部 ↗</button></div>{orders.length ? <div className={styles.orderList}>{orders.slice(0, 3).map((order, index) => <button type="button" className={styles.order} key={`${order.orderNo || index}`} onClick={() => go('/?tab=orders')}><div><b>訂單 #{order.orderNo || '—'}</b><small>{formatDate(order.time || order.date)} · {order.status || '處理中'}</small></div><strong>NT$ {order.total || 0} ›</strong></button>)}</div> : <div className={styles.empty}>目前沒有歷史訂單。</div>}</section>
+        <section className={styles.howTo}><div><p>使用說明</p><small>＊線上消費「獨享杯」「雙重奏」，每件累積 1 點<br />＊點數由系統自動累入會員帳戶<br />＊店家保有活動、獎項修改之權利</small></div><button type="button" onClick={() => go('/menu/')}>開始點餐</button></section>
       </>}
 
       {message && <div className={styles.toast} role="status">{message}</div>}
-      <nav className={styles.bottomNav} aria-label="主要導覽"><button type="button" onClick={() => go('/')}><span>⌂</span><small>今日</small></button><button type="button" onClick={() => go('/menu/')}><span>✦</span><small>點餐</small></button><button type="button" onClick={() => go('/?tab=orders')}><span>◷</span><small>訂單查看</small></button><button type="button" className={styles.activeNav} onClick={() => scrollTo('member-vouchers')}><span>◒</span><small>OMG會員</small></button></nav>
+      <nav className={styles.bottomNav} aria-label="主要導覽"><button type="button" onClick={() => go('/')}><span>⌂</span><small>今日</small></button><button type="button" onClick={() => go('/menu/')}><span>✦</span><small>點餐</small></button><button type="button" onClick={() => go('/?tab=orders')}><span>◷</span><small>訂單查看</small></button><button type="button" className={styles.activeNav} onClick={() => scrollTo('member-redeem')}><span>◒</span><small>OMG會員</small></button></nav>
     </main>
   );
 }
