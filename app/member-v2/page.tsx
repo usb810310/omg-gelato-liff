@@ -27,6 +27,7 @@ export default function MemberV2Page() {
   const [message, setMessage] = useState('');
   const [redeeming, setRedeeming] = useState<MemberRewardType | null>(null);
   const [rewardView, setRewardView] = useState<'available' | 'earned'>('available');
+  const demoMode = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('preview') === '1';
 
   const accessToken = () => liff.getAccessToken() || '';
 
@@ -51,6 +52,12 @@ export default function MemberV2Page() {
     let cancelled = false;
     (async () => {
       try {
+        if (demoMode) {
+          setProfile({ userId: 'preview-member', displayName: 'demo1號店', memberNo: 'M-DEMO3466' });
+          setPoints({ balance: 1, entries: { preview: { delta: 1, sourceLabel: '線上消費集點', createdAt: Date.now() - 86400000, orderNo: '908' } }, rewardVouchers: {} });
+          setOrders([{ orderNo: '908', total: 220, time: new Date().toISOString(), status: '已完成' }]);
+          return;
+        }
         await liff.init({ liffId: LIFF_ID });
         if (!liff.isLoggedIn()) {
           setLoading(false);
