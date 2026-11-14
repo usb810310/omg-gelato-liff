@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#fbf5ea" />
+  <title>On My Gelato｜最新優惠</title>
+  <style>
+    :root {
+      --bg: #fbf5ea;
+      --paper: #fffdf9;
+      --ink: #3c302b;
+      --muted: #8f7e72;
+      --line: #eee1d3;
+      --orange: #c9784f;
+      --orange-soft: #f8e6d7;
+      --green: #718c6b;
+      --green-soft: #e7efdf;
+      --gold: #c69a49;
+      --shadow: 0 9px 24px rgba(94, 62, 39, .08);
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; background: radial-gradient(circle at 100% 0, #f5e0cc 0, var(--bg) 36%); color: var(--ink); }
+    body { padding: 11px 11px 18px; font-family: -apple-system, BlinkMacSystemFont, "Noto Sans TC", "PingFang TC", sans-serif; }
+    .shell { width: min(100%, 420px); margin: 0 auto; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 11px; }
+    .eyebrow { margin: 0 0 4px; color: var(--orange); font-size: 9px; font-weight: 850; letter-spacing: .18em; }
+    h1 { margin: 0; color: var(--ink); font-size: 23px; letter-spacing: -.07em; }
+    .gift { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 14px; color: var(--orange); background: var(--orange-soft); font-size: 21px; box-shadow: 0 5px 14px rgba(201,120,79,.12); }
+    .intro { margin: 0 2px 11px; color: var(--muted); font-size: 10px; line-height: 1.55; }
+    .offer-card { position: relative; overflow: hidden; margin-top: 10px; padding: 15px 15px 14px; border: 1px solid var(--line); border-radius: 17px; background: rgba(255,253,249,.9); box-shadow: var(--shadow); }
+    .offer-card::after { content: ''; position: absolute; width: 82px; height: 82px; right: -27px; bottom: -39px; border: 1px solid rgba(201,120,79,.16); border-radius: 50%; box-shadow: 0 0 0 13px rgba(201,120,79,.05), 0 0 0 26px rgba(201,120,79,.035); pointer-events: none; }
+    .offer-card.points { border-color: #ead9c9; }
+    .offer-card.bonus { border-color: #dbe6d3; }
+    .card-head { display: flex; align-items: flex-start; gap: 10px; }
+    .number { display: grid; flex: 0 0 28px; width: 28px; height: 28px; place-items: center; border-radius: 10px; color: #fff; background: var(--orange); font-size: 14px; font-weight: 850; }
+    .bonus .number { background: var(--green); }
+    .card-kicker { margin: 1px 0 3px; color: var(--muted); font-size: 8px; font-weight: 850; letter-spacing: .13em; }
+    .card-title { margin: 0; color: var(--ink); font-size: 17px; letter-spacing: -.05em; }
+    .rule { margin: 13px 0 10px; border: 0; border-top: 1px dashed var(--line); }
+    .main-copy { margin: 0; color: var(--ink); font-size: 12px; font-weight: 700; line-height: 1.65; }
+    .main-copy strong { color: var(--orange); font-size: 16px; }
+    .bonus .main-copy strong { color: var(--green); }
+    .tag { display: inline-block; margin-top: 10px; padding: 6px 9px; border-radius: 8px; color: #82632e; background: #fff5d9; font-size: 10px; font-weight: 800; }
+    .bonus .tag { color: #52714f; background: var(--green-soft); }
+    .note { margin: 11px 0 0; color: var(--muted); font-size: 9px; line-height: 1.5; }
+    .note::before { content: '*'; margin-right: 3px; color: var(--orange); font-weight: 900; }
+    .footer { margin: 14px 4px 0; color: #a89383; font-size: 8px; line-height: 1.5; text-align: center; }
+    @media (max-width: 330px) { body { padding-inline: 9px; } .offer-card { padding-inline: 13px; } h1 { font-size: 21px; } .card-title { font-size: 16px; } }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div><p class="eyebrow">ON MY GELATO</p><h1>🎁 最新優惠</h1></div>
+      <div class="gift" aria-hidden="true">🎁</div>
+    </header>
+    <p class="intro">把喜歡的甜點帶回家，也把每一次來店變成下一次期待。</p>
+
+    <article class="offer-card points">
+      <div class="card-head"><span class="number">①</span><div><p class="card-kicker">REWARD PROGRAM</p><h2 class="card-title">集點活動</h2></div></div>
+      <hr class="rule" />
+      <p class="main-copy">購買一杯獨享杯或一杯雙重奏即可獲得 <strong>1 點</strong></p>
+      <span class="tag">集滿 10 點</span>
+      <p class="main-copy">可獲得「雙重奏／獨享杯兌換券」1 張（擇一兌換）</p>
+      <p class="note">已享折價時不提供集點</p>
+    </article>
+
+    <article class="offer-card bonus">
+      <div class="card-head"><span class="number">②</span><div><p class="card-kicker">SPEND &amp; GET</p><h2 class="card-title">滿額贈</h2></div></div>
+      <hr class="rule" />
+      <p class="main-copy">單筆消費滿 <strong>2000 元</strong></p>
+      <span class="tag">贈送 1 杯獨享杯</span>
+      <p class="note">此優惠可同時參加集點活動</p>
+    </article>
+
+    <p class="footer">優惠內容以店家現場公告為準</p>
+  </main>
+</body>
+</html>
