@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>OMG Gelato 小幫手</title>
+  <style>
+    :root { --bg:#f7f8fa; --card:#fff; --ink:#28323c; --muted:#7d8790; --line:#e8ebee; --green:#06c755; --orange:#c88658; }
+    * { box-sizing:border-box; }
+    html, body { margin:0; min-height:100%; background:var(--bg); color:var(--ink); }
+    body { padding:16px 14px 28px; font-family:-apple-system,BlinkMacSystemFont,"Noto Sans TC","PingFang TC",sans-serif; }
+    .shell { width:min(100%, 430px); margin:0 auto; }
+    .topbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; }
+    .brand { display:flex; align-items:center; gap:10px; }
+    .logo { width:42px; height:42px; border-radius:13px; object-fit:contain; background:#fff; box-shadow:0 4px 14px rgba(42,55,66,.08); }
+    .brand h1 { margin:0; font-size:17px; letter-spacing:.2px; }
+    .brand p { margin:4px 0 0; color:var(--muted); font-size:10px; }
+    .online { display:flex; align-items:center; gap:5px; color:#4b8b5c; font-size:10px; }
+    .online i { width:7px; height:7px; border-radius:50%; background:#54ad6b; box-shadow:0 0 0 4px rgba(84,173,107,.12); }
+    .hero { padding:22px 18px 20px; border-radius:22px; background:linear-gradient(135deg,#fffdf8,#f5efe4); border:1px solid #efe5d8; box-shadow:0 8px 22px rgba(73,48,32,.05); }
+    .hero-kicker { margin:0 0 8px; color:var(--orange); font-size:10px; font-weight:800; letter-spacing:.12em; }
+    .hero h2 { margin:0; font-size:24px; line-height:1.35; letter-spacing:-.04em; }
+    .hero p { margin:11px 0 0; color:#746d66; font-size:12px; line-height:1.75; }
+    .notice { margin-top:11px; padding:16px; border:1px solid var(--line); border-radius:17px; background:var(--card); box-shadow:0 5px 15px rgba(42,55,66,.035); }
+    .notice-title { display:flex; align-items:center; gap:8px; margin:0 0 9px; font-weight:800; font-size:14px; }
+    .notice-title span { display:grid; place-items:center; width:25px; height:25px; border-radius:8px; background:#e9f4e8; color:#4d8b50; font-size:14px; }
+    .notice p { margin:0; color:#66717a; font-size:12px; line-height:1.7; }
+    .warning { border-color:#f0dfd3; background:#fffaf6; }
+    .warning .notice-title span { background:#f9e9dd; color:#b56f46; }
+    .support-title { margin:20px 3px 9px; color:var(--muted); font-size:10px; font-weight:800; letter-spacing:.1em; }
+    .support-card { display:flex; align-items:center; gap:12px; width:100%; margin-top:8px; padding:14px; border:1px solid var(--line); border-radius:16px; background:var(--card); color:var(--ink); text-align:left; text-decoration:none; box-shadow:0 5px 15px rgba(42,55,66,.035); }
+    .support-icon { display:grid; place-items:center; width:40px; height:40px; flex:none; border-radius:12px; background:#e8f7eb; color:#06a948; font-weight:900; font-size:12px; }
+    .support-icon.money { background:#fff0df; color:#b87842; font-size:19px; }
+    .support-copy { min-width:0; }
+    .support-copy strong { display:block; font-size:13px; }
+    .support-copy small { display:block; margin-top:4px; color:var(--muted); font-size:10px; line-height:1.45; }
+    .arrow { margin-left:auto; color:#aab2b9; font-size:22px; }
+    .footer { margin:19px 0 0; color:#a1a8ae; font-size:10px; line-height:1.6; text-align:center; }
+    .friend-button { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; margin-top:15px; padding:13px; border-radius:999px; color:#fff; background:var(--green); font-size:12px; font-weight:800; text-decoration:none; box-shadow:0 6px 14px rgba(6,199,85,.18); }
+    .modal { position:fixed; inset:0; z-index:10; display:none; place-items:center; padding:22px; background:rgba(30,38,44,.46); }
+    .modal.show { display:grid; }
+    .modal-card { width:min(100%,340px); padding:23px 20px 18px; border-radius:22px; background:#fff; text-align:center; box-shadow:0 18px 50px rgba(0,0,0,.18); }
+    .modal-card h3 { margin:0; font-size:19px; }
+    .modal-card p { color:var(--muted); font-size:11px; line-height:1.6; }
+    .qr-box { display:grid; place-items:center; width:150px; height:150px; margin:15px auto; border:10px solid #fff; border-radius:14px; background:repeating-linear-gradient(45deg,#27313a 0 4px,#fff 4px 8px); box-shadow:0 0 0 1px #e3e7e9; color:#fff; font-size:11px; font-weight:800; }
+    .close-button { width:100%; padding:11px; border:0; border-radius:999px; background:#edf0f2; color:#59636b; font:inherit; font-size:12px; font-weight:700; }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div class="brand">
+        <img class="logo" src="logo-new.png" alt="OMG Gelato" onerror="this.style.display='none'" />
+        <div><h1>OMG Gelato 小幫手</h1><p>線上詢問與付款協助</p></div>
+      </div>
+      <div class="online"><i></i>服務中</div>
+    </header>
+
+    <section class="hero">
+      <p class="hero-kicker">NEED A HAND?</p>
+      <h2>有任何問題，歡迎詢問我們</h2>
+      <p>請先看看下方的說明。如果仍需要協助，可以依照問題類別聯絡客服。</p>
+    </section>
+
+    <section class="notice">
+      <h3 class="notice-title"><span>✦</span>小幫手回覆時間</h3>
+      <p>小幫手每日 10:00～18:30 會依照詢問順序回覆訊息，還請耐心等待。重複發問可能會讓訊息排序往後，反而更慢收到回覆。</p>
+    </section>
+
+    <section class="notice warning">
+      <h3 class="notice-title"><span>!</span>付款問題請依類別詢問</h3>
+      <p>如果你是消費者遇到 LINE Pay 使用問題，請依照問題類別向對應的客服中心詢問，會比較快得到協助。</p>
+    </section>
+
+    <p class="support-title">選擇需要的協助</p>
+    <a class="support-card" href="https://contact-cc.line.me/serviceId/11399" target="_blank" rel="noopener noreferrer">
+      <span class="support-icon">LINE</span>
+      <span class="support-copy"><strong>LINE Pay 客服中心</strong><small>綁定信用卡、付款、LINE POINTS 或優惠券折抵問題</small></span>
+      <span class="arrow">›</span>
+    </a>
+    <a class="support-card" href="https://contact-cc.line.me/category1Id/15769" target="_blank" rel="noopener noreferrer">
+      <span class="support-icon money">$</span>
+      <span class="support-copy"><strong>LINE Pay Money 客服中心</strong><small>帳戶開通、儲值、付款、轉帳、紅包及生活繳費問題</small></span>
+      <span class="arrow">›</span>
+    </a>
+
+    <a class="friend-button" href="https://page.line.me/tua3549x" target="_blank" rel="noopener noreferrer">加入官方帳號／開啟 LINE</a>
+    <p class="footer">請勿重複送出相同問題，謝謝你的耐心等候。</p>
+  </main>
+
+  <div class="modal" id="qrModal" role="dialog" aria-modal="true" aria-labelledby="qrTitle">
+    <div class="modal-card">
+      <h3 id="qrTitle">開啟 OMG Gelato 官方帳號</h3>
+      <p>請點擊下方按鈕前往 LINE 官方帳號頁面。</p>
+      <div class="qr-box">LINE</div>
+      <a class="friend-button" href="https://page.line.me/tua3549x" target="_blank" rel="noopener noreferrer">前往官方帳號</a>
+      <button class="close-button" type="button" id="closeModal">關閉</button>
+    </div>
+  </div>
+
+  <script>
+    const modal = document.getElementById('qrModal');
+    const closeModal = () => modal.classList.remove('show');
+    document.getElementById('closeModal').addEventListener('click', closeModal);
+    modal.addEventListener('click', (event) => { if (event.target === modal) closeModal(); });
+    if (new URLSearchParams(window.location.search).get('openQrModal') === 'true') modal.classList.add('show');
+  </script>
+</body>
+</html>

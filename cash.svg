@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 64" role="img" aria-label="現金">
+  <rect width="96" height="64" rx="12" fill="#e9f3df"/>
+  <rect x="12" y="15" width="72" height="34" rx="7" fill="#7da866"/>
+  <circle cx="48" cy="32" r="12" fill="#f7e9b2"/>
+  <path d="M48 24v16M53 27c-1.5-2-7-2-7 1.5 0 3 7 1.5 7 5 0 3.5-5.5 3.5-7 1.5" fill="none" stroke="#557c4f" stroke-width="2.5" stroke-linecap="round"/>
+</svg>
