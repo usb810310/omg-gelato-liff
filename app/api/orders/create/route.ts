@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getLineMember } from '@/lib/member-points';
-import { firebasePost, reservePickupCode } from '@/lib/firebase-server';
+import { firebaseGet, firebasePost, reservePickupCode } from '@/lib/firebase-server';
+import { validatePickupSlot, type BusinessHours } from '@/lib/business-hours';
 
 export const runtime = 'nodejs';
 const PRICE_TABLE: Record<string, number> = { 'OMG獨享杯': 100, 'OMG雙重奏': 120, 'OMG分享盒': 420 };
@@ -31,12 +32,20 @@ export async function POST(request: Request) {
     } else if (requestedSource === 'LIFF') {
       return NextResponse.json({ success: false, error: 'LINE 登入已失效，請重新開啟點餐頁' }, { status: 401 });
     }
+    const pickupDate = text(order.pickupDate, 10);
+    const pickupTime = text(order.pickupTime, 20);
+    const businessHours = await firebaseGet<BusinessHours | null>('businessHours').catch(() => null);
+    const pickupValidation = validatePickupSlot(businessHours, pickupDate, pickupTime);
+    if (!pickupValidation.ok) {
+      return NextResponse.json({ success: false, error: pickupValidation.error }, { status: 409 });
+    }
     const items = safeItems(order.items);
     const total = items.reduce((sum, item) => sum + item.price * item.qty, 0);
     const orderNo = `WEB-${Date.now().toString(36).slice(-7).toUpperCase()}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`;
     const pickupNo = await reservePickupCode(dateKey());
     const orderData = {
       orderNo, channel: 'online', pickupNo, pickupNumber: pickupNo, pickupCode: pickupNo,
+      pickupDate, pickupTime,
       userId: member?.userId || null, displayName: member?.displayName || null, pictureUrl: member?.pictureUrl || null,
       time: new Date().toISOString(), date: new Date().toISOString().slice(0, 10), items, subtotal: total, total,
       payment: text(order.payment, 30) === 'LINE Pay' ? 'LINE Pay' : '現場付款', paymentStatus: 'unpaid',

@@ -12,6 +12,7 @@
             }
         }
     </script>
+    <script src="/business-hours-rules.js?v=20261116-1"></script>
     <script>
         if (new URLSearchParams(window.location.search).get('embedded') === '1') {
             document.documentElement.classList.add('embedded-menu');
@@ -2107,6 +2108,7 @@
       })();
     </script>
     <script type="module">
+        const businessHoursRules = window.GelatoBusinessHours;
         // 初始化 LIFF，取得 User ID
         const liff = await new Promise((resolve, reject) => {
             if (window.liff) {
@@ -2735,7 +2737,7 @@
         function buildSlotGrid() {
             const slots = getDaySlots(selectedDate);
             let html = '';
-            if (selectedDate === 'today' && isPickupDayAvailable('today')) {
+            if (selectedDate === 'today' && canTakeImmediatePickup()) {
                 html += `<div class="pickup-slot pickup-immediate ${selectedSlot === 'immediate' ? 'selected' : ''}" data-slot="immediate">⚡ 立即取餐</div>`;
             }
             slots.forEach(({ slot, disabled }) => {
@@ -2770,12 +2772,14 @@
 
         // ★★★ 新增：取得取餐日期字串（絕對日期） ★★★
         function getPickupDateStr(dateType) {
-            const d = new Date();
-            if (dateType === 'tomorrow') d.setDate(d.getDate() + 1);
-            const y = d.getFullYear();
-            const m = String(d.getMonth() + 1).padStart(2, '0');
-            const day = String(d.getDate()).padStart(2, '0');
-            return `${y}/${m}/${day}`;
+            const offset = dateType === 'tomorrow' ? 1 : 0;
+            const dateKey = businessHoursRules?.getTaipeiDateKey(new Date(), offset);
+            if (dateKey) return dateKey.replaceAll('-', '/');
+            const parts = new Intl.DateTimeFormat('en-US', {
+                timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit',
+            }).formatToParts(new Date(Date.now() + offset * 86400000));
+            const value = (type) => parts.find((part) => part.type === type)?.value || '';
+            return `${value('year')}/${value('month')}/${value('day')}`;
         }
 
         function updatePickupDisplay() {
@@ -2853,9 +2857,10 @@
                 pickupError.textContent = '請選擇取餐時間';
                 return;
             }
+            const pickupDate = getPickupDateStr(selectedSlot === 'immediate' ? 'today' : selectedDate);
             pendingPickup = selectedSlot === 'immediate'
-                ? { abs: `${getPickupDateStr('today')} 立即取餐`, rel: '立即取餐' }
-                : { abs: `${getPickupDateStr(selectedDate)} ${selectedSlot}`, rel: `${selectedDate === 'tomorrow' ? '明天' : '今天'} ${selectedSlot}` };
+                ? { abs: `${pickupDate} 立即取餐`, rel: '立即取餐', dateKey: pickupDate.replaceAll('/', '-'), time: 'immediate' }
+                : { abs: `${pickupDate} ${selectedSlot}`, rel: `${selectedDate === 'tomorrow' ? '明天' : '今天'} ${selectedSlot}`, dateKey: pickupDate.replaceAll('/', '-'), time: selectedSlot };
             closePickupModal();
             openPayModal();
         });
@@ -2904,7 +2909,7 @@
             const method = pendingPayMethod;
             closeOrderConfirm();
             showToast(method === 'onsite_linepay' ? '正在建立訂單並準備 LINE Pay，請稍候…' : '正在送出訂單，請稍候…', '⏳');
-            await sendOrderToLine(pendingPickup.abs, pendingPickup.rel, method);
+            await sendOrderToLine(pendingPickup.abs, pendingPickup.rel, method, pendingPickup.dateKey, pendingPickup.time);
             pendingPayMethod = null;
         });
         orderConfirmCancel.addEventListener('click', () => { closeOrderConfirm(); openPayModal(); });
@@ -3420,7 +3425,7 @@
             return lines.join('\n');
         }
 
-        async function sendOrderToLine(pickupAbs, pickupRel, payMethod = 'onsite_cash') {
+        async function sendOrderToLine(pickupAbs, pickupRel, payMethod = 'onsite_cash', pickupDateKey = '', pickupTime = '') {
             if (payMethod === 'onsite_linepay' && !window.liffUserId) {
                 clearOrderSubmitLock();
                 setOrderSubmitting(false);
@@ -3458,14 +3463,16 @@
                 });
 
                 const total = itemsForFirebase.reduce((sum, item) => sum + item.price * item.qty, 0);
-                const pickupDateKey = getPickupDateKey(pickupAbs);
-                const pointCampaign = await getPointCampaignForDate(pickupDateKey);
+                const orderPickupDateKey = pickupDateKey || getPickupDateKey(pickupAbs);
+                const pointCampaign = await getPointCampaignForDate(orderPickupDateKey);
                 const baseRewardPoints = getOrderRewardPoints(itemsForFirebase);
                 const campaignBonusPoints = isDouble11OnlineOrderDate() ? baseRewardPoints : 0;
                 const rewardPoints = POINTS_REWARDS_ENABLED ? baseRewardPoints + campaignBonusPoints : 0;
                 const orderNo = 'WEB-' + Date.now().toString(36).slice(-7).toUpperCase();
                 const orderPayload = {
                     orderNo,
+                    pickupDate: orderPickupDateKey,
+                    pickupTime,
                     channel: 'online',
                     pickupNo: null,
                     pickupNumber: null,
@@ -3740,19 +3747,31 @@
         const SHOP_DEFAULT = { open: true, start: '13:00', end: '20:00' };
         const SHOP_DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
         let shopHours = null;
-        let shopIsOpen = true;
+        let shopHoursLoaded = false;
+        let shopHoursFailed = false;
+        let shopIsOpen = false;
 
         function shopToMin(t) { const [h, m] = String(t).split(':').map(Number); return h * 60 + m; }
+        function hasShopHoursConfig() {
+            return Boolean(shopHours && typeof shopHours === 'object' && SHOP_DAY_KEYS.some(key => shopHours[key] && typeof shopHours[key] === 'object'));
+        }
 
         function getTaipeiClock(offsetDays = 0) {
-            const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Taipei', weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(Date.now() + offsetDays * 86400000));
+            const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(Date.now() + offsetDays * 86400000));
             const pick = (t) => parts.find(p => p.type === t).value;
-            return { key: pick('weekday').toLowerCase().slice(0, 3), mins: Number(pick('hour')) * 60 + Number(pick('minute')) };
+            const dateKey = businessHoursRules
+                ? businessHoursRules.getTaipeiDateKey(new Date(), offsetDays)
+                : `${pick('year')}-${pick('month')}-${pick('day')}`;
+            return { key: pick('weekday').toLowerCase().slice(0, 3), mins: Number(pick('hour')) * 60 + Number(pick('minute')), dateKey };
         }
 
         function getDayHours(dateType) {
-            const key = getTaipeiClock(dateType === 'tomorrow' ? 1 : 0).key;
-            return Object.assign({}, SHOP_DEFAULT, (shopHours && shopHours[key]) || {});
+            const clock = getTaipeiClock(dateType === 'tomorrow' ? 1 : 0);
+            const weekly = Object.assign({}, SHOP_DEFAULT, (shopHours && shopHours[clock.key]) || {});
+            const special = shopHours && shopHours.specialDates && shopHours.specialDates[clock.dateKey];
+            return special && typeof special === 'object'
+                ? Object.assign(weekly, special, { _isSpecial: true, _dateKey: clock.dateKey })
+                : Object.assign(weekly, { _isSpecial: false, _dateKey: clock.dateKey });
         }
 
         // 回傳該天可選時段（含已過時間，標記 disabled）；店休回傳空陣列
@@ -3762,12 +3781,15 @@
         }
 
         function getDaySlots(dateType) {
+            if (!shopHoursLoaded || !hasShopHoursConfig()) return [];
             const mode = getShopMode();
             if (mode === 'off') return [];
             if (mode === 'closed' && dateType === 'today') return [];
             const day = getDayHours(dateType);
-            // 手動「營業中」時，今天即使每週設為店休也開放預約
-            if (mode === 'open' && dateType === 'today') day.open = true;
+            // 明確的特殊店休日優先於手動強制營業，避免假日被誤開取餐。
+            if (day._isSpecial && day.open === false) return [];
+            // 手動「營業中」只覆蓋每週排程；不覆蓋任何已設定的特殊日期。
+            if (mode === 'open' && dateType === 'today' && !day._isSpecial) day.open = true;
             if (!day.open) return [];
             const nowMins = getTaipeiClock().mins;
             const slots = [];
@@ -3782,27 +3804,55 @@
             return getDaySlots(dateType).some(s => !s.disabled);
         }
 
+        function canTakeImmediatePickup() {
+            if (!shopHoursLoaded || !hasShopHoursConfig()) return false;
+            const mode = getShopMode();
+            if (mode === 'off' || mode === 'closed') return false;
+            const day = getDayHours('today');
+            if (day._isSpecial && day.open === false) return false;
+            const forcedOpen = mode === 'open' && !day._isSpecial;
+            if (!day.open && !forcedOpen) return false;
+            const minutes = getTaipeiClock().mins;
+            return minutes >= shopToMin(day.start) && minutes < shopToMin(day.end);
+        }
+
         function updatePickupTabs() {
             pickupDateTabs.forEach(tab => {
                 const type = tab.dataset.date;
-                const ok = isPickupDayAvailable(type);
                 const base = type === 'today' ? '📅 今天' : '📆 明天';
+                if (!shopHoursLoaded || !hasShopHoursConfig()) {
+                    tab.classList.add('disabled');
+                    tab.textContent = `${base}・${shopHoursFailed ? '營業資訊無法同步' : shopHoursLoaded ? '尚未設定營業時間' : '營業時間同步中'}`;
+                    return;
+                }
+                const ok = isPickupDayAvailable(type);
+                const day = getDayHours(type);
+                const mode = getShopMode();
+                const unavailableLabel = mode === 'off' ? '・暫停接單'
+                    : mode === 'closed' && type === 'today' ? '・停止接單'
+                    : !day.open ? (day._isSpecial ? '・臨時店休' : '・店休')
+                    : '・已截止';
                 tab.classList.toggle('disabled', !ok);
-                tab.textContent = ok ? base : `${base}・店休`;
+                tab.textContent = ok ? base : `${base}${unavailableLabel}`;
             });
         }
 
         function getShopStatus() {
-            if (!shopHours) return { isOpen: true, canOrder: true, label: '今日營業中', detail: '' };
+            if (!shopHoursLoaded || !hasShopHoursConfig()) {
+                const label = shopHoursFailed ? '營業資訊無法同步' : shopHoursLoaded ? '尚未設定營業時間' : '營業資訊同步中';
+                const detail = shopHoursFailed ? '目前無法確認店家最新營業設定，暫停線上點餐。' : shopHoursLoaded ? '店家尚未設定營業時間，暫停線上點餐。' : '正在取得 POS 營業設定，暫不受理送單。';
+                return { isOpen: false, canOrder: false, label, detail };
+            }
             const mode = getShopMode();
-            const canOrder = isPickupDayAvailable('today') || isPickupDayAvailable('tomorrow');
-            if (mode === 'off') return { isOpen: false, canOrder: false, label: '店休中', detail: '目前店休中，線上點餐暫停，歡迎先瀏覽口味' };
-            if (mode === 'closed') return { isOpen: false, canOrder, label: '已打烊', detail: canOrder ? '今天已打烊，仍可預約明天取餐' : '今天已打烊，明天不營業，暫停線上點餐' };
             const day = getDayHours('today');
             const mins = getTaipeiClock().mins;
-            const isOpen = mode === 'open' || (day.open && mins >= shopToMin(day.start) && mins < shopToMin(day.end));
-            if (isOpen) return { isOpen, canOrder, label: '今日營業中', detail: mode === 'open' ? '' : `營業時間 ${day.start} – ${day.end}` };
-            const label = !day.open ? '今日店休' : mins < shopToMin(day.start) ? '尚未營業' : '今日已打烊';
+            const forcedOpen = mode === 'open' && !day._isSpecial;
+            const isOpen = !(day._isSpecial && day.open === false) && (forcedOpen || (day.open && mins >= shopToMin(day.start) && mins < shopToMin(day.end)));
+            const canOrder = mode !== 'off' && (isPickupDayAvailable('today') || isPickupDayAvailable('tomorrow'));
+            if (mode === 'off') return { isOpen, canOrder: false, label: isOpen ? '目前營業中' : (day._isSpecial ? '臨時店休' : '目前未營業'), detail: '目前暫停線上點餐；店面營業狀態依 POS 營業時間及特殊日期顯示。' };
+            if (mode === 'closed') return { isOpen, canOrder, label: isOpen ? '目前營業中' : (day._isSpecial && !day.open ? '臨時店休' : '目前未營業'), detail: canOrder ? '今日線上接單已截止，仍可預約其他可營業日期。' : '今日已停止接單，且今天與明天都沒有可預約時段。' };
+            if (isOpen) return { isOpen, canOrder, label: day._isSpecial ? '特別營業中' : '今日營業中', detail: forcedOpen ? '' : `營業時間 ${day.start} – ${day.end}` };
+            const label = day._isSpecial && !day.open ? '臨時店休' : !day.open ? '今日店休' : mins < shopToMin(day.start) ? '尚未營業' : '今日已打烊';
             if (!canOrder) return { isOpen, canOrder, label, detail: '今天與明天都不營業，暫停線上點餐' };
             return { isOpen, canOrder, label, detail: `目前未營業，仍可預約${isPickupDayAvailable('today') ? '今天' : '明天'}取餐` };
         }
@@ -3819,8 +3869,18 @@
             if (!st.canOrder) { closePickupModal(); closePayModal(); }
         }
 
-        onValue(ref(db, 'businessHours'), (snap) => { shopHours = snap.val(); applyShopStatus(); },
-            (err) => { console.warn('營業時間讀取失敗，暫不鎖定下單:', err); });
+        onValue(ref(db, 'businessHours'), (snap) => {
+            shopHours = snap.val();
+            shopHoursLoaded = true;
+            shopHoursFailed = false;
+            applyShopStatus();
+        }, (err) => {
+            console.warn('營業時間讀取失敗，已暫停下單:', err);
+            shopHours = null;
+            shopHoursLoaded = false;
+            shopHoursFailed = true;
+            applyShopStatus();
+        });
         setInterval(applyShopStatus, 30000);
 
         // ---- 初始化 ----
