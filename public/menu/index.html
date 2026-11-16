@@ -3863,7 +3863,9 @@
             document.getElementById('shopStatusBar').classList.toggle('closed', !st.isOpen);
             document.getElementById('shopStatusLabel').textContent = st.label;
             document.getElementById('shopStatusDetail').textContent = st.detail;
-            document.getElementById('orderLockNote').classList.toggle('show', !st.canOrder);
+            const orderLockNote = document.getElementById('orderLockNote');
+            orderLockNote.textContent = st.canOrder ? '' : `${st.detail} 仍可瀏覽今日口味。`;
+            orderLockNote.classList.toggle('show', !st.canOrder);
             ['orderPanel', 'summarySection'].forEach(id => document.getElementById(id).classList.toggle('order-locked', !st.canOrder));
             updatePickupTabs();
             if (!st.canOrder) { closePickupModal(); closePayModal(); }

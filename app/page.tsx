@@ -758,6 +758,10 @@ export default function Home() {
   };
 
   const openMenu = () => {
+    if (!shopStatus.canOrder) {
+      window.alert(shopStatus.detail || '今天與明天皆無可預約時段，暫停線上點餐。');
+      return;
+    }
     window.location.replace('/menu/index.html');
   };
 

@@ -18,6 +18,8 @@ export type ShopStatus = {
   canOrder: boolean;
   label: string;
   detail: string;
+  todayIsSpecialClosed?: boolean;
+  tomorrowIsSpecialClosed?: boolean;
 };
 
 const DEFAULT_HOURS = { open: true, start: '13:00', end: '20:00' };
@@ -129,6 +131,7 @@ export function getShopStatus(hours: BusinessHours | null, now = new Date()): Sh
   const tomorrowKey = addCalendarDays(todayParts.dateKey, 1);
   const tomorrow = dayHours(hours, tomorrowKey);
   const todaySpecialClosed = today.isSpecial && today.open === false;
+  const tomorrowSpecialClosed = tomorrow.isSpecial && tomorrow.open === false;
   const isOpen = !todaySpecialClosed && isOpenNow(today, todayParts.minutes);
 
   const todayCanOrder = todaySpecialClosed || mode === 'off' || mode === 'closed'
@@ -152,7 +155,18 @@ export function getShopStatus(hours: BusinessHours | null, now = new Date()): Sh
     : mode === 'closed'
       ? '今日線上接單已截止；店面營業狀態仍依營業時間顯示。'
       : '';
-  const detail = [today.isSpecial && today.reason ? today.reason : hoursDetail, orderDetail].filter(Boolean).join(' ');
+  const hasTodayOrder = todayCanOrder;
+  const hasTomorrowOrder = Boolean(tomorrow.open);
+  let availabilityDetail = '';
+  if (!hasTodayOrder && !hasTomorrowOrder) {
+    if (todaySpecialClosed && tomorrowSpecialClosed) availabilityDetail = '今天與明天皆為臨時店休，暫停線上點餐。';
+    else if (todaySpecialClosed) availabilityDetail = '今天為臨時店休，明天也沒有可預約時段，暫停線上點餐。';
+    else if (tomorrowSpecialClosed) availabilityDetail = '今天已無可預約時段，明天為臨時店休，暫停線上點餐。';
+    else availabilityDetail = '今天與明天都沒有可預約時段，暫停線上點餐。';
+  } else if (todaySpecialClosed) {
+    availabilityDetail = tomorrowSpecialClosed ? '今天與明天皆為臨時店休，暫停線上點餐。' : '今天為臨時店休，可改預約明天營業時段。';
+  }
+  const detail = [today.isSpecial && today.reason ? today.reason : hoursDetail, availabilityDetail, orderDetail].filter(Boolean).join(' ');
 
-  return { isOpen, canOrder, label, detail };
+  return { isOpen, canOrder, label, detail, todayIsSpecialClosed: todaySpecialClosed, tomorrowIsSpecialClosed: tomorrowSpecialClosed };
 }
