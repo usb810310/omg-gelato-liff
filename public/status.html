@@ -95,6 +95,13 @@
     .payment-card.compact { padding: 12px 14px; border-radius: 15px; font-size: 11px; }
     .payment-card.compact .payment-methods span { padding: 6px 8px; font-size: 9px; }
     .error-card { margin-top: 12px; border-color: rgba(242,155,125,.35); color: #ffd2c3; font-size: 11px; line-height: 1.5; }
+    .status-panel { overflow: hidden; padding: 4px 19px 15px; border: 1px solid rgba(242,155,125,.2); border-radius: 24px; background: linear-gradient(145deg, rgba(73,48,78,.92), rgba(55,49,77,.96)); box-shadow: var(--shadow), inset 0 1px 0 rgba(255,255,255,.1); }
+    .status-panel .today-card { min-height: 218px; padding: 18px 2px 20px; border: 0; border-bottom: 1px solid rgba(255,255,255,.1); border-radius: 0; background: transparent; box-shadow: none; }
+    .status-panel .announcement-card { margin-top: 0; padding: 15px 2px; border: 0; border-bottom: 1px solid rgba(255,255,255,.1); border-radius: 0; background: transparent; box-shadow: none; }
+    .status-panel .announcement-card.urgent { background: transparent; }
+    .status-panel .payment-card { padding: 10px 2px 2px; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+    .status-panel .store-heading { margin: 12px 2px 0; }
+    .status-panel .error-card { margin: 8px 2px 0; padding: 9px 0 0; border: 0; border-top: 1px solid rgba(242,155,125,.28); background: transparent; box-shadow: none; }
     .refresh { display: block; width: 100%; margin-top: 17px; padding: 13px; border: 1px solid var(--line); border-radius: 999px; color: var(--ink); background: rgba(255,255,255,.08); font-size: 12px; font-weight: 850; cursor: pointer; }
     .footer-note { margin: 18px 8px 0; color: var(--muted); font-size: 10px; line-height: 1.6; text-align: center; }
     @media (max-width: 360px) {
@@ -115,6 +122,7 @@
       <div class="sync-badge" id="syncBadge"><i></i><span id="syncText">正在同步</span></div>
     </header>
 
+    <section class="status-panel" aria-label="營業狀況與門市資訊">
     <section class="today-card loading" id="todayCard" aria-live="polite">
       <div class="today-content">
         <p class="eyebrow" id="todayEyebrow">TODAY · STORE HOURS</p>
@@ -154,6 +162,7 @@
     <div class="section-heading store-heading"><h2>門市資訊</h2><span>付款方式</span></div>
     <section class="payment-card compact" aria-label="門市資訊"><p>門市接受現金與 LINE Pay 付款。</p><div class="payment-methods"><span>現金</span><span>LINE Pay</span></div></section>
     <p class="error-card" id="errorText" role="status" hidden></p>
+    </section>
     <button class="refresh" type="button" id="refreshButton">重新整理營業資訊</button>
     <p class="footer-note">營業時間依台灣時間及店家 POS 設定更新；若遇臨時調整，請以置頂公告為準。</p>
   </main>
