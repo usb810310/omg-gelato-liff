@@ -1804,7 +1804,32 @@
             .container-options { gap: 7px; }
             .container-option { min-height: 132px; padding-left: 4px; padding-right: 4px; }
         }
-</style>
+
+        /* LIFF channel redesign v1 — 點餐：選擇 → 組合 → 送出 */
+        body { background: #f7f2ec; color: #30251f; }
+        .control-bar { border-color: rgba(234,223,213,.92); background: rgba(255,253,249,.94); box-shadow: 0 6px 18px rgba(83,59,42,.08); }
+        .brand { padding-bottom: 12px; }
+        .brand h1 { color: #30251f; letter-spacing: -.06em; }
+        .brand .tagline { color: #9b6a4d; }
+        .shop-status-bar { border-color: #eadfd5; border-radius: 18px; background: linear-gradient(135deg,#fffdf9,#f5eee5); box-shadow: 0 7px 18px rgba(83,59,42,.055); }
+        .shop-status-bar.closed { border-color: #ead6cf; background: linear-gradient(135deg,#fffaf7,#f8ece8); }
+        .flow-step-label { color: #8b7c71; }
+        .flow-step-label.is-current { color: #b87550; }
+        .order-panel, .today-section, .summary-section { border-color: #eadfd5; border-radius: 22px; background: #fffdf9; box-shadow: 0 9px 22px rgba(83,59,42,.055); }
+        .container-options { gap: 10px; }
+        .container-option { min-height: 148px; border-color: #eadfd5; border-radius: 18px; background: #fffdf9; box-shadow: 0 5px 14px rgba(83,59,42,.045); }
+        .container-option.active { border-color: #c97958; background: linear-gradient(145deg,#fff8ef,#f8e6d7); box-shadow: 0 9px 20px rgba(201,104,81,.14); }
+        .container-option strong { color: #b87550; }
+        .today-card { border-color: #eadfd5; border-radius: 17px; background: #fffdf9; box-shadow: 0 5px 14px rgba(83,59,42,.045); }
+        .today-card:hover:not(.sold-out), .today-card.taste-focus { border-color: #c97958; box-shadow: 0 10px 20px rgba(113,83,55,.12); }
+        .today-card.sold-out { filter: grayscale(.55); opacity: .64; }
+        .summary-section { background: linear-gradient(145deg,#fffdf9,#f7f0e8); }
+        .summary-actions .action-btn.primary { background: #30251f; }
+        .app-dock { border-color: rgba(234,223,213,.95); background: rgba(255,253,249,.94); }
+        .app-dock a.active { color: #b87550; background: #fff0e5; }
+        .app-dock a.dock-order.active { background: linear-gradient(145deg,#e49a73,#c96b53); }
+        @media (prefers-reduced-motion: reduce) { .container-option, .today-card { transition: none; } }
+    </style>
 </head>
 <body>
     <div id="floatingToast" class="floating-toast"><span class="icon">🍨</span><span id="toastMessage">訊息</span></div>

@@ -629,3 +629,45 @@
 @keyframes memberDialogRise { from { opacity:0; transform:translateY(12px) scale(.985); } to { opacity:1; transform:translateY(0) scale(1); } }
 @media (max-width:480px) { .memberDialogOverlay { align-items:end; padding:10px 10px max(10px,env(safe-area-inset-bottom)); }.memberDialog { max-height:min(88dvh,760px); border-radius:25px; }.memberDialogBody { padding:16px; } }
 @media (prefers-reduced-motion:reduce) { .memberDialogOverlay,.memberDialog { animation:none; } }
+
+
+/* LIFF channel redesign v1 — 主 Shell：今天要做什麼／訂單追蹤 */
+.appShell {
+  --channel-bg: #f7f2ec;
+  --channel-paper: #fffdf9;
+  --channel-ink: #30251f;
+  --channel-muted: #8b7c71;
+  --channel-line: #eadfd5;
+  background: var(--channel-bg);
+  color: var(--channel-ink);
+}
+.topbar { border-bottom: 1px solid rgba(234,223,213,.8); background: rgba(247,242,236,.92); backdrop-filter: blur(18px); }
+.pageEyebrow { color: #a36d4f; letter-spacing: .16em; }
+.pageTitle { color: var(--channel-ink); }
+.content { padding-top: 14px; }
+.appHero { min-height: 300px; border: 1px solid #ead8c9; border-radius: 26px; background: linear-gradient(145deg, #fffaf1 0%, #f4e2ce 58%, #e5c09e 100%); box-shadow: 0 14px 30px rgba(110,75,46,.10); }
+.appHeroGlow { opacity: .42; }
+.heroTag { color: #9b6a4d; background: rgba(255,253,249,.72); border-color: rgba(163,109,79,.18); }
+.appHeroKicker { color: var(--channel-ink); }
+.appHeroDescription { color: #705f54; }
+.homeWelcomeCard, .homeFeatureCard { border-color: var(--channel-line); background: var(--channel-paper); box-shadow: 0 8px 20px rgba(83,59,42,.055); }
+.homeSectionLabel h2 { color: var(--channel-ink); }
+.homeActionGrid { gap: 10px; }
+.homeActionCard { min-height: 108px; border: 1px solid var(--channel-line); border-radius: 18px; background: var(--channel-paper); box-shadow: 0 7px 16px rgba(83,59,42,.045); }
+.homeActionCard:hover { border-color: #d5b69c; box-shadow: 0 10px 22px rgba(83,59,42,.08); }
+.homeActionCard b { color: var(--channel-ink); }
+.homeActionCard small { color: var(--channel-muted); }
+.actionCardIcon { color: #b87550; background: #f6e7d8; }
+.homeActionCard strong { color: #b87550; }
+.pageView, .memberPageView { color: var(--channel-ink); }
+.sectionHeading h1, .memberHero h1, .ordersHero h1 { color: var(--channel-ink); }
+.orderHistoryTabs { border-color: var(--channel-line); background: #f0e9e1; }
+.orderHistoryTabActive { background: var(--channel-ink); }
+.orderListItem { border-color: var(--channel-line); background: var(--channel-paper); }
+.orderListItem::before { background: #d88b62; }
+.statusPanel { border-color: var(--channel-line); background: linear-gradient(145deg,#fffdf9,#f5eee5); }
+.statusPanelReady { border-color: #d4e5cf; background: linear-gradient(145deg,#fbfff8,#edf5e8); }
+.appDock { border-color: rgba(234,223,213,.95); background: rgba(255,253,249,.92); }
+.appDock .dockActive { color: #b87550; background: #fff0e5; }
+.appDock .dockOrderActive { background: linear-gradient(145deg,#e49a73,#c96b53); }
+@media (max-width: 380px) { .appHero { min-height: 285px; } .homeActionCard { min-height: 104px; } }

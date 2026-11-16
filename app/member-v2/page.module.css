@@ -11,3 +11,26 @@
 @media (min-width:700px) { body:has(.shell) { background:#eee9df; }.shell { max-width:520px; margin:0 auto; box-shadow:0 0 45px rgba(53,42,31,.08); } }
 
 .floatingLogin { position:fixed; z-index:12; left:50%; bottom:84px; transform:translateX(-50%); display:flex; align-items:center; justify-content:center; gap:8px; width:min(calc(100% - 36px),390px); min-height:48px; border:0; border-radius:26px; color:#fff; background:#06c755; box-shadow:0 9px 24px rgba(6,199,85,.28); font:inherit; font-size:13px; font-weight:800; cursor:pointer; }.floatingLogin span { padding:4px 6px; border-radius:5px; color:#06c755; background:#fff; font-size:9px; }.floatingLogin b { font-size:17px; }
+
+
+/* LIFF channel redesign v1 — 會員中心：線上點數帳戶／獎勵錢包 */
+.shell { --member-ink:#30251f; --member-muted:#8b7c71; --member-paper:#fffdf9; --member-line:#eadfd5; color:var(--member-ink); background:#f7f2ec; }
+.topbar { border-bottom-color:rgba(234,223,213,.86); background:rgba(247,242,236,.94); backdrop-filter:blur(18px); }
+.topbar strong { color:var(--member-ink); }
+.coverHero { height:220px; background:linear-gradient(145deg,#45352e 0%,#755442 55%,#c18461 100%); }
+.coverHero:before { color:rgba(255,244,232,.09); }
+.coverTitle h1 { font-size:30px; }
+.stampCard { margin-top:-24px !important; border:1px solid rgba(255,255,255,.12); background:linear-gradient(145deg,#4a3931,#2f2521); box-shadow:0 16px 32px rgba(50,35,25,.2); }
+.stampReward > span { background:#d78b61; }
+.rewardTabs { margin-top:20px; border-bottom-color:var(--member-line); background:transparent; }
+.rewardTabs button { background:transparent; color:#aa9d93; }
+.rewardTabs .rewardTabActive { border-bottom-color:#b87550; color:#30251f; }
+.rewardPanel,.infoPanel,.howTo { background:transparent; }
+.reward,.voucher,.activity,.order { border:1px solid var(--member-line); background:var(--member-paper); box-shadow:0 6px 15px rgba(83,59,42,.045); }
+.reward button { background:#b87550; }
+.voucherMark { background:#b87550; }
+.howTo { border-top-color:var(--member-line); }
+.howTo button { background:#30251f; }
+.bottomNav { border-color:rgba(234,223,213,.95); background:rgba(255,253,249,.94); }
+.bottomNav .activeNav { color:#b87550; background:#fff0e5; }
+.floatingLogin { background:#30251f; box-shadow:0 9px 24px rgba(48,37,31,.22); }
