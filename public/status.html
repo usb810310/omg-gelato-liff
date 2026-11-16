@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#29263f" />
+  <meta name="theme-color" content="#f7f2ec" />
   <meta name="description" content="查看 OMG! Gelato 今日營業狀態與臨時店休公告。" />
   <title>OMG! Gelato｜營業狀態</title>
   <script type="importmap">
@@ -16,103 +16,61 @@
   </script>
   <script src="/business-hours-rules.js?v=20261116-1"></script>
   <style>
+
     :root {
-      color-scheme: dark;
-      --ink: #fffaf2;
-      --cream: #29263f;
-      --paper: #37314d;
-      --paper-light: #423a59;
-      --muted: #b9aeb8;
-      --line: rgba(255, 255, 255, .12);
-      --lime: #d9eea7;
-      --coral: #f29b7d;
-      --green: #a8d48d;
-      --amber: #f3ce84;
-      --shadow: 0 18px 44px rgba(0, 0, 0, .25);
+      color-scheme: light;
+      --ink: #2d241f;
+      --cream: #f7f2ec;
+      --paper: #fffdf9;
+      --muted: #8a7b70;
+      --line: #eadfd5;
+      --lime: #6c8751;
+      --coral: #b85f4f;
+      --green: #39734a;
+      --amber: #a66f1d;
+      --shadow: 0 10px 26px rgba(78, 54, 36, .08);
     }
     * { box-sizing: border-box; }
-    html, body { margin: 0; min-height: 100%; background: radial-gradient(circle at 50% -12%, #574263 0, var(--cream) 44%); color: var(--ink); }
+    html, body { margin: 0; min-height: 100%; background: var(--cream); color: var(--ink); }
     body { padding: max(18px, env(safe-area-inset-top)) 16px max(28px, env(safe-area-inset-bottom)); font-family: -apple-system, BlinkMacSystemFont, "Noto Sans TC", "PingFang TC", sans-serif; }
     button { font: inherit; }
     [hidden] { display: none !important; }
     .page { width: min(100%, 480px); margin: 0 auto; }
-    .brand-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 2px 2px 16px; }
-    .brand-name { margin: 0; color: var(--lime); font-size: 11px; font-weight: 900; letter-spacing: .16em; }
-    .page-title { margin: 4px 0 0; color: var(--ink); font-size: 22px; line-height: 1.15; letter-spacing: -.04em; }
-    .sync-badge { display: inline-flex; align-items: center; gap: 7px; flex: 0 0 auto; padding: 8px 10px; border: 1px solid var(--line); border-radius: 999px; color: #ded4dc; background: rgba(255,255,255,.06); font-size: 10px; font-weight: 800; }
+    .brand-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 2px 2px 14px; }
+    .brand-name { margin: 0; color: #a36d4f; font-size: 10px; font-weight: 900; letter-spacing: .16em; }
+    .page-title { margin: 4px 0 0; color: var(--ink); font-size: 24px; line-height: 1.12; letter-spacing: -.05em; }
+    .sync-badge { display: inline-flex; align-items: center; gap: 7px; flex: 0 0 auto; padding: 7px 10px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); background: rgba(255,255,255,.72); font-size: 10px; font-weight: 800; }
     .sync-badge i { width: 7px; height: 7px; border-radius: 50%; background: var(--amber); }
-    .sync-badge.online i { background: var(--green); box-shadow: 0 0 0 4px rgba(168,212,141,.12); }
+    .sync-badge.online i { background: #4fa563; box-shadow: 0 0 0 4px rgba(79,165,99,.12); }
     .sync-badge.offline i { background: var(--coral); }
-
-    .today-card { position: relative; overflow: hidden; min-height: 230px; padding: 22px 21px 20px; border: 1px solid rgba(242,155,125,.24); border-radius: 24px; background: linear-gradient(145deg, #49304e 0%, #3d304e 72%); box-shadow: var(--shadow), inset 0 1px 0 rgba(255,255,255,.12); transition: border-color .2s ease, background-color .2s ease, opacity .2s ease; }
-    .today-card::after { content: ""; position: absolute; z-index: 0; right: -66px; top: -80px; width: 220px; height: 220px; border-radius: 50%; background: rgba(242,155,125,.17); box-shadow: 0 0 0 28px rgba(255,255,255,.025), 0 0 0 58px rgba(255,255,255,.02); pointer-events: none; }
-    .today-card.closed { border-color: rgba(242,155,125,.38); background: linear-gradient(145deg, #4e3349 0%, #382d49 76%); }
-    .today-card.open { border-color: rgba(168,212,141,.35); }
+    .status-panel { padding: 0; border: 0; background: transparent; box-shadow: none; }
+    .today-card { position: relative; overflow: hidden; min-height: 0; padding: 22px 20px 20px; border: 1px solid var(--line); border-left: 5px solid var(--green); border-radius: 20px; background: var(--paper); box-shadow: var(--shadow); }
+    .today-card.closed { border-left-color: var(--coral); background: #fffaf7; }
+    .today-card.loading { border-left-color: var(--amber); }
     .today-content { position: relative; z-index: 1; }
-    .eyebrow { margin: 0 0 10px; color: var(--lime); font-size: 10px; font-weight: 900; letter-spacing: .18em; }
-    .today-date { margin: 0; color: rgba(255,250,242,.7); font-size: 12px; font-weight: 700; }
-    .today-title { max-width: 330px; margin: 8px 0 7px; color: var(--ink); font-size: clamp(30px, 9vw, 40px); font-weight: 900; line-height: 1.05; letter-spacing: -.07em; }
-    .today-detail { max-width: 345px; margin: 0; color: rgba(255,250,242,.78); font-size: 13px; line-height: 1.6; white-space: pre-wrap; }
-    .hours-pill { display: inline-flex; align-items: center; gap: 8px; margin-top: 15px; padding: 9px 12px; border: 1px solid rgba(255,255,255,.17); border-radius: 999px; color: var(--ink); background: rgba(255,255,255,.08); font-size: 11px; font-weight: 800; }
+    .eyebrow { margin: 0 0 9px; color: var(--muted); font-size: 10px; font-weight: 900; letter-spacing: .14em; }
+    .today-date { margin: 0; color: var(--muted); font-size: 12px; font-weight: 700; }
+    .today-title { max-width: 360px; margin: 7px 0 8px; color: var(--ink); font-size: clamp(28px, 8vw, 38px); font-weight: 900; line-height: 1.08; letter-spacing: -.07em; }
+    .today-detail { max-width: 380px; margin: 0; color: #695b51; font-size: 13px; line-height: 1.55; white-space: pre-wrap; }
+    .hours-pill { display: inline-flex; align-items: center; gap: 8px; margin-top: 15px; padding: 8px 11px; border: 1px solid var(--line); border-radius: 999px; color: #594b41; background: #faf5ef; font-size: 11px; font-weight: 800; }
     .hours-pill i { width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
     .today-card.closed .hours-pill i { background: var(--coral); }
     .today-card.loading .hours-pill i { background: var(--amber); }
-
-    .section-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 22px 3px 9px; }
-    .section-heading h2 { margin: 0; color: #f2e7ec; font-size: 15px; letter-spacing: -.03em; }
-    .section-heading span { color: var(--muted); font-size: 10px; }
-    .day-card, .next-open-card, .announcement-card, .order-note, .error-card, .payment-card { padding: 16px; border: 1px solid var(--line); border-radius: 18px; background: linear-gradient(145deg, var(--paper-light), var(--paper)); box-shadow: 0 8px 22px rgba(0,0,0,.17), inset 0 1px 0 rgba(255,255,255,.05); transition: border-color .2s ease, background-color .2s ease, opacity .2s ease; }
-    .day-card { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 12px; }
-    .day-name { margin: 0 0 5px; color: var(--muted); font-size: 10px; font-weight: 850; letter-spacing: .1em; }
-    .day-label { margin: 0; color: var(--ink); font-size: 18px; font-weight: 900; letter-spacing: -.04em; }
-    .day-detail { margin: 5px 0 0; color: #c9bdc8; font-size: 11px; line-height: 1.5; white-space: pre-wrap; }
-    .status-chip { min-width: 76px; padding: 8px 10px; border-radius: 999px; color: #27301f; background: var(--green); text-align: center; font-size: 10px; font-weight: 900; }
-    .status-chip.closed { color: #3b261f; background: #f5ad91; }
-    .status-chip.special { color: #392f22; background: var(--amber); }
-    .status-chip.pending { color: #30283b; background: #c5b2d3; }
-
-    .next-open-card { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-color: rgba(217,238,167,.18); }
-    .next-open-label { margin: 0 0 5px; color: var(--muted); font-size: 10px; font-weight: 850; letter-spacing: .1em; }
-    .next-open-value { margin: 0; color: var(--lime); font-size: 17px; font-weight: 900; line-height: 1.35; }
-    .next-open-note { margin: 4px 0 0; color: #c9bdc8; font-size: 10px; line-height: 1.45; }
-    .next-open-icon { display: grid; place-items: center; flex: 0 0 40px; width: 40px; height: 40px; border-radius: 14px; color: var(--lime); background: rgba(217,238,167,.09); font-size: 19px; }
-
-    .announcement-card { margin-top: 11px; border-color: rgba(242,155,125,.27); background: linear-gradient(135deg, #45324f, #39314b); }
-    .announcement-card.urgent { border-color: rgba(242,155,125,.48); background: linear-gradient(135deg, #53354a, #40304d); }
-    .announcement-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
-    .announcement-kicker { color: #f5c5ad; font-size: 9px; font-weight: 900; letter-spacing: .14em; }
-    .announcement-badge { padding: 5px 8px; border-radius: 999px; color: var(--lime); background: rgba(217,238,167,.1); font-size: 9px; font-weight: 850; }
-    .announcement-card h2 { margin: 0; color: var(--ink); font-size: 15px; line-height: 1.4; }
-    .announcement-card p { margin: 6px 0 0; color: rgba(255,250,242,.72); font-size: 11px; line-height: 1.6; white-space: pre-wrap; }
-    .sync-warning { margin-top: 10px !important; padding-top: 9px; border-top: 1px solid rgba(255,255,255,.1); color: #f4d1a1 !important; font-size: 10px !important; }
-    .order-note { margin-top: 12px; color: #d8ccd7; font-size: 10px; line-height: 1.55; }
-    .payment-card { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: #d8ccd7; font-size: 12px; }
-    .payment-card p { margin: 0; line-height: 1.5; }
-    .payment-methods { display: flex; flex: 0 0 auto; gap: 6px; }
-    .payment-methods span { padding: 7px 9px; border: 1px solid var(--line); border-radius: 999px; color: var(--ink); background: rgba(255,255,255,.06); font-size: 10px; font-weight: 850; white-space: nowrap; }
-    .compact-hidden { display: none; }
-    .store-heading { margin-top: 16px; margin-bottom: 7px; }
-    .payment-card.compact { padding: 12px 14px; border-radius: 15px; font-size: 11px; }
-    .payment-card.compact .payment-methods span { padding: 6px 8px; font-size: 9px; }
-    .error-card { margin-top: 12px; border-color: rgba(242,155,125,.35); color: #ffd2c3; font-size: 11px; line-height: 1.5; }
-    .status-panel { overflow: hidden; padding: 4px 19px 15px; border: 1px solid rgba(242,155,125,.2); border-radius: 24px; background: linear-gradient(145deg, rgba(73,48,78,.92), rgba(55,49,77,.96)); box-shadow: var(--shadow), inset 0 1px 0 rgba(255,255,255,.1); }
-    .status-panel .today-card { min-height: 218px; padding: 18px 2px 20px; border: 0; border-bottom: 1px solid rgba(255,255,255,.1); border-radius: 0; background: transparent; box-shadow: none; }
-    .status-panel .announcement-card { margin-top: 0; padding: 15px 2px; border: 0; border-bottom: 1px solid rgba(255,255,255,.1); border-radius: 0; background: transparent; box-shadow: none; }
-    .status-panel .announcement-card.urgent { background: transparent; }
-    .status-panel .payment-card { padding: 10px 2px 2px; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
-    .status-panel .store-heading { margin: 12px 2px 0; }
-    .status-panel .error-card { margin: 8px 2px 0; padding: 9px 0 0; border: 0; border-top: 1px solid rgba(242,155,125,.28); background: transparent; box-shadow: none; }
-    .refresh { display: block; width: 100%; margin-top: 17px; padding: 13px; border: 1px solid var(--line); border-radius: 999px; color: var(--ink); background: rgba(255,255,255,.08); font-size: 12px; font-weight: 850; cursor: pointer; }
-    .footer-note { margin: 18px 8px 0; color: var(--muted); font-size: 10px; line-height: 1.6; text-align: center; }
-    @media (max-width: 360px) {
-      body { padding-right: 12px; padding-left: 12px; }
-      .today-card { min-height: 218px; padding: 19px 17px; }
-      .day-card { padding: 14px; }
-      .day-label { font-size: 16px; }
-      .status-chip { min-width: 68px; padding-right: 8px; padding-left: 8px; }
-      .payment-card { align-items: flex-start; flex-direction: column; }
-    }
-    @media (prefers-reduced-motion: reduce) { .today-card, .day-card, .next-open-card, .announcement-card, .order-note, .error-card, .payment-card { transition: none; } }
+    .announcement-card { margin-top: 12px; padding: 15px 16px; border: 1px solid var(--line); border-radius: 18px; background: var(--paper); box-shadow: 0 7px 18px rgba(78,54,36,.05); }
+    .announcement-card.urgent { border-color: #efcfc4; background: #fff8f4; }
+    .announcement-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 7px; }
+    .announcement-kicker { color: var(--coral); font-size: 9px; font-weight: 900; letter-spacing: .12em; }
+    .announcement-badge { padding: 5px 8px; border-radius: 999px; color: #8b5a28; background: #fff0d7; font-size: 9px; font-weight: 850; }
+    .announcement-card h2 { margin: 0; color: var(--ink); font-size: 16px; line-height: 1.4; }
+    .announcement-card p { margin: 6px 0 0; color: #705f54; font-size: 12px; line-height: 1.6; white-space: pre-wrap; }
+    .sync-warning { margin-top: 9px !important; padding-top: 9px; border-top: 1px solid #edd8cf; color: #9a642c !important; font-size: 10px !important; }
+    .compact-hidden, .store-heading, .payment-card { display: none !important; }
+    .error-card { margin-top: 12px; padding: 12px 14px; border: 1px solid #efcfc4; border-radius: 15px; background: #fff8f4; color: #9a5144; font-size: 11px; line-height: 1.5; }
+    .refresh { display: block; width: 100%; margin-top: 15px; padding: 12px; border: 1px solid #dacbbf; border-radius: 999px; color: #6b574a; background: rgba(255,255,255,.65); font-size: 12px; font-weight: 850; cursor: pointer; }
+    .refresh:active { transform: scale(.99); }
+    .footer-note { margin: 15px 8px 0; color: var(--muted); font-size: 10px; line-height: 1.55; text-align: center; }
+    @media (max-width: 360px) { body { padding-right: 12px; padding-left: 12px; } .today-card { padding: 19px 16px; } }
+    @media (prefers-reduced-motion: reduce) { .refresh { transition: none; } }
   </style>
 </head>
 <body>
