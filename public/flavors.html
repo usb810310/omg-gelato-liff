@@ -139,7 +139,7 @@
       $('statusDate').textContent = formatToday(todayKey);
       $('statusLabel').textContent = current.label;
       $('statusDetail').textContent = schedule.isSpecial ? (schedule.reason || current.detail) : current.detail;
-      $('statusTime').textContent = schedule.open ? `營業時間 ${schedule.start} – ${schedule.end}` : (schedule.isSpecial ? '今日特殊店休' : '固定公休');
+      $('statusTime').textContent = schedule.open ? `營業時間 ${schedule.start} – ${schedule.end}` : '今日不營業';
       if (!isClosed && current.kind === 'not-open-yet') status.classList.remove('closed');
     }
 
