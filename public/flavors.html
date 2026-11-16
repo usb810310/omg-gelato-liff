@@ -130,17 +130,41 @@
       }
       const now = new Date();
       const todayKey = rules.getTaipeiDateKey(now);
+      const tomorrowKey = rules.getTaipeiDateKey(now, 1);
       const current = rules.statusForDate(hours, todayKey, now);
+      const tomorrow = rules.statusForDate(hours, tomorrowKey, now);
       const schedule = current.hours || {};
+      const tomorrowSchedule = tomorrow.hours || {};
       const isOpen = current.kind === 'open-now';
-      const isClosed = current.kind.includes('closed') || current.kind === 'weekly-closed' || current.kind === 'special-closed';
+      const tomorrowAvailable = tomorrowSchedule.open === true;
+      const tomorrowText = tomorrowAvailable ? '仍可預約明天取餐' : '明天也沒有可預約時段';
+      let label = current.label;
+      let detail = current.detail;
+      let time = schedule.open ? `營業時間 ${schedule.start} – ${schedule.end}` : (tomorrowAvailable ? `明日營業 ${tomorrowSchedule.start} – ${tomorrowSchedule.end}` : '近期無可預約時段');
+
+      if (current.kind === 'weekly-closed') {
+        label = '今日店休';
+        detail = `目前未營業，${tomorrowText}`;
+      } else if (current.kind === 'special-closed') {
+        label = '臨時店休';
+        detail = `${schedule.reason || '今日臨時店休'}，${tomorrowText}`;
+      } else if (current.kind === 'closed-for-today') {
+        label = '今日已打烊';
+        detail = `目前未營業，${tomorrowText}`;
+      } else if (current.kind === 'not-open-yet') {
+        label = '尚未營業';
+        detail = `目前未營業，今天 ${schedule.start} 開始營業`;
+      } else if (current.kind === 'open-now') {
+        label = schedule.isSpecial ? '特別營業中' : '今日營業中';
+        detail = `目前營業中，營業至 ${schedule.end}`;
+      }
+
       status.classList.remove('loading');
       status.classList.toggle('closed', !isOpen);
       $('statusDate').textContent = formatToday(todayKey);
-      $('statusLabel').textContent = current.label;
-      $('statusDetail').textContent = schedule.isSpecial ? (schedule.reason || current.detail) : current.detail;
-      $('statusTime').textContent = schedule.open ? `營業時間 ${schedule.start} – ${schedule.end}` : '今日不營業';
-      if (!isClosed && current.kind === 'not-open-yet') status.classList.remove('closed');
+      $('statusLabel').textContent = label;
+      $('statusDetail').textContent = detail;
+      $('statusTime').textContent = time;
     }
 
     function renderFlavors(data) {
