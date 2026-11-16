@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#29263f" />
-  <meta name="description" content="查看 OMG! Gelato 今日與明日營業狀態、臨時店休公告及下次營業時間。" />
+  <meta name="description" content="查看 OMG! Gelato 今日營業狀態與臨時店休公告。" />
   <title>OMG! Gelato｜營業狀態</title>
   <script type="importmap">
     {
@@ -90,6 +90,10 @@
     .payment-card p { margin: 0; line-height: 1.5; }
     .payment-methods { display: flex; flex: 0 0 auto; gap: 6px; }
     .payment-methods span { padding: 7px 9px; border: 1px solid var(--line); border-radius: 999px; color: var(--ink); background: rgba(255,255,255,.06); font-size: 10px; font-weight: 850; white-space: nowrap; }
+    .compact-hidden { display: none; }
+    .store-heading { margin-top: 16px; margin-bottom: 7px; }
+    .payment-card.compact { padding: 12px 14px; border-radius: 15px; font-size: 11px; }
+    .payment-card.compact .payment-methods span { padding: 6px 8px; font-size: 9px; }
     .error-card { margin-top: 12px; border-color: rgba(242,155,125,.35); color: #ffd2c3; font-size: 11px; line-height: 1.5; }
     .refresh { display: block; width: 100%; margin-top: 17px; padding: 13px; border: 1px solid var(--line); border-radius: 999px; color: var(--ink); background: rgba(255,255,255,.08); font-size: 12px; font-weight: 850; cursor: pointer; }
     .footer-note { margin: 18px 8px 0; color: var(--muted); font-size: 10px; line-height: 1.6; text-align: center; }
@@ -121,8 +125,8 @@
       </div>
     </section>
 
-    <div class="section-heading"><h2>明日營業</h2><span id="tomorrowDate">—</span></div>
-    <section class="day-card" id="tomorrowCard" aria-live="polite">
+    <div class="section-heading compact-hidden"><h2>明日營業</h2><span id="tomorrowDate">—</span></div>
+    <section class="day-card compact-hidden" id="tomorrowCard" aria-live="polite">
       <div><p class="day-name">TOMORROW</p><h2 class="day-label" id="tomorrowLabel">正在確認</h2><p class="day-detail" id="tomorrowDetail">正在同步明日營業時間。</p></div>
       <span class="status-chip pending" id="tomorrowChip">同步中</span>
     </section>
@@ -140,15 +144,15 @@
       <p id="announcementDetail"></p>
     </section>
 
-    <div class="section-heading"><h2>下次營業</h2><span>依 POS 營業設定</span></div>
-    <section class="next-open-card">
+    <div class="section-heading compact-hidden"><h2>下次營業</h2><span>依 POS 營業設定</span></div>
+    <section class="next-open-card compact-hidden">
       <div><p class="next-open-label">NEXT OPENING</p><p class="next-open-value" id="nextOpenValue">同步中</p><p class="next-open-note" id="nextOpenNote">正在尋找下一個營業日。</p></div>
       <span class="next-open-icon" aria-hidden="true">✦</span>
     </section>
 
     <p class="order-note" id="orderNote" hidden></p>
-    <div class="section-heading"><h2>付款方式</h2><span>門市消費</span></div>
-    <section class="payment-card" aria-label="付款方式"><p>門市接受現金與 LINE Pay 付款。</p><div class="payment-methods"><span>現金</span><span>LINE Pay</span></div></section>
+    <div class="section-heading store-heading"><h2>門市資訊</h2><span>付款方式</span></div>
+    <section class="payment-card compact" aria-label="門市資訊"><p>門市接受現金與 LINE Pay 付款。</p><div class="payment-methods"><span>現金</span><span>LINE Pay</span></div></section>
     <p class="error-card" id="errorText" role="status" hidden></p>
     <button class="refresh" type="button" id="refreshButton">重新整理營業資訊</button>
     <p class="footer-note">營業時間依台灣時間及店家 POS 設定更新；若遇臨時調整，請以置頂公告為準。</p>
