@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#f7f2ec" />
   <title>OMG! Gelato 今日口味</title>
   <script type="importmap">
     {
@@ -12,6 +13,7 @@
       }
     }
   </script>
+  <script src="/business-hours-rules.js?v=20261116-2"></script>
   <style>
 
     :root { --bg:#f7f2ec; --card:#fffdf9; --ink:#30251f; --muted:#8b7c71; --line:#eadfd5; --accent:#a36d4f; --ok-bg:#edf7ee; --ok:#39734a; --closed-bg:#fff2eb; --closed:#9a5a45; --sold-bg:#f1eeeb; --sold:#9a8e85; }
@@ -29,12 +31,18 @@
     .sync-dot { width:7px; height:7px; border-radius:50%; background:#e3af55; }
     .sync-dot.online { background:#4fa563; box-shadow:0 0 0 3px rgba(79,165,99,.12); }
     .sync-dot.offline { background:#d66b59; }
-    .status { display:grid; grid-template-columns:10px minmax(0,1fr); align-items:center; gap:10px; margin-bottom:13px; padding:13px 14px; border:1px solid #dcebdd; border-radius:16px; background:linear-gradient(135deg,#fffdf9,#f3f8f0); color:var(--ok); box-shadow:0 6px 16px rgba(73,48,32,.05); }
-    .status.closed { border-color:#f0d8ca; background:linear-gradient(135deg,#fffaf6,#f8eee9); color:var(--closed); }
-    .status-dot { width:9px; height:9px; border-radius:50%; background:currentColor; }
-    .status > div { display:flex; align-items:baseline; justify-content:space-between; gap:12px; min-width:0; }
-    .status strong { color:var(--ink); font-size:14px; line-height:1.2; }
-    .status small { color:var(--muted); font-size:10px; line-height:1.35; text-align:right; }
+    .status { position: relative; display: block; margin-bottom: 13px; padding: 17px 17px 15px; border: 1px solid #cfe4d2; border-radius: 19px; background: linear-gradient(135deg, #f1fbf1 0%, #e5f3e6 100%); color: var(--ok); box-shadow: 0 9px 22px rgba(73, 117, 71, .10); overflow: hidden; }
+    .status::after { content: ""; position: absolute; width: 118px; height: 118px; right: -35px; top: -46px; border-radius: 50%; background: rgba(79, 165, 99, .11); pointer-events: none; }
+    .status.closed { border-color: #efd4c9; background: linear-gradient(135deg, #fff7f1 0%, #fbe8df 100%); color: var(--closed); box-shadow: 0 9px 22px rgba(163, 91, 67, .09); }
+    .status.closed::after { background: rgba(214, 107, 89, .11); }
+    .status-top { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .status-kicker { display: flex; align-items: center; gap: 7px; color: currentColor; font-size: 10px; font-weight: 900; letter-spacing: .12em; }
+    .status-dot { width: 9px; height: 9px; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 5px rgba(79, 165, 99, .13); }
+    .status.closed .status-dot { box-shadow: 0 0 0 5px rgba(214, 107, 89, .13); }
+    .status-main { position: relative; z-index: 1; margin: 8px 0 3px; color: var(--ink); font-size: 24px; font-weight: 900; line-height: 1.15; letter-spacing: -.06em; }
+    .status-detail { position: relative; z-index: 1; margin: 0; color: var(--muted); font-size: 11px; line-height: 1.45; }
+    .status-time { position: relative; z-index: 1; display: inline-flex; margin-top: 11px; padding: 7px 10px; border: 1px solid rgba(69, 112, 72, .15); border-radius: 999px; color: #47704a; background: rgba(255,255,255,.58); font-size: 10px; font-weight: 800; }
+    .status.closed .status-time { border-color: rgba(154, 90, 69, .16); color: var(--closed); }
     .section { padding:14px 12px 12px; border:1px solid var(--line); border-radius:18px; background:var(--card); box-shadow:0 8px 22px rgba(73,48,32,.06); }
     .section-head { display:flex; align-items:baseline; justify-content:space-between; gap:8px; margin:0 2px 10px; }
     .section-head h2 { margin:0; font-size:15px; letter-spacing:.1px; }
@@ -66,9 +74,11 @@
       <div class="sync"><i class="sync-dot" id="syncDot"></i><span id="syncText">連線中</span></div>
     </header>
 
-    <section class="status" id="shopStatus">
-      <i class="status-dot"></i>
-      <div><strong id="statusLabel">確認營業狀態中…</strong><small id="statusDetail"></small></div>
+    <section class="status" id="shopStatus" aria-live="polite">
+      <div class="status-top"><span class="status-kicker"><i class="status-dot"></i>今日營業狀態</span><span class="sync" id="statusDate">—</span></div>
+      <strong class="status-main" id="statusLabel">確認中…</strong>
+      <p class="status-detail" id="statusDetail">正在同步店家最新營業設定</p>
+      <span class="status-time" id="statusTime">營業時間同步中</span>
     </section>
 
     <section class="section">
@@ -97,21 +107,34 @@
     const $ = (id) => document.getElementById(id);
     const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
     const colors = { '開心果':'#8CB872', '草莓':'#E8837A', '巧克力':'#8D7A6D', '芒果':'#F5C542', '抹茶':'#89B87C', '香草':'#F5E6D3', '咖啡':'#B5957A', '檸檬':'#F5E56B', '覆盆子':'#E8707A', '百香果':'#F5B84D', '藍莓':'#7A8FC9', '芋頭牛奶':'#C9A8D0', '烏龍茶':'#A09080', '紅茶':'#C4B0A0', '黑金芝麻':'#4A3A30' };
-    const defaultHours = { open: true, start: '13:00', end: '20:00' };
-    const dayKey = (date) => new Intl.DateTimeFormat('en-US', { timeZone:'Asia/Taipei', weekday:'short' }).format(date).toLowerCase().slice(0, 3);
-    const minutes = (date) => { const p = new Intl.DateTimeFormat('en-US', { timeZone:'Asia/Taipei', hour:'2-digit', minute:'2-digit', hourCycle:'h23' }).formatToParts(date); return Number(p.find(x => x.type === 'hour')?.value || 0) * 60 + Number(p.find(x => x.type === 'minute')?.value || 0); };
-    const toMinutes = (v) => { const [h, m] = String(v || '0:0').split(':').map(Number); return h * 60 + m; };
-
+    const rules = window.GelatoBusinessHours;
+    const dayNames = { sun:'星期日', mon:'星期一', tue:'星期二', wed:'星期三', thu:'星期四', fri:'星期五', sat:'星期六' };
     function setSync(state, text) { $('syncDot').className = `sync-dot ${state}`; $('syncText').textContent = text; $('updatedAt').textContent = `最後同步：${new Date().toLocaleTimeString('zh-TW', { hour:'2-digit', minute:'2-digit' })}`; }
+    function formatToday(dateKey) {
+      const p = rules.taipeiParts(new Date(`${dateKey}T12:00:00+08:00`));
+      return `${p.month}月${p.day}日 ${dayNames[p.dayKey] || ''}`;
+    }
     function updateStatus(hours) {
       const status = $('shopStatus');
-      if (!hours) { status.classList.remove('closed'); $('statusLabel').textContent = '營業狀態請以店內公告為準'; $('statusDetail').textContent = ''; return; }
-      const mode = hours.shopMode || (hours.shopClosed ? 'off' : 'auto');
-      const today = { ...defaultHours, ...(hours[dayKey(new Date())] || {}) };
-      const open = mode === 'open' || (mode !== 'off' && today.open && minutes(new Date()) >= toMinutes(today.start) && minutes(new Date()) < toMinutes(today.end));
-      status.classList.toggle('closed', !open);
-      $('statusLabel').textContent = open ? '目前營業中' : '目前非營業時間';
-      $('statusDetail').textContent = mode === 'off' ? '店休中，仍可查看今日口味' : `營業時間 ${today.start} – ${today.end}`;
+      if (!rules || !hours) {
+        status.classList.remove('closed');
+        $('statusLabel').textContent = '營業狀態暫時無法確認';
+        $('statusDetail').textContent = '請稍後重新整理查看最新資訊。';
+        $('statusTime').textContent = '等待同步';
+        return;
+      }
+      const now = new Date();
+      const todayKey = rules.getTaipeiDateKey(now);
+      const current = rules.statusForDate(hours, todayKey, now);
+      const schedule = current.hours || {};
+      const isOpen = current.kind === 'open-now';
+      const isClosed = current.kind.includes('closed') || current.kind === 'weekly-closed' || current.kind === 'special-closed';
+      status.classList.toggle('closed', !isOpen);
+      $('statusDate').textContent = formatToday(todayKey);
+      $('statusLabel').textContent = current.label;
+      $('statusDetail').textContent = schedule.isSpecial ? (schedule.reason || current.detail) : current.detail;
+      $('statusTime').textContent = schedule.open ? `營業時間 ${schedule.start} – ${schedule.end}` : (schedule.isSpecial ? '今日特殊店休' : '固定公休');
+      if (!isClosed && current.kind === 'not-open-yet') status.classList.remove('closed');
     }
 
     function renderFlavors(data) {
@@ -125,9 +148,9 @@
     }
 
     onValue(ref(db, 'todayFlavors'), snap => { renderFlavors(snap.val()); setSync('online', '即時同步'); }, () => { $('flavorGrid').innerHTML = '<div class="empty">目前無法同步，請稍後再試</div>'; setSync('offline', '同步中斷'); });
-    onValue(ref(db, 'businessHours'), snap => updateStatus(snap.val()));
+    onValue(ref(db, 'businessHours'), snap => { window.__businessHours = snap.val() || {}; updateStatus(window.__businessHours); }, () => updateStatus(null));
     onValue(ref(db, 'siteConfig'), snap => { const value = snap.val(); if (!value) return; $('brandTitle').textContent = value.brand?.mainTitle || 'OMG! Gelato'; $('brandSubtitle').textContent = '今日口味・快速查看'; });
-    setInterval(() => onValue(ref(db, 'businessHours'), snap => updateStatus(snap.val()), { onlyOnce: true }), 30000);
+    setInterval(() => updateStatus(window.__businessHours || null), 30000);
   </script>
 </body>
 </html>
