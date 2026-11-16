@@ -21,13 +21,12 @@
     html, body { margin:0; min-height:100%; background:var(--bg); color:var(--ink); }
     body { font-family:-apple-system,BlinkMacSystemFont,"Noto Sans TC","PingFang TC",sans-serif; padding:14px 12px 20px; }
     .shell { width:min(100%,420px); margin:0 auto; }
-    .topbar { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px; }
-    .brand { display:flex; align-items:center; gap:9px; min-width:0; }
-    .logo { width:34px; height:34px; object-fit:contain; border-radius:10px; background:#fff; box-shadow:0 3px 12px rgba(79,55,39,.08); }
+    .brand { display:flex; align-items:center; gap:8px; min-width:0; }
+    .logo { width:26px; height:26px; object-fit:contain; border-radius:8px; background:#fff; box-shadow:0 2px 8px rgba(79,55,39,.08); }
     .brand-copy { min-width:0; }
-    .brand-title { margin:0; font-size:16px; line-height:1.1; letter-spacing:.2px; }
-    .brand-subtitle { margin-top:3px; color:var(--muted); font-size:9px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .sync { display:inline-flex; align-items:center; gap:5px; color:var(--muted); font-size:10px; white-space:nowrap; }
+    .brand-title { margin:0; color:var(--ink); font-size:12px; line-height:1.1; letter-spacing:.1px; }
+    .brand-subtitle { margin-top:2px; color:var(--muted); font-size:8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .sync { display:inline-flex; align-items:center; gap:5px; color:var(--muted); font-size:9px; white-space:nowrap; }
     .sync-dot { width:7px; height:7px; border-radius:50%; background:#e3af55; }
     .sync-dot.online { background:#4fa563; box-shadow:0 0 0 3px rgba(79,165,99,.12); }
     .sync-dot.offline { background:#d66b59; }
@@ -35,7 +34,8 @@
     .status::after { content: ""; position: absolute; width: 118px; height: 118px; right: -35px; top: -46px; border-radius: 50%; background: rgba(79, 165, 99, .11); pointer-events: none; }
     .status.closed { border-color: #efd4c9; background: linear-gradient(135deg, #fff7f1 0%, #fbe8df 100%); color: var(--closed); box-shadow: 0 9px 22px rgba(163, 91, 67, .09); }
     .status.closed::after { background: rgba(214, 107, 89, .11); }
-    .status-top { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .status-brand-row { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-bottom: 11px; border-bottom: 1px solid rgba(73, 117, 71, .14); }
+    .status-top { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-top: 12px; }
     .status-kicker { display: flex; align-items: center; gap: 7px; color: currentColor; font-size: 10px; font-weight: 900; letter-spacing: .12em; }
     .status-dot { width: 9px; height: 9px; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 5px rgba(79, 165, 99, .13); }
     .status.closed .status-dot { box-shadow: 0 0 0 5px rgba(214, 107, 89, .13); }
@@ -63,18 +63,17 @@
 </head>
 <body>
   <main class="shell">
-    <header class="topbar">
-      <div class="brand">
-        <img class="logo" src="https://omg-gelato79.pages.dev/logo1.png" alt="OMG! Gelato" onerror="this.style.display='none'" />
-        <div class="brand-copy">
-          <h1 class="brand-title" id="brandTitle">OMG! Gelato</h1>
-          <div class="brand-subtitle" id="brandSubtitle">今日口味・快速查看</div>
-        </div>
-      </div>
-      <div class="sync"><i class="sync-dot" id="syncDot"></i><span id="syncText">連線中</span></div>
-    </header>
-
     <section class="status" id="shopStatus" aria-live="polite">
+      <div class="status-brand-row">
+        <div class="brand">
+          <img class="logo" src="https://omg-gelato79.pages.dev/logo1.png" alt="OMG! Gelato" onerror="this.style.display='none'" />
+          <div class="brand-copy">
+            <h1 class="brand-title" id="brandTitle">OMG! Gelato</h1>
+            <div class="brand-subtitle" id="brandSubtitle">今日口味・快速查看</div>
+          </div>
+        </div>
+        <div class="sync"><i class="sync-dot" id="syncDot"></i><span id="syncText">連線中</span></div>
+      </div>
       <div class="status-top"><span class="status-kicker"><i class="status-dot"></i>今日營業狀態</span><span class="sync" id="statusDate">—</span></div>
       <strong class="status-main" id="statusLabel">確認中…</strong>
       <p class="status-detail" id="statusDetail">正在同步店家最新營業設定</p>
