@@ -34,6 +34,10 @@
     .status::after { content: ""; position: absolute; width: 118px; height: 118px; right: -35px; top: -46px; border-radius: 50%; background: rgba(79, 165, 99, .11); pointer-events: none; }
     .status.closed { border-color: #efd4c9; background: linear-gradient(135deg, #fff7f1 0%, #fbe8df 100%); color: var(--closed); box-shadow: 0 9px 22px rgba(163, 91, 67, .09); }
     .status.closed::after { background: rgba(214, 107, 89, .11); }
+    .status.loading { border-color: #ead9b4; background: linear-gradient(135deg, #fffaf0 0%, #f8efd9 100%); color: #a66f1d; box-shadow: 0 9px 22px rgba(166, 111, 29, .08); }
+    .status.loading::after { background: rgba(227, 175, 85, .13); }
+    .status.loading .status-dot { box-shadow: 0 0 0 5px rgba(227, 175, 85, .14); }
+    .status.loading .status-time { border-color: rgba(166, 111, 29, .16); color: #94651f; }
     .status-brand-row { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-bottom: 11px; border-bottom: 1px solid rgba(73, 117, 71, .14); }
     .status-top { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-top: 12px; }
     .status-kicker { display: flex; align-items: center; gap: 7px; color: currentColor; font-size: 10px; font-weight: 900; letter-spacing: .12em; }
@@ -63,7 +67,7 @@
 </head>
 <body>
   <main class="shell">
-    <section class="status" id="shopStatus" aria-live="polite">
+    <section class="status loading" id="shopStatus" aria-live="polite">
       <div class="status-brand-row">
         <div class="brand">
           <img class="logo" src="https://omg-gelato79.pages.dev/logo1.png" alt="OMG! Gelato" onerror="this.style.display='none'" />
@@ -75,9 +79,9 @@
         <div class="sync"><i class="sync-dot" id="syncDot"></i><span id="syncText">連線中</span></div>
       </div>
       <div class="status-top"><span class="status-kicker"><i class="status-dot"></i>今日營業狀態</span><span class="sync" id="statusDate">—</span></div>
-      <strong class="status-main" id="statusLabel">確認中…</strong>
-      <p class="status-detail" id="statusDetail">正在同步店家最新營業設定</p>
-      <span class="status-time" id="statusTime">營業時間同步中</span>
+      <strong class="status-main" id="statusLabel">正在同步狀態</strong>
+      <p class="status-detail" id="statusDetail">尚未取得 POS 最新營業設定，請稍候。</p>
+      <span class="status-time" id="statusTime">資料同步中</span>
     </section>
 
     <section class="section">
@@ -117,9 +121,11 @@
       const status = $('shopStatus');
       if (!rules || !hours) {
         status.classList.remove('closed');
-        $('statusLabel').textContent = '營業狀態暫時無法確認';
-        $('statusDetail').textContent = '請稍後重新整理查看最新資訊。';
-        $('statusTime').textContent = '等待同步';
+        status.classList.add('loading');
+        $('statusDate').textContent = '同步中';
+        $('statusLabel').textContent = '正在同步狀態';
+        $('statusDetail').textContent = '尚未取得 POS 最新營業設定，請稍候。';
+        $('statusTime').textContent = '資料同步中';
         return;
       }
       const now = new Date();
@@ -128,6 +134,7 @@
       const schedule = current.hours || {};
       const isOpen = current.kind === 'open-now';
       const isClosed = current.kind.includes('closed') || current.kind === 'weekly-closed' || current.kind === 'special-closed';
+      status.classList.remove('loading');
       status.classList.toggle('closed', !isOpen);
       $('statusDate').textContent = formatToday(todayKey);
       $('statusLabel').textContent = current.label;
