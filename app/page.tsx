@@ -80,17 +80,8 @@ function getOrderKey(order: Order) {
   return String(order.orderNo ?? order.id ?? '');
 }
 
-const ORDER_HISTORY_DAYS = 30;
-const ORDER_HISTORY_MS = ORDER_HISTORY_DAYS * 24 * 60 * 60 * 1000;
 const ORDER_POINTS_RECOVERY_COOLDOWN_MS = 5 * 60 * 1000;
 const MEMBER_APP_URL = 'https://omg-gelato-omg-liff.vercel.app/member-center/';
-
-function isRecentOrder(order: Order) {
-  const rawDate = order.time || order.createdAt || order.date;
-  if (!rawDate) return true;
-  const timestamp = new Date(rawDate).getTime();
-  return Number.isNaN(timestamp) || Date.now() - timestamp <= ORDER_HISTORY_MS;
-}
 
 function getPaymentStatus(order: Order) {
   return getPaymentDisplayStatus(order);
@@ -513,7 +504,7 @@ export default function Home() {
         if (!accessToken) return;
         const nextOrders = await readOrders(accessToken);
         if (cancelled) return;
-        setOrders(nextOrders.filter(isRecentOrder));
+        setOrders(nextOrders);
 
         const now = Date.now();
         const recoveryCandidates = nextOrders.filter((order) => {
@@ -552,7 +543,7 @@ export default function Home() {
           }
 
           if (cancelled) return;
-          setOrders((await readOrders(accessToken)).filter(isRecentOrder));
+          setOrders(await readOrders(accessToken));
           try {
             const pointsResponse = await fetch('/api/member/points', {
               method: 'POST',
@@ -684,7 +675,7 @@ export default function Home() {
       const response = await fetch('/api/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accessToken }), cache: 'no-store' });
       const result = await response.json().catch(() => ({}));
       if (!response.ok || !result.success) throw new Error(result.error || '訂單查詢失敗');
-      setOrders((result.orders || []).filter((order: Order) => isRecentOrder(order)));
+      setOrders((result.orders || []) as Order[]);
     } catch (err) {
       console.error(err);
       alert('查詢失敗，請稍後再試');
