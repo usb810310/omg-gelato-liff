@@ -21,7 +21,7 @@
             const state = params.get('liff.state') || params.get('liff_state') || '';
             const normalizedState = state.replace(/\\/g, '').replace(/\/$/, '');
             if (normalizedState !== '/member-center' && normalizedState !== '/member-v2') return;
-            const target = new URL('/member-center/', window.location.origin);
+            const target = new URL('https://liff.line.me/2011536222-27exC5Co');
             params.forEach((value, key) => {
                 if (key !== 'liff.state' && key !== 'liff_state') target.searchParams.set(key, value);
             });

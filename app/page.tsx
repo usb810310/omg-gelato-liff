@@ -83,6 +83,7 @@ function getOrderKey(order: Order) {
 const ORDER_HISTORY_DAYS = 30;
 const ORDER_HISTORY_MS = ORDER_HISTORY_DAYS * 24 * 60 * 60 * 1000;
 const ORDER_POINTS_RECOVERY_COOLDOWN_MS = 5 * 60 * 1000;
+const MEMBER_LIFF_URL = 'https://liff.line.me/2011536222-27exC5Co';
 
 function isRecentOrder(order: Order) {
   const rawDate = order.time || order.createdAt || order.date;
@@ -389,6 +390,10 @@ export default function Home() {
   }, [isSubmittingWish, rewardActionType]);
 
   useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('tab') === 'member') {
+      window.location.replace(MEMBER_LIFF_URL);
+      return;
+    }
     let cancelled = false;
     const initLiff = async () => {
       setStatus('正在初始化...');
