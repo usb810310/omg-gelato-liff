@@ -14,6 +14,7 @@ type Order = { orderNo?: string | number; total?: string | number; time?: string
 type QrState = { dataUrl: string; expiresAt: number; title: string };
 
 type Dialog = { kind: 'memberQr' | 'voucherQr'; voucher?: Voucher } | null;
+type ServiceTab = 'home' | 'menu' | 'orders' | 'flavors' | 'status' | 'member';
 const LIFF_ID = '2011536222-27exC5Co';
 const APP_ORIGIN = 'https://omg-gelato-omg-liff.vercel.app';
 
@@ -45,6 +46,7 @@ export default function MemberV2Page() {
   const [redeeming, setRedeeming] = useState<MemberRewardType | null>(null);
   const [showAllEntries, setShowAllEntries] = useState(false);
   const [now, setNow] = useState(() => Date.now());
+  const [serviceTab, setServiceTab] = useState<ServiceTab>('member');
   const demoMode = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('preview') === '1';
 
   const accessToken = () => liff.getAccessToken() || '';
@@ -53,6 +55,14 @@ export default function MemberV2Page() {
   const vouchers = useMemo(() => Object.values(points.rewardVouchers || {}).sort((a, b) => b.issuedAt - a.issuedAt), [points.rewardVouchers]);
   const activeVouchers = vouchers.filter((voucher) => voucher.status === 'issued');
   const nextReward = [...MEMBER_REWARD_OPTIONS].sort((a, b) => a.pointsCost - b.pointsCost).find((reward) => balance < reward.pointsCost);
+  const serviceSources: Record<Exclude<ServiceTab, 'member'>, string> = {
+    home: `${APP_ORIGIN}/?tab=home&embedded=1`,
+    menu: `${APP_ORIGIN}/menu/index.html?embedded=1`,
+    orders: `${APP_ORIGIN}/?tab=orders&embedded=1`,
+    flavors: `${APP_ORIGIN}/flavors.html?embedded=1`,
+    status: `${APP_ORIGIN}/status.html?embedded=1`,
+  };
+  const serviceTitles: Record<ServiceTab, string> = { home: '今日首頁', menu: '線上點餐', orders: '訂單查看', flavors: '今日口味', status: '營業公告', member: '會員錢包' };
 
   const loadMemberData = async () => {
     const token = accessToken();
@@ -124,9 +134,9 @@ export default function MemberV2Page() {
   }, []);
 
   const login = () => liff.login({ redirectUri: window.location.href });
-  const go = (path: string) => {
-    const target = new URL(path, APP_ORIGIN).toString();
-    window.location.replace(target);
+  const openService = (tab: ServiceTab) => {
+    setServiceTab(tab);
+    setMessage('');
   };
 
   const openMemberQr = async () => {
@@ -167,8 +177,20 @@ export default function MemberV2Page() {
 
   if (loading) return <main className={styles.loading}><div className={styles.loadingMark}>OMG</div><strong>正在同步會員資料</strong><span>請稍候，正在確認你的點數與兌換券…</span></main>;
 
+  if (serviceTab !== 'member') return <main className={styles.shell}>
+    <header className={styles.serviceTopbar}><button type="button" className={styles.iconButton} onClick={() => openService('member')} aria-label="回到會員錢包">‹</button><div><span>OMG! GELATO</span><strong>{serviceTitles[serviceTab]}</strong></div><span className={styles.serviceBadge}>單一 LIFF</span></header>
+    <iframe className={styles.serviceFrame} src={serviceSources[serviceTab]} title={serviceTitles[serviceTab]} />
+    <nav className={styles.bottomNav} aria-label="主要導覽">
+      <button type="button" onClick={() => openService('home')}><span>⌂</span><small>今日</small></button>
+      <button type="button" onClick={() => openService('menu')}><span>✦</span><small>點餐</small></button>
+      <button type="button" onClick={() => openService('orders')}><span>◷</span><small>訂單</small></button>
+      <button type="button" onClick={() => openService('flavors')}><span>●</span><small>口味</small></button>
+      <button type="button" className={styles.activeNav} onClick={() => openService('member')}><span>◒</span><small>會員</small></button>
+    </nav>
+  </main>;
+
   return <main className={styles.shell}>
-    <header className={styles.topbar}><button type="button" className={styles.iconButton} onClick={() => go('/')} aria-label="回到今日首頁">‹</button><div><span>OMG! GELATO</span><strong>會員錢包</strong></div><button type="button" className={styles.iconButton} onClick={() => void refresh()} disabled={syncing} aria-label="重新整理">{syncing ? '…' : '↻'}</button></header>
+    <header className={styles.topbar}><button type="button" className={styles.iconButton} onClick={() => openService('home')} aria-label="回到今日首頁">‹</button><div><span>OMG! GELATO</span><strong>會員錢包</strong></div><button type="button" className={styles.iconButton} onClick={() => void refresh()} disabled={syncing} aria-label="重新整理">{syncing ? '…' : '↻'}</button></header>
 
     {!profile ? <section className={styles.loginState}><div className={styles.loginMark}>L</div><p className={styles.eyebrow}>ON MY GELATO · CLUB</p><h1>登入，打開你的會員錢包</h1><p>登入 LINE 後即可查看點數、兌換券與歷史消費紀錄。</p><button type="button" className={styles.primaryButton} onClick={login}>LINE 登入 <b>↗</b></button>{!insideLine && !demoMode && <small>請從 LINE 官方帳號開啟，可使用完整會員功能。</small>}</section> : <>
       <section className={styles.accountHeader}><div className={styles.avatar}>{profile.pictureUrl ? <img src={profile.pictureUrl} alt="會員頭像" /> : <span>{profile.displayName.slice(0, 1)}</span>}</div><div><p className={styles.eyebrow}>GOOD TO SEE YOU</p><h1>{profile.displayName}</h1><span>會員編號 {profile.memberNo || '建立中…'}</span></div><span className={styles.liveBadge}><i />即時同步</span></section>
@@ -183,13 +205,13 @@ export default function MemberV2Page() {
 
       <section className={styles.section}><div className={styles.sectionHeading}><div><p className={styles.eyebrow}>POINT ACTIVITY</p><h2>點數流水</h2></div><button type="button" className={styles.textButton} onClick={() => setShowAllEntries((value) => !value)}>{entries.length ? (showAllEntries ? '收合' : `查看全部 ${entries.length} 筆`) : '尚無紀錄'}</button></div>{entries.length ? <div className={styles.activityList}>{entries.slice(0, showAllEntries ? entries.length : 5).map(([id, entry]) => <div className={styles.activityRow} key={id}><span>✦</span><div><b>{entryLabel(entry)}</b><small>{entry.orderNo ? `訂單 #${entry.orderNo} · ` : ''}{formatDate(entry.createdAt, true)}</small></div><strong className={Number(entry.delta || 0) >= 0 ? styles.plus : styles.minus}>{Number(entry.delta || 0) >= 0 ? '+' : ''}{entry.delta || 0}</strong></div>)}</div> : <div className={styles.emptyState}><span>○</span><p>還沒有點數紀錄</p><small>完成指定品項消費後，點數會自動顯示在這裡。</small></div>}</section>
 
-      <section className={styles.section}><div className={styles.sectionHeading}><div><p className={styles.eyebrow}>ORDER HISTORY</p><h2>最近訂單</h2></div><button type="button" className={styles.textButton} onClick={() => go('/?tab=orders')}>查看全部 ↗</button></div>{orders.length ? <div className={styles.orderList}>{orders.slice(0, 3).map((order, index) => <button type="button" className={styles.orderRow} key={`${order.orderNo || index}`} onClick={() => go('/?tab=orders')}><div><b>訂單 #{order.orderNo || '—'}</b><small>{formatDate(order.time || order.date, true)} · {order.status || '處理中'}</small></div><strong>NT$ {order.total || 0} ›</strong></button>)}</div> : <div className={styles.emptyState}><span>◌</span><p>目前沒有歷史訂單</p><small>選一個喜歡的口味，開始第一次點餐。</small></div>}</section>
+      <section className={styles.section}><div className={styles.sectionHeading}><div><p className={styles.eyebrow}>ORDER HISTORY</p><h2>最近訂單</h2></div><button type="button" className={styles.textButton} onClick={() => openService('orders')}>查看全部 ↗</button></div>{orders.length ? <div className={styles.orderList}>{orders.slice(0, 3).map((order, index) => <button type="button" className={styles.orderRow} key={`${order.orderNo || index}`} onClick={() => openService('orders')}><div><b>訂單 #{order.orderNo || '—'}</b><small>{formatDate(order.time || order.date, true)} · {order.status || '處理中'}</small></div><strong>NT$ {order.total || 0} ›</strong></button>)}</div> : <div className={styles.emptyState}><span>◌</span><p>目前沒有歷史訂單</p><small>選一個喜歡的口味，開始第一次點餐。</small></div>}</section>
 
-      <section className={styles.rules}><p className={styles.eyebrow}>HOW IT WORKS</p><h2>會員點數使用說明</h2><p>線上與門市 POS 的指定品項消費會依目前活動規則累點；退款或取消訂單時，系統會依原交易回收點數。門市會員 QR 約 90 秒有效，兌換券核銷 QR 約 5 分鐘有效。</p><button type="button" className={styles.primaryButton} onClick={() => go('/menu/')}>開始點餐 ↗</button></section>
+      <section className={styles.rules}><p className={styles.eyebrow}>HOW IT WORKS</p><h2>會員點數使用說明</h2><p>線上與門市 POS 的指定品項消費會依目前活動規則累點；退款或取消訂單時，系統會依原交易回收點數。門市會員 QR 約 90 秒有效，兌換券核銷 QR 約 5 分鐘有效。</p><button type="button" className={styles.primaryButton} onClick={() => openService('menu')}>開始點餐 ↗</button></section>
     </>}
 
     {message && <div className={styles.toast} role="status">{message}</div>}
-    <nav className={styles.bottomNav} aria-label="主要導覽"><button type="button" onClick={() => go('/')}><span>⌂</span><small>今日</small></button><button type="button" onClick={() => go('/menu/')}><span>✦</span><small>點餐</small></button><button type="button" onClick={() => go('/?tab=orders')}><span>◷</span><small>訂單</small></button><button type="button" className={styles.activeNav}><span>◒</span><small>會員錢包</small></button></nav>
+    <nav className={styles.bottomNav} aria-label="主要導覽"><button type="button" onClick={() => openService('home')}><span>⌂</span><small>今日</small></button><button type="button" onClick={() => openService('menu')}><span>✦</span><small>點餐</small></button><button type="button" onClick={() => openService('orders')}><span>◷</span><small>訂單</small></button><button type="button" onClick={() => openService('flavors')}><span>●</span><small>口味</small></button><button type="button" className={styles.activeNav}><span>◒</span><small>會員</small></button></nav>
 
     {dialog && <div className={styles.dialogOverlay} role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setDialog(null); }}><section className={styles.dialog} role="dialog" aria-modal="true" aria-labelledby="qr-title"><header><div><p className={styles.eyebrow}>SECURE SHORT-LIVED QR</p><h2 id="qr-title">{dialog.kind === 'memberQr' ? '門市會員 QR' : dialog.voucher?.title}</h2></div><button type="button" onClick={() => setDialog(null)} aria-label="關閉">×</button></header><div className={styles.qrBody}>{qr && qr.expiresAt > now ? <img src={qr.dataUrl} alt={qr.title} /> : <div className={styles.qrPlaceholder}>{qrLoading ? '正在準備短效 QR…' : '這組 QR 已失效，請重新產生。'}</div>}<p>{dialog.kind === 'memberQr' ? '請在結帳前出示，POS 掃描後會綁定本次訂單。' : '請讓店員在 POS 掃描；兌換券本身永久有效。'}</p><span>{qr && qr.expiresAt > now ? `有效時間剩餘 ${Math.max(1, Math.ceil((qr.expiresAt - now) / 1000))} 秒` : '請重新產生一組新的 QR'}</span><button type="button" className={styles.primaryButton} onClick={() => void (dialog.kind === 'memberQr' ? openMemberQr() : dialog.voucher && openVoucherQr(dialog.voucher))} disabled={qrLoading}>{qrLoading ? '產生中…' : qr ? '重新產生 QR' : '產生 QR'}</button></div></section></div>}
   </main>;

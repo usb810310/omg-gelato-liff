@@ -342,6 +342,7 @@ function getGelatoDatabase() {
 
 export default function Home() {
   const router = useRouter();
+  const embeddedMode = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('embedded') === '1';
   const [profile, setProfile] = useState<Profile | null>(null);
   const [status, setStatus] = useState('正在初始化...');
   const [activeTab, setActiveTab] = useState<'home' | 'menu' | 'orders' | 'member'>(() => {
@@ -399,7 +400,7 @@ export default function Home() {
       setStatus('正在初始化...');
       try {
         await Promise.race([
-          liff.init({ liffId: '2011536222-v4OvTSup' }),
+          liff.init({ liffId: embeddedMode ? '2011536222-27exC5Co' : '2011536222-v4OvTSup' }),
           new Promise<never>((_, reject) => window.setTimeout(() => reject(new Error('連線逾時，請確認網路後重試')), 10000)),
         ]);
         if (!liff.isLoggedIn()) {
@@ -433,7 +434,7 @@ export default function Home() {
     };
     initLiff();
     return () => { cancelled = true; };
-  }, [initAttempt]);
+  }, [embeddedMode, initAttempt]);
 
   useEffect(() => {
     if (!profile?.userId) return;
@@ -975,7 +976,7 @@ export default function Home() {
   const pageTitle = activeTab === 'menu' ? '線上點餐' : activeTab === 'orders' ? (selectedOrder ? '訂單詳情' : '訂單足跡') : activeTab === 'member' ? '會員與點數' : '今日首頁';
 
   return (
-    <main className={styles.appShell}>
+    <main className={`${styles.appShell} ${embeddedMode ? styles.embeddedShell : ''}`}>
       <header className={styles.topbar}>
         <div className={styles.brandLockup}>
           <p className={styles.pageEyebrow}>ON MY GELATO · CLUB</p>
