@@ -83,7 +83,7 @@ function getOrderKey(order: Order) {
 const ORDER_HISTORY_DAYS = 30;
 const ORDER_HISTORY_MS = ORDER_HISTORY_DAYS * 24 * 60 * 60 * 1000;
 const ORDER_POINTS_RECOVERY_COOLDOWN_MS = 5 * 60 * 1000;
-const MEMBER_LIFF_URL = 'https://liff.line.me/2011536222-27exC5Co';
+const MEMBER_APP_URL = 'https://omg-gelato-omg-liff.vercel.app/member-center/';
 
 function isRecentOrder(order: Order) {
   const rawDate = order.time || order.createdAt || order.date;
@@ -391,7 +391,7 @@ export default function Home() {
 
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get('tab') === 'member') {
-      window.location.replace(MEMBER_LIFF_URL);
+      window.location.replace(MEMBER_APP_URL);
       return;
     }
     let cancelled = false;

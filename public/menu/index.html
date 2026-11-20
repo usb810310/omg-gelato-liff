@@ -21,7 +21,7 @@
             const state = params.get('liff.state') || params.get('liff_state') || '';
             const normalizedState = state.replace(/\\/g, '').replace(/\/$/, '');
             if (normalizedState !== '/member-center' && normalizedState !== '/member-v2') return;
-            const target = new URL('https://liff.line.me/2011536222-27exC5Co');
+            const target = new URL('https://omg-gelato-omg-liff.vercel.app/member-center/');
             params.forEach((value, key) => {
                 if (key !== 'liff.state' && key !== 'liff_state') target.searchParams.set(key, value);
             });
@@ -4000,7 +4000,7 @@ s0.parentNode.insertBefore(s1,s0);
         <a href="https://omg-gelato-omg-liff.vercel.app/?tab=home"><span>⌂</span><small>今日</small></a>
         <a class="dock-order active" href="./" aria-current="page" onclick="event.preventDefault();"><span>✦</span><small>點餐</small></a>
         <a href="https://omg-gelato-omg-liff.vercel.app/?tab=orders"><span>◷</span><small>訂單查看</small></a>
-        <a href="https://liff.line.me/2011536222-27exC5Co"><span>◒</span><small>OMG會員</small></a>
+        <a href="https://omg-gelato-omg-liff.vercel.app/member-center/"><span>◒</span><small>OMG會員</small></a>
     </nav>
 </body>
 </html>
