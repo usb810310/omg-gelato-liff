@@ -123,7 +123,18 @@ export default function MemberV2Page() {
   }, []);
 
   const login = () => liff.login({ redirectUri: window.location.href });
-  const go = (path: string) => { window.location.href = path; };
+  const go = (path: string) => {
+    const target = new URL(path, window.location.origin).toString();
+    try {
+      if (liff.isInClient() && liff.isApiAvailable('openWindow')) {
+        liff.openWindow({ url: target, external: false });
+        return;
+      }
+    } catch (error) {
+      console.warn('LINE 導覽 API 無法使用，改用一般頁面導向', error);
+    }
+    window.location.assign(target);
+  };
 
   const openMemberQr = async () => {
     setDialog({ kind: 'memberQr' }); setQr(null); setQrLoading(true);
