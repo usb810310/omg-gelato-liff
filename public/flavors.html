@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#f7f2ec" />
-  <title>OMG! Gelato 今日口味</title>
+  <meta name="theme-color" content="#f2eee7" />
+  <title>OMG! Gelato｜今日口味</title>
   <script type="importmap">
     {
       "imports": {
@@ -15,83 +15,87 @@
   </script>
   <script src="/business-hours-rules.js?v=20261116-2"></script>
   <style>
-
-    :root { --bg:#f6f0e9; --paper:#fffdf9; --ink:#30251f; --muted:#95877c; --line:#eadfd5; --accent:#b87550; --ok:#39734a; --closed:#9a5a45; --sold:#9a8e85; }
+    :root { --canvas:#f2eee7; --ink:#202c2b; --muted:#7e8984; --paper:#fffefa; --line:#dfe4df; --coral:#ff785f; --mint:#b9d98d; --deep:#213635; --closed:#b75f51; --amber:#c28a42; --sold:#9b9f9a; }
     * { box-sizing:border-box; }
-    html, body { margin:0; min-height:100%; background:var(--bg); color:var(--ink); }
-    body { font-family:-apple-system,BlinkMacSystemFont,"Noto Sans TC","PingFang TC",sans-serif; padding:14px 12px 22px; }
-    .shell { width:min(100%,430px); margin:0 auto; }
-    .brand { display:flex; align-items:center; gap:9px; min-width:0; }
-    .logo { width:30px; height:30px; object-fit:contain; border-radius:10px; background:#fff; box-shadow:0 3px 10px rgba(79,55,39,.10); }
-    .brand-copy { min-width:0; }
-    .brand-title { margin:0; color:var(--ink); font-size:13px; line-height:1.1; letter-spacing:.1px; }
-    .brand-subtitle { margin-top:3px; color:var(--muted); font-size:9px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .sync { display:inline-flex; align-items:center; gap:5px; color:var(--muted); font-size:9px; white-space:nowrap; }
-    .sync-dot { width:7px; height:7px; border-radius:50%; background:#e3af55; }
-    .sync-dot.online { background:#4fa563; box-shadow:0 0 0 3px rgba(79,165,99,.12); }
-    .sync-dot.offline { background:#d66b59; }
-    .page-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px; padding:2px 3px; }
-    .mini-hero { position:relative; min-height:104px; margin-bottom:10px; padding:17px 17px 15px; overflow:hidden; border-radius:22px; color:#fff9f3; background:linear-gradient(135deg,#5c4539 0%,#8b5f49 100%); box-shadow:0 12px 24px rgba(82,55,42,.16); }
-    .mini-hero::before,.mini-hero::after { content:""; position:absolute; border-radius:50%; pointer-events:none; }
-    .mini-hero::before { width:130px; height:130px; right:-35px; top:-58px; background:#f2c19e33; }
-    .mini-hero::after { width:72px; height:72px; right:43px; bottom:-39px; background:#d9eea755; }
-    .hero-kicker { position:relative; z-index:1; margin:0; color:#f7d8bf; font-size:9px; font-weight:900; letter-spacing:.18em; }
-    .mini-hero h2 { position:relative; z-index:1; margin:7px 0 4px; font-size:23px; line-height:1.05; letter-spacing:-.08em; }
-    .mini-hero p { position:relative; z-index:1; margin:0; color:#f5e5d9; font-size:10px; line-height:1.4; }
-    .hero-mark { position:absolute; z-index:1; right:20px; bottom:10px; color:#f7d8bf; font-size:31px; transform:rotate(-12deg); }
-    .status { position:relative; display:block; margin-bottom:12px; padding:11px 13px; border:1px solid #cfe4d2; border-radius:15px; background:linear-gradient(135deg,#f1fbf1,#e5f3e6); color:var(--ok); box-shadow:0 6px 15px rgba(73,117,71,.08); overflow:hidden; }
-    .status::after { content:""; position:absolute; width:76px; height:76px; right:-25px; top:-30px; border-radius:50%; background:rgba(79,165,99,.11); pointer-events:none; }
-    .status.closed { border-color:#efd4c9; background:linear-gradient(135deg,#fff7f1,#fbe8df); color:var(--closed); }
-    .status.closed::after { background:rgba(214,107,89,.11); }
-    .status.loading { border-color:#ead9b4; background:linear-gradient(135deg,#fffaf0,#f8efd9); color:#a66f1d; }
-    .status.loading::after { background:rgba(227,175,85,.13); }
-    .status.loading .status-dot { box-shadow:0 0 0 5px rgba(227,175,85,.14); }
+    html, body { min-height:100%; margin:0; background:var(--canvas); color:var(--ink); }
+    body { padding:18px 14px 28px; font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Noto Sans TC","PingFang TC",sans-serif; }
+    button { font:inherit; }
+    .board { width:min(100%, 460px); margin:0 auto; }
+    .topline { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:0 2px 18px; }
+    .identity { display:flex; align-items:center; gap:10px; min-width:0; }
+    .logo { width:34px; height:34px; object-fit:contain; border-radius:12px; background:#fff; box-shadow:0 5px 12px #4f5e5220; }
+    .identity-copy { min-width:0; }
+    .identity-title { margin:0; color:var(--deep); font-size:14px; font-weight:950; letter-spacing:-.04em; }
+    .identity-subtitle { margin:3px 0 0; overflow:hidden; color:var(--muted); font-size:9px; letter-spacing:.03em; text-overflow:ellipsis; white-space:nowrap; }
+    .sync { display:inline-flex; align-items:center; gap:5px; color:var(--muted); font-size:9px; font-weight:700; white-space:nowrap; }
+    .sync-dot { width:7px; height:7px; border-radius:50%; background:var(--amber); }
+    .sync-dot.online { background:#6aa856; box-shadow:0 0 0 4px #6aa8561f; }
+    .sync-dot.offline { background:#d56a5c; }
+    .masthead { position:relative; min-height:188px; overflow:hidden; padding:23px 22px 20px; border-radius:31px; color:#f6f7ef; background:var(--deep); box-shadow:0 18px 35px #34474429; }
+    .masthead::before,.masthead::after { content:""; position:absolute; border-radius:50%; pointer-events:none; }
+    .masthead::before { width:230px; height:230px; right:-90px; top:-105px; background:#b9d98d3d; }
+    .masthead::after { width:150px; height:150px; right:22px; bottom:-100px; background:#ff785f50; }
+    .masthead-kicker { position:relative; z-index:1; margin:0; color:#cce4a4; font-size:9px; font-weight:950; letter-spacing:.22em; }
+    .masthead h1 { position:relative; z-index:1; max-width:245px; margin:13px 0 9px; font-size:34px; line-height:.98; letter-spacing:-.1em; }
+    .masthead-copy { position:relative; z-index:1; max-width:245px; margin:0; color:#d5dfd7; font-size:11px; line-height:1.6; }
+    .orbit { position:absolute; z-index:1; right:25px; bottom:19px; display:grid; place-items:center; width:82px; height:82px; border:1px solid #ffffff33; border-radius:50%; color:#fff5df; font-size:28px; transform:rotate(-12deg); }
+    .orbit::after { content:""; position:absolute; width:11px; height:11px; right:-2px; top:5px; border-radius:50%; background:var(--coral); box-shadow:0 0 0 5px #ff785f2b; }
+    .status { position:relative; z-index:2; display:block; margin:-27px 13px 20px; padding:13px 15px 14px; border:1px solid #cfe4d2; border-radius:18px; background:#f4fbf0; color:#39734a; box-shadow:0 10px 22px #49634a1a; }
+    .status::after { content:""; position:absolute; width:75px; height:75px; right:-26px; top:-32px; border-radius:50%; background:#6aa85617; pointer-events:none; }
+    .status.closed { border-color:#eed3ca; background:#fff4ef; color:var(--closed); }
+    .status.closed::after { background:#d56a5c1b; }
+    .status.loading { border-color:#ead9b4; background:#fff8e9; color:var(--amber); }
+    .status.loading::after { background:#e3af551c; }
     .status-top { position:relative; z-index:1; display:flex; align-items:center; justify-content:space-between; gap:10px; }
-    .status-kicker { display:flex; align-items:center; gap:7px; color:currentColor; font-size:10px; font-weight:900; letter-spacing:.12em; }
-    .status-dot { width:9px; height:9px; border-radius:50%; background:currentColor; box-shadow:0 0 0 5px rgba(79,165,99,.13); }
-    .status.closed .status-dot { box-shadow:0 0 0 5px rgba(214,107,89,.13); }
-    .status-main { position:relative; z-index:1; margin:6px 0 0; color:var(--ink); font-size:19px; font-weight:900; line-height:1.15; letter-spacing:-.06em; }
-    .status-detail,.status-time { display:none; }
-    .section { padding:16px 13px 13px; border:1px solid var(--line); border-radius:20px; background:var(--paper); box-shadow:0 9px 22px rgba(73,48,32,.06); }
-    .section-head { display:flex; align-items:baseline; justify-content:space-between; gap:8px; margin:0 2px 12px; }
-    .section-head h2 { margin:0; font-size:17px; letter-spacing:-.06em; }
-    .section-head span { padding:4px 7px; border-radius:999px; color:#a36d4f; background:#f7e9dd; font-size:9px; font-weight:800; }
-    .flavor-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; }
-    .flavor-card { position:relative; min-height:78px; padding:14px 10px 11px 15px; overflow:hidden; border:1px solid var(--line); border-radius:15px; background:#fffdfb; box-shadow:0 4px 10px rgba(83,59,42,.04); transition:transform .18s ease, box-shadow .18s ease; }
-    .flavor-card::before { content:""; position:absolute; left:0; top:0; bottom:0; width:5px; background:var(--flavor,var(--accent)); }
-    .flavor-card::after { content:""; position:absolute; width:38px; height:38px; right:-14px; bottom:-17px; border-radius:50%; background:var(--flavor,var(--accent)); opacity:.13; }
-    .flavor-card.sold { background:#f1eeeb; color:var(--sold); box-shadow:none; }
-    .flavor-card.sold::before { background:#c9c0b9; }
-    .flavor-card.sold::after { background:#c9c0b9; }
-    .flavor-name { position:relative; z-index:1; padding-right:2px; font-size:13px; font-weight:850; line-height:1.25; }
-    .flavor-desc { position:relative; z-index:1; margin-top:5px; color:var(--muted); font-size:10px; line-height:1.4; }
-    .badge { position:absolute; z-index:2; top:8px; right:8px; padding:3px 6px; border-radius:999px; background:#e2dcd7; color:var(--sold); font-size:8px; font-weight:800; }
-    .empty { grid-column:1/-1; padding:29px 8px; color:var(--muted); text-align:center; font-size:12px; }
-    .note { margin:11px 3px 0; color:var(--muted); font-size:10px; line-height:1.4; text-align:center; }
-    .updated { margin-top:6px; color:#aa9b90; font-size:9px; text-align:center; }
-    @media (hover:hover) { .flavor-card:hover { transform:translateY(-2px); box-shadow:0 8px 16px rgba(83,59,42,.09); } }
-    @media (max-width:330px) { body { padding:11px 9px 16px; } .mini-hero { min-height:96px; padding:15px; } .mini-hero h2 { font-size:21px; } .flavor-card { min-height:70px; padding-left:13px; } }
-    @media (prefers-reduced-motion:reduce) { .flavor-card { transition:none; } }
+    .status-kicker { display:flex; align-items:center; gap:7px; font-size:10px; font-weight:950; letter-spacing:.12em; }
+    .status-dot { width:9px; height:9px; border-radius:50%; background:currentColor; box-shadow:0 0 0 5px #6aa8561c; }
+    .status.closed .status-dot { box-shadow:0 0 0 5px #d56a5c1c; }
+    .status-main { position:relative; z-index:1; display:block; margin:7px 0 0; color:var(--ink); font-size:20px; font-weight:950; letter-spacing:-.08em; }
+    .status-detail,.status-time { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+    .menu-panel { padding:19px 15px 15px; border:1px solid var(--line); border-radius:26px; background:var(--paper); box-shadow:0 12px 28px #53615a10; }
+    .menu-heading { display:flex; align-items:flex-end; justify-content:space-between; gap:12px; margin:0 2px 15px; }
+    .menu-heading p { margin:0 0 5px; color:var(--coral); font-size:9px; font-weight:950; letter-spacing:.2em; }
+    .menu-heading h2 { margin:0; color:var(--deep); font-size:23px; letter-spacing:-.09em; }
+    .count-pill { flex:none; padding:6px 9px; border-radius:999px; color:var(--deep); background:#eaf2dc; font-size:9px; font-weight:900; }
+    .flavor-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+    .flavor-card { position:relative; min-height:126px; overflow:hidden; padding:15px 13px 13px; border:1px solid #e4e8e2; border-radius:20px; background:#fcfdfa; box-shadow:0 5px 12px #55645c0b; }
+    .flavor-card::before { content:""; position:absolute; width:76px; height:76px; right:-22px; top:-24px; border-radius:50%; background:var(--flavor,#d9b19a); opacity:.3; }
+    .flavor-card::after { content:""; position:absolute; left:0; top:0; width:6px; height:100%; background:var(--flavor,#d9b19a); }
+    .flavor-card.sold { background:#f0f1ee; color:var(--sold); box-shadow:none; }
+    .flavor-card.sold::before { background:#b9beb8; opacity:.28; }
+    .flavor-card.sold::after { background:#b9beb8; }
+    .flavor-name { position:relative; z-index:1; max-width:95px; padding-top:18px; font-size:15px; font-weight:950; line-height:1.18; letter-spacing:-.06em; }
+    .flavor-desc { position:relative; z-index:1; max-width:120px; margin-top:7px; color:var(--muted); font-size:10px; line-height:1.45; }
+    .flavor-card.sold .flavor-desc { color:#9b9f9a; }
+    .badge { position:absolute; z-index:2; top:11px; right:10px; padding:4px 7px; border-radius:999px; color:#727873; background:#dfe2de; font-size:8px; font-weight:900; }
+    .empty { grid-column:1/-1; padding:42px 14px; color:var(--muted); text-align:center; font-size:12px; line-height:1.5; }
+    .empty::before { content:"✦"; display:block; margin-bottom:8px; color:var(--mint); font-size:25px; }
+    .footnote { margin:14px 5px 0; color:var(--muted); font-size:10px; line-height:1.55; text-align:center; }
+    .updated { margin-top:6px; color:#a7afa8; font-size:9px; text-align:center; }
+    @media (max-width:340px) { body { padding:12px 10px 22px; } .masthead { min-height:178px; padding:20px 18px; } .masthead h1 { font-size:30px; } .orbit { right:18px; width:70px; height:70px; } .status { margin-left:8px; margin-right:8px; } .menu-panel { padding-left:11px; padding-right:11px; } .flavor-card { min-height:116px; padding-left:11px; } }
+    @media (prefers-reduced-motion:reduce) { * { scroll-behavior:auto!important; transition:none!important; } }
   </style>
 </head>
 <body>
-  <main class="shell">
-    <header class="page-head">
-      <div class="brand">
+  <main class="board">
+    <header class="topline">
+      <div class="identity">
         <img class="logo" src="https://omg-gelato79.pages.dev/logo1.png" alt="OMG! Gelato" onerror="this.style.display='none'" />
-        <div class="brand-copy">
-          <h1 class="brand-title" id="brandTitle">OMG! Gelato</h1>
-          <div class="brand-subtitle" id="brandSubtitle">今日口味・快速查看</div>
+        <div class="identity-copy">
+          <h2 class="identity-title" id="brandTitle">OMG! Gelato</h2>
+          <p class="identity-subtitle" id="brandSubtitle">每日新鮮口味公告</p>
         </div>
       </div>
       <div class="sync"><i class="sync-dot" id="syncDot"></i><span id="syncText">連線中</span></div>
     </header>
-    <section class="mini-hero" aria-label="今日口味介紹">
-      <p class="hero-kicker">TODAY&apos;S SCOOP</p>
-      <h2>今天想吃哪一球？</h2>
-      <p>每天現場新鮮供應，喜歡的口味售完就要等下一次囉。</p>
-      <span class="hero-mark" aria-hidden="true">✦</span>
+
+    <section class="masthead" aria-label="今日口味主視覺">
+      <p class="masthead-kicker">GELATO DAILY BOARD</p>
+      <h1>今天，<br />想來哪一球？</h1>
+      <p class="masthead-copy">把今天的好心情，交給一球剛剛好的義式冰淇淋。</p>
+      <span class="orbit" aria-hidden="true">✦</span>
     </section>
+
     <section class="status loading" id="shopStatus" aria-live="polite">
       <div class="status-top"><span class="status-kicker"><i class="status-dot"></i>今日營業狀態</span><span class="sync" id="statusDate">—</span></div>
       <strong class="status-main" id="statusLabel">正在同步狀態</strong>
@@ -99,12 +103,15 @@
       <span class="status-time" id="statusTime">資料同步中</span>
     </section>
 
-    <section class="section">
-      <div class="section-head"><h2>今日口味</h2><span id="flavorCount">載入中</span></div>
+    <section class="menu-panel" aria-label="今日口味清單">
+      <div class="menu-heading">
+        <div><p>FLAVORS ON THE COUNTER</p><h2>今日口味</h2></div>
+        <span class="count-pill" id="flavorCount">載入中</span>
+      </div>
       <div class="flavor-grid" id="flavorGrid"><div class="empty">正在同步今日口味…</div></div>
     </section>
 
-    <p class="note">口味與供應數量會依店內現場為準</p>
+    <p class="footnote">口味與供應數量依店內現場為準<br />想吃的那一球，遇見就別錯過。</p>
     <div class="updated" id="updatedAt">最後同步：—</div>
   </main>
 
@@ -135,53 +142,28 @@
     function updateStatus(hours) {
       const status = $('shopStatus');
       if (!rules || !hours) {
-        status.classList.remove('closed');
-        status.classList.add('loading');
-        $('statusDate').textContent = '同步中';
-        $('statusLabel').textContent = '正在同步狀態';
-        $('statusDetail').textContent = '尚未取得 POS 最新營業設定，請稍候。';
-        $('statusTime').textContent = '資料同步中';
+        status.classList.remove('closed'); status.classList.add('loading');
+        $('statusDate').textContent = '同步中'; $('statusLabel').textContent = '正在同步狀態';
+        $('statusDetail').textContent = '尚未取得 POS 最新營業設定，請稍候。'; $('statusTime').textContent = '資料同步中';
         return;
       }
       const now = new Date();
-      const todayKey = rules.getTaipeiDateKey(now);
-      const tomorrowKey = rules.getTaipeiDateKey(now, 1);
-      const current = rules.statusForDate(hours, todayKey, now);
-      const tomorrow = rules.statusForDate(hours, tomorrowKey, now);
-      const schedule = current.hours || {};
-      const tomorrowSchedule = tomorrow.hours || {};
-      const isOpen = current.kind === 'open-now';
-      const tomorrowAvailable = tomorrowSchedule.open === true;
+      const todayKey = rules.getTaipeiDateKey(now); const tomorrowKey = rules.getTaipeiDateKey(now, 1);
+      const current = rules.statusForDate(hours, todayKey, now); const tomorrow = rules.statusForDate(hours, tomorrowKey, now);
+      const schedule = current.hours || {}; const tomorrowSchedule = tomorrow.hours || {};
+      const isOpen = current.kind === 'open-now'; const tomorrowAvailable = tomorrowSchedule.open === true;
       const tomorrowText = tomorrowAvailable ? '仍可預約明天取餐' : '明天也沒有可預約時段';
-      let label = current.label;
-      let detail = current.detail;
+      let label = current.label; let detail = current.detail;
       let time = schedule.open ? `營業時間 ${schedule.start} – ${schedule.end}` : (tomorrowAvailable ? `明日營業 ${tomorrowSchedule.start} – ${tomorrowSchedule.end}` : '近期無可預約時段');
-
-      if (current.kind === 'weekly-closed') {
-        label = '今日店休';
-        detail = `目前未營業，${tomorrowText}`;
-      } else if (current.kind === 'special-closed') {
-        label = '臨時店休';
-        detail = `${schedule.reason || '今日臨時店休'}，${tomorrowText}`;
-      } else if (current.kind === 'closed-for-today') {
-        label = '今日已打烊';
-        detail = `目前未營業，${tomorrowText}`;
-      } else if (current.kind === 'not-open-yet') {
-        label = '尚未營業';
-        detail = `目前未營業，今天 ${schedule.start} 開始營業`;
-      } else if (current.kind === 'open-now') {
-        label = schedule.isSpecial ? '特別營業中' : '今日營業中';
-        detail = `目前營業中，營業至 ${schedule.end}`;
-      }
-
-      status.classList.remove('loading');
-      status.classList.toggle('closed', !isOpen);
-      $('statusDate').textContent = formatToday(todayKey);
-      $('statusLabel').textContent = label;
-      $('statusDetail').textContent = detail;
-      $('statusTime').textContent = time;
+      if (current.kind === 'weekly-closed') { label = '今日店休'; detail = `目前未營業，${tomorrowText}`; }
+      else if (current.kind === 'special-closed') { label = '臨時店休'; detail = `${schedule.reason || '今日臨時店休'}，${tomorrowText}`; }
+      else if (current.kind === 'closed-for-today') { label = '今日已打烊'; detail = `目前未營業，${tomorrowText}`; }
+      else if (current.kind === 'not-open-yet') { label = '尚未營業'; detail = `目前未營業，今天 ${schedule.start} 開始營業`; }
+      else if (current.kind === 'open-now') { label = schedule.isSpecial ? '特別營業中' : '今日營業中'; detail = `目前營業中，營業至 ${schedule.end}`; }
+      status.classList.remove('loading'); status.classList.toggle('closed', !isOpen);
+      $('statusDate').textContent = formatToday(todayKey); $('statusLabel').textContent = label;
+      $('statusDetail').textContent = detail; $('statusTime').textContent = time;
     }
-
     function renderFlavors(data) {
       const items = Object.values(data || {}).filter(item => item?.name).sort((a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0));
       $('flavorCount').textContent = items.length ? `${items.length} 種口味` : '尚未公布';
@@ -191,10 +173,9 @@
         return `<article class="flavor-card${sold ? ' sold' : ''}" style="--flavor:${colors[item.name] || '#b98262'}"><div class="flavor-name">${escapeHtml(item.name)}</div>${item.desc ? `<div class="flavor-desc">${escapeHtml(item.desc)}</div>` : ''}${sold ? '<span class="badge">售完</span>' : ''}</article>`;
       }).join('');
     }
-
     onValue(ref(db, 'todayFlavors'), snap => { renderFlavors(snap.val()); setSync('online', '即時同步'); }, () => { $('flavorGrid').innerHTML = '<div class="empty">目前無法同步，請稍後再試</div>'; setSync('offline', '同步中斷'); });
     onValue(ref(db, 'businessHours'), snap => { window.__businessHours = snap.val() || {}; updateStatus(window.__businessHours); }, () => updateStatus(null));
-    onValue(ref(db, 'siteConfig'), snap => { const value = snap.val(); if (!value) return; $('brandTitle').textContent = value.brand?.mainTitle || 'OMG! Gelato'; $('brandSubtitle').textContent = '今日口味・快速查看'; });
+    onValue(ref(db, 'siteConfig'), snap => { const value = snap.val(); if (!value) return; $('brandTitle').textContent = value.brand?.mainTitle || 'OMG! Gelato'; $('brandSubtitle').textContent = '每日新鮮口味公告'; });
     setInterval(() => updateStatus(window.__businessHours || null), 30000);
   </script>
 </body>
