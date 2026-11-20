@@ -54,3 +54,11 @@
 ## 交付
 
 先在本機完成程式與記憶體測試，不寫正式 Firebase 資料。驗證通過後再請使用者確認是否將 LIFF/Vercel 與 POS/Cloudflare 發布到正式站。
+
+## 會員中心重設計補充
+
+會員中心採唯一「會員錢包」模型：首頁會員分頁負責摘要與快速操作，`/member-center` 負責完整點數、兌換券、QR 與使用規則，`/member-v2` 僅作相容入口並共用同一套資料與互動元件。既有 LINE 登入、會員 profile、點數 transaction、兌換券 idempotency、門市會員 QR、POS 綁單與 POS 核銷 API 均保留，不由視覺改版直接重寫。
+
+會員資料與點數採伺服器 API 邊界：會員瀏覽器不直接讀寫 `memberPoints`、`memberQrClaims`、`rewardQrClaims`；管理員權限只依 Firebase Authentication custom claims 與 Google 帳號權限，不依會員編號判斷。Firebase Rules 維持 fail-closed 候選方案，先本地驗證再由使用者另行確認發布。
+
+完整介面規格與分批實作方式記錄於 `docs/member-center-redesign.md`。第一批只做會員入口與視覺統一，第二批做安全邊界及 QR／兌換券狀態測試，第三批才考慮推送與正式部署。

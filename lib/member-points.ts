@@ -5,8 +5,8 @@ import { DEFAULT_POS_POINT_RULES, parsePosPointRules, resolvePosPointMultiplier 
 import { isMemberRewardType, MEMBER_REWARD_OPTIONS, type MemberRewardType } from '@/lib/member-rewards';
 
 const ELIGIBLE_PRODUCTS = new Set(['OMG獨享杯', 'OMG雙重奏']);
-// 門市會員 QR 尚未對現場客人開放；線上點數流程不受影響。
-export const IN_STORE_MEMBER_QR_ENABLED = false;
+// 門市會員 QR 由 POS 掃描後綁定現場訂單；token 本身短效且只能使用一次。
+export const IN_STORE_MEMBER_QR_ENABLED = true;
 
 // 新版點數制度正式啟用時間：2026/11/11 12:27:02（Asia/Taipei）。
 // 這個時間以前建立的訂單不追溯、不補發點數，線上與 POS 現場一致。

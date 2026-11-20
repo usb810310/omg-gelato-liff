@@ -56,6 +56,7 @@ type MemberRewardVoucher = {
 
 type MemberDialog =
   | { kind: 'history' }
+  | { kind: 'member-qr' }
   | { kind: 'voucher-qr'; voucherId: string }
   | { kind: 'redeem-confirm'; reward: (typeof MEMBER_REWARD_OPTIONS)[number] }
   | { kind: 'wish-confirm' }
@@ -369,6 +370,8 @@ export default function Home() {
   const [rewardActionType, setRewardActionType] = useState<MemberRewardType | null>(null);
   const [rewardQrByVoucher, setRewardQrByVoucher] = useState<Record<string, { dataUrl: string; expiresAt: number }>>({});
   const [rewardQrLoadingVoucherId, setRewardQrLoadingVoucherId] = useState<string | null>(null);
+  const [memberQr, setMemberQr] = useState<{ dataUrl: string; expiresAt: number } | null>(null);
+  const [memberQrLoading, setMemberQrLoading] = useState(false);
   const rewardIdempotencyKeysRef = useRef(new Map<MemberRewardType, string>());
   const [pointCampaign, setPointCampaign] = useState<PointCampaign | null>(null);
   const [lineFriendStatus, setLineFriendStatus] = useState<LineFriendStatus>('checking');
@@ -746,6 +749,27 @@ export default function Home() {
   };
 
 
+  const showMemberQr = async () => {
+    setMemberDialog({ kind: 'member-qr' });
+    if (memberQrLoading) return;
+    setMemberQr(null);
+    setMemberQrLoading(true);
+    try {
+      const accessToken = liff.getAccessToken();
+      if (!accessToken) throw new Error('LINE 登入已失效，請重新開啟會員頁');
+      const response = await fetch('/api/member/qr', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accessToken, mode: 'member' }), cache: 'no-store' });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.success || typeof result.token !== 'string') throw new Error(result.error || '會員條碼產生失敗');
+      const dataUrl = await QRCode.toDataURL(result.token, { errorCorrectionLevel: 'M', margin: 2, width: 280, color: { dark: '#2d1f14', light: '#fffdf9' } });
+      setMemberQr({ dataUrl, expiresAt: Number(result.expiresAt || Date.now() + 90_000) });
+      setQrClock(Date.now());
+    } catch (error) {
+      setMemberDialog({ kind: 'notice', title: '會員條碼暫時無法載入', message: error instanceof Error ? error.message : '會員條碼產生失敗，請稍後再試。', tone: 'error' });
+    } finally {
+      setMemberQrLoading(false);
+    }
+  };
+
   const switchTab = (tab: 'home' | 'menu' | 'orders' | 'member') => {
     if (tab === 'menu') {
       window.location.replace('/menu/index.html');
@@ -1036,8 +1060,9 @@ export default function Home() {
             </section>
 
             <section className={styles.memberActionCard} aria-label="限門市消費集點">
-              <div className={styles.actionCardHeading}><span className={styles.actionIcon}>⌁</span><div><p className={styles.kicker}>限門市消費集點</p><h2>門市會員 QR 尚未開放</h2></div></div>
-              <p className={styles.actionCardDescription}>線上訂單可自動累積點數；門市會員 QR 條碼功能尚未開放，開放後會在此提供使用方式。</p>
+              <div className={styles.actionCardHeading}><span className={styles.actionIcon}>⌁</span><div><p className={styles.kicker}>限門市消費集點</p><h2>出示會員 QR 給店員</h2></div></div>
+              <p className={styles.actionCardDescription}>請在結帳前開啟短效會員條碼，讓店員在 POS 掃描後綁定本次消費。</p>
+              <button type="button" className={styles.dialogPrimaryButton} onClick={() => void showMemberQr()} disabled={memberQrLoading}>{memberQrLoading ? '產生中…' : '顯示門市會員 QR'}</button>
 
             </section>
 
@@ -1103,12 +1128,18 @@ export default function Home() {
       {memberDialog && <div className={styles.memberDialogOverlay} onMouseDown={(event) => { if (event.target === event.currentTarget) closeMemberDialog(); }}>
         <section className={styles.memberDialog} ref={memberDialogRef} role="dialog" aria-modal="true" aria-labelledby="member-dialog-title" tabIndex={-1}>
           <header className={styles.memberDialogHeader}>
-            <div><p className={styles.kicker}>ON MY GELATO · CLUB</p><h2 id="member-dialog-title">{memberDialog.kind === 'history' ? '點數紀錄' : memberDialog.kind === 'voucher-qr' ? (dialogVoucher?.title || '兌換券條碼') : memberDialog.kind === 'redeem-confirm' ? '確認兌換' : memberDialog.kind === 'wish-confirm' ? '送出味道許願' : memberDialog.title}</h2></div>
+            <div><p className={styles.kicker}>ON MY GELATO · CLUB</p><h2 id="member-dialog-title">{memberDialog.kind === 'history' ? '點數紀錄' : memberDialog.kind === 'member-qr' ? '門市會員 QR' : memberDialog.kind === 'voucher-qr' ? (dialogVoucher?.title || '兌換券條碼') : memberDialog.kind === 'redeem-confirm' ? '確認兌換' : memberDialog.kind === 'wish-confirm' ? '送出味道許願' : memberDialog.title}</h2></div>
             <button type="button" ref={memberDialogCloseRef} className={styles.memberDialogClose} onClick={closeMemberDialog} disabled={isSubmittingWish || rewardActionType !== null} aria-label="關閉視窗">×</button>
           </header>
 
           <div className={styles.memberDialogBody}>
             {memberDialog.kind === 'history' && (recentPointEntries.length ? <div className={styles.dialogHistoryList}>{recentPointEntries.map(([entryId, entry]) => <div className={styles.pointActivityItem} key={entryId}><span className={styles.activityMark}>✦</span><div><b>{entry.sourceLabel || (entry.type === 'reward_redemption' ? '獎勵兌換' : '點數異動')}</b><small>{entry.orderNo ? `訂單 #${entry.orderNo} · ` : ''}{entry.createdAt ? new Intl.DateTimeFormat('zh-TW', { year: 'numeric', month: 'numeric', day: 'numeric' }).format(new Date(entry.createdAt)) : '最近更新'}</small></div><strong className={Number(entry.delta || 0) >= 0 ? styles.activityPlus : styles.activityMinus}>{Number(entry.delta || 0) >= 0 ? '+' : ''}{entry.delta || 0}</strong></div>)}</div> : <div className={styles.dialogEmpty}>目前還沒有點數紀錄。</div>)}
+
+            {memberDialog.kind === 'member-qr' && <div className={styles.dialogQrContent}>
+              {memberQr && memberQr.expiresAt > qrClock ? <Image className={styles.dialogQrImage} src={memberQr.dataUrl} alt="門市會員條碼" width={250} height={250} unoptimized /> : <div className={styles.dialogQrPlaceholder}>{memberQrLoading ? '正在準備專屬條碼…' : '請產生一組新的會員條碼'}</div>}
+              <small>請讓店員在 POS 掃描；此會員條碼約 90 秒後失效，掃描後只能綁定一次。</small>
+              <button type="button" className={styles.dialogPrimaryButton} onClick={() => void showMemberQr()} disabled={memberQrLoading}>{memberQrLoading ? '產生中…' : '重新產生會員 QR'}</button>
+            </div>}
 
             {memberDialog.kind === 'voucher-qr' && <div className={styles.dialogQrContent}>
               {dialogVoucher && <p className={styles.dialogVoucherName}>{dialogVoucher.title.includes('券') ? dialogVoucher.title : `${dialogVoucher.title}兌換券`}</p>}
