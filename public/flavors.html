@@ -30,22 +30,21 @@
     .sync-dot { width:7px; height:7px; border-radius:50%; background:#e3af55; }
     .sync-dot.online { background:#4fa563; box-shadow:0 0 0 3px rgba(79,165,99,.12); }
     .sync-dot.offline { background:#d66b59; }
-    .status { position: relative; display: block; margin-bottom: 13px; padding: 17px 17px 15px; border: 1px solid #cfe4d2; border-radius: 19px; background: linear-gradient(135deg, #f1fbf1 0%, #e5f3e6 100%); color: var(--ok); box-shadow: 0 9px 22px rgba(73, 117, 71, .10); overflow: hidden; }
-    .status::after { content: ""; position: absolute; width: 118px; height: 118px; right: -35px; top: -46px; border-radius: 50%; background: rgba(79, 165, 99, .11); pointer-events: none; }
+    .page-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:9px; padding:2px 3px; }
+    .status { position: relative; display: block; margin-bottom: 11px; padding: 11px 13px; border: 1px solid #cfe4d2; border-radius: 14px; background: linear-gradient(135deg, #f1fbf1 0%, #e5f3e6 100%); color: var(--ok); box-shadow: 0 6px 15px rgba(73, 117, 71, .08); overflow: hidden; }
+    .status::after { content: ""; position: absolute; width: 76px; height: 76px; right: -25px; top: -30px; border-radius: 50%; background: rgba(79, 165, 99, .11); pointer-events: none; }
     .status.closed { border-color: #efd4c9; background: linear-gradient(135deg, #fff7f1 0%, #fbe8df 100%); color: var(--closed); box-shadow: 0 9px 22px rgba(163, 91, 67, .09); }
     .status.closed::after { background: rgba(214, 107, 89, .11); }
     .status.loading { border-color: #ead9b4; background: linear-gradient(135deg, #fffaf0 0%, #f8efd9 100%); color: #a66f1d; box-shadow: 0 9px 22px rgba(166, 111, 29, .08); }
     .status.loading::after { background: rgba(227, 175, 85, .13); }
     .status.loading .status-dot { box-shadow: 0 0 0 5px rgba(227, 175, 85, .14); }
     .status.loading .status-time { border-color: rgba(166, 111, 29, .16); color: #94651f; }
-    .status-brand-row { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-bottom: 11px; border-bottom: 1px solid rgba(73, 117, 71, .14); }
-    .status-top { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-top: 12px; }
+    .status-top { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
     .status-kicker { display: flex; align-items: center; gap: 7px; color: currentColor; font-size: 10px; font-weight: 900; letter-spacing: .12em; }
     .status-dot { width: 9px; height: 9px; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 5px rgba(79, 165, 99, .13); }
     .status.closed .status-dot { box-shadow: 0 0 0 5px rgba(214, 107, 89, .13); }
-    .status-main { position: relative; z-index: 1; margin: 8px 0 3px; color: var(--ink); font-size: 24px; font-weight: 900; line-height: 1.15; letter-spacing: -.06em; }
-    .status-detail { position: relative; z-index: 1; margin: 0; color: var(--muted); font-size: 11px; line-height: 1.45; }
-    .status-time { position: relative; z-index: 1; display: inline-flex; margin-top: 11px; padding: 7px 10px; border: 1px solid rgba(69, 112, 72, .15); border-radius: 999px; color: #47704a; background: rgba(255,255,255,.58); font-size: 10px; font-weight: 800; }
+    .status-main { position: relative; z-index: 1; margin: 6px 0 0; color: var(--ink); font-size: 19px; font-weight: 900; line-height: 1.15; letter-spacing: -.06em; }
+    .status-detail, .status-time { display:none; }
     .status.closed .status-time { border-color: rgba(154, 90, 69, .16); color: var(--closed); }
     .section { padding:14px 12px 12px; border:1px solid var(--line); border-radius:18px; background:var(--card); box-shadow:0 8px 22px rgba(73,48,32,.06); }
     .section-head { display:flex; align-items:baseline; justify-content:space-between; gap:8px; margin:0 2px 10px; }
@@ -67,17 +66,17 @@
 </head>
 <body>
   <main class="shell">
-    <section class="status loading" id="shopStatus" aria-live="polite">
-      <div class="status-brand-row">
-        <div class="brand">
-          <img class="logo" src="https://omg-gelato79.pages.dev/logo1.png" alt="OMG! Gelato" onerror="this.style.display='none'" />
-          <div class="brand-copy">
-            <h1 class="brand-title" id="brandTitle">OMG! Gelato</h1>
-            <div class="brand-subtitle" id="brandSubtitle">今日口味・快速查看</div>
-          </div>
+    <header class="page-head">
+      <div class="brand">
+        <img class="logo" src="https://omg-gelato79.pages.dev/logo1.png" alt="OMG! Gelato" onerror="this.style.display='none'" />
+        <div class="brand-copy">
+          <h1 class="brand-title" id="brandTitle">OMG! Gelato</h1>
+          <div class="brand-subtitle" id="brandSubtitle">今日口味・快速查看</div>
         </div>
-        <div class="sync"><i class="sync-dot" id="syncDot"></i><span id="syncText">連線中</span></div>
       </div>
+      <div class="sync"><i class="sync-dot" id="syncDot"></i><span id="syncText">連線中</span></div>
+    </header>
+    <section class="status loading" id="shopStatus" aria-live="polite">
       <div class="status-top"><span class="status-kicker"><i class="status-dot"></i>今日營業狀態</span><span class="sync" id="statusDate">—</span></div>
       <strong class="status-main" id="statusLabel">正在同步狀態</strong>
       <p class="status-detail" id="statusDetail">尚未取得 POS 最新營業設定，請稍候。</p>
@@ -169,8 +168,8 @@
 
     function renderFlavors(data) {
       const items = Object.values(data || {}).filter(item => item?.name).sort((a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0));
-      $('flavorCount').textContent = items.length ? `${items.length} 種口味` : '暫無資料';
-      if (!items.length) { $('flavorGrid').innerHTML = '<div class="empty">今天尚未公布口味</div>'; return; }
+      $('flavorCount').textContent = items.length ? `${items.length} 種口味` : '尚未公布';
+      if (!items.length) { $('flavorGrid').innerHTML = '<div class="empty">今日口味還沒公布</div>'; return; }
       $('flavorGrid').innerHTML = items.map(item => {
         const sold = item.soldOut === true;
         return `<article class="flavor-card${sold ? ' sold' : ''}" style="--flavor:${colors[item.name] || '#b98262'}"><div class="flavor-name">${escapeHtml(item.name)}</div>${item.desc ? `<div class="flavor-desc">${escapeHtml(item.desc)}</div>` : ''}${sold ? '<span class="badge">售完</span>' : ''}</article>`;
