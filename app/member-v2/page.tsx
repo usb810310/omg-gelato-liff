@@ -15,6 +15,8 @@ type QrState = { dataUrl: string; expiresAt: number; title: string };
 
 type Dialog = { kind: 'memberQr' | 'voucherQr'; voucher?: Voucher } | null;
 const LIFF_ID = '2011536222-27exC5Co';
+const APP_ORIGIN = 'https://omg-gelato-omg-liff.vercel.app';
+const MENU_LIFF_URL = 'https://liff.line.me/2011536222-v4OvTSup';
 
 function formatDate(value?: string | number, long = false) {
   if (!value) return '日期未提供';
@@ -124,7 +126,9 @@ export default function MemberV2Page() {
 
   const login = () => liff.login({ redirectUri: window.location.href });
   const go = (path: string) => {
-    const target = new URL(path, window.location.origin).toString();
+    const target = path === '/menu/' || path === '/menu/index.html'
+      ? MENU_LIFF_URL
+      : new URL(path, APP_ORIGIN).toString();
     try {
       if (liff.isInClient() && liff.isApiAvailable('openWindow')) {
         liff.openWindow({ url: target, external: false });
