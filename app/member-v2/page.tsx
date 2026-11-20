@@ -55,7 +55,7 @@ export default function MemberV2Page() {
 
   const loadMemberData = async () => {
     const token = accessToken();
-    if (!token) throw new Error('LINE 登入已失效，請重新開啟會員中心。');
+    if (!token) throw new Error('LINE 登入已失效，請重新登入。');
     const [profileResponse, pointsResponse, ordersResponse] = await Promise.all([
       fetch('/api/member/profile', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accessToken: token }), cache: 'no-store' }),
       fetch('/api/member/points', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accessToken: token }), cache: 'no-store' }),
@@ -64,6 +64,11 @@ export default function MemberV2Page() {
     const profileResult = await profileResponse.json();
     const pointsResult = await pointsResponse.json();
     const ordersResult = await ordersResponse.json();
+    if (profileResponse.status === 401 || /Token|登入已失效/i.test(String(profileResult.error || ''))) {
+      const authError = new Error('LINE 登入已失效，請重新登入。');
+      authError.name = 'LiffAuthError';
+      throw authError;
+    }
     if (!profileResponse.ok || !profileResult.success) throw new Error(profileResult.error || '會員資料載入失敗');
     setProfile(profileResult.profile);
     if (pointsResponse.ok && pointsResult.success) setPoints(pointsResult.points || {});
@@ -74,6 +79,15 @@ export default function MemberV2Page() {
     if (syncing) return;
     setSyncing(true); setMessage('正在同步會員資料…');
     try { await loadMemberData(); setMessage('會員資料已更新'); } catch (error) { setMessage(error instanceof Error ? error.message : '同步失敗，請稍後再試'); } finally { setSyncing(false); }
+  };
+
+  const reauthenticate = (inClient: boolean) => {
+    if (!inClient) {
+      setMessage('請從 LINE 官方帳號重新開啟會員中心。');
+      return;
+    }
+    try { if (liff.isLoggedIn()) liff.logout(); } catch (error) { console.warn('清除過期 LINE 登入狀態失敗', error); }
+    liff.login({ redirectUri: window.location.href });
   };
 
   useEffect(() => {
@@ -89,8 +103,18 @@ export default function MemberV2Page() {
         await liff.init({ liffId: LIFF_ID });
         const inClient = liff.isInClient(); setInsideLine(inClient);
         if (!liff.isLoggedIn()) { if (inClient) liff.login({ redirectUri: window.location.href }); return; }
+        try { await liff.getProfile(); } catch (error) {
+          console.warn('LINE profile token 已失效，重新登入', error);
+          reauthenticate(inClient);
+          return;
+        }
         await loadMemberData();
-      } catch (error) { if (!cancelled) setMessage(error instanceof Error ? error.message : '會員中心暫時無法載入'); }
+      } catch (error) {
+        if (!cancelled) {
+          if (error instanceof Error && error.name === 'LiffAuthError') reauthenticate(liff.isInClient());
+          else setMessage(error instanceof Error ? error.message : '會員中心暫時無法載入');
+        }
+      }
       finally { if (!cancelled) setLoading(false); }
     };
     void boot();
