@@ -14,7 +14,7 @@ type Order = { orderNo?: string | number; total?: string | number; time?: string
 type QrState = { dataUrl: string; expiresAt: number; title: string };
 
 type Dialog = { kind: 'memberQr' | 'voucherQr'; voucher?: Voucher } | null;
-const LIFF_ID = '2011536222-v4OvTSup';
+const LIFF_ID = '2011536222-27exC5Co';
 
 function formatDate(value?: string | number, long = false) {
   if (!value) return '日期未提供';
