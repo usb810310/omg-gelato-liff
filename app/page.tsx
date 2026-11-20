@@ -344,6 +344,7 @@ export default function Home() {
   const router = useRouter();
   const embeddedMode = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('embedded') === '1';
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [embeddedAccessToken, setEmbeddedAccessToken] = useState('');
   const [status, setStatus] = useState('正在初始化...');
   const [activeTab, setActiveTab] = useState<'home' | 'menu' | 'orders' | 'member'>(() => {
     if (typeof window === 'undefined') return 'home';
@@ -390,6 +391,30 @@ export default function Home() {
     setMemberDialog(null);
   }, [isSubmittingWish, rewardActionType]);
 
+  const sessionAccessToken = () => embeddedAccessToken || liff.getAccessToken() || '';
+
+  useEffect(() => {
+    if (!embeddedMode) return;
+    const handleSession = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin || event.data?.type !== 'OMG_LIFF_SESSION') return;
+      if (typeof event.data.accessToken === 'string') setEmbeddedAccessToken(event.data.accessToken);
+    };
+    window.addEventListener('message', handleSession);
+    return () => window.removeEventListener('message', handleSession);
+  }, [embeddedMode]);
+
+  useEffect(() => {
+    if (!embeddedMode || !embeddedAccessToken) return;
+    let cancelled = false;
+    fetch('/api/member/profile', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accessToken: embeddedAccessToken }), cache: 'no-store' })
+      .then((response) => response.json().then((result) => ({ response, result })))
+      .then(({ response, result }) => {
+        if (!cancelled && response.ok && result.success && result.profile) setProfile(result.profile);
+      })
+      .catch((error) => console.warn('內嵌會員 session 同步失敗:', error));
+    return () => { cancelled = true; };
+  }, [embeddedAccessToken, embeddedMode]);
+
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get('tab') === 'member') {
       window.location.replace(MEMBER_APP_URL);
@@ -398,6 +423,10 @@ export default function Home() {
     let cancelled = false;
     const initLiff = async () => {
       setStatus('正在初始化...');
+      if (embeddedMode) {
+        setStatus('');
+        return;
+      }
       try {
         await Promise.race([
           liff.init({ liffId: embeddedMode ? '2011536222-27exC5Co' : '2011536222-v4OvTSup' }),
@@ -414,7 +443,7 @@ export default function Home() {
         if (cancelled) return;
         let memberNo = '';
         try {
-          const accessToken = liff.getAccessToken();
+          const accessToken = sessionAccessToken();
           if (accessToken) {
             const response = await fetch('/api/member/profile', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accessToken }), cache: 'no-store' });
             const result = await response.json().catch(() => ({}));
@@ -480,7 +509,7 @@ export default function Home() {
       if (refreshInProgress) return;
       refreshInProgress = true;
       try {
-        const accessToken = liff.getAccessToken();
+        const accessToken = sessionAccessToken();
         if (!accessToken) return;
         const nextOrders = await readOrders(accessToken);
         if (cancelled) return;
@@ -555,7 +584,7 @@ export default function Home() {
     let cancelled = false;
     const refreshPoints = async () => {
       try {
-        const accessToken = liff.getAccessToken();
+        const accessToken = sessionAccessToken();
         if (!accessToken) return;
         const response = await fetch('/api/member/points', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accessToken }), cache: 'no-store' });
         const result = await response.json().catch(() => ({}));
@@ -650,7 +679,7 @@ export default function Home() {
     if (!profile?.userId) return;
     setIsLoadingOrders(true);
     try {
-      const accessToken = liff.getAccessToken();
+      const accessToken = sessionAccessToken();
       if (!accessToken) throw new Error('LINE 登入已失效');
       const response = await fetch('/api/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accessToken }), cache: 'no-store' });
       const result = await response.json().catch(() => ({}));
@@ -669,7 +698,7 @@ export default function Home() {
     const submittedWish = wishText.trim();
     setIsSubmittingWish(true);
     try {
-      const accessToken = liff.getAccessToken();
+      const accessToken = sessionAccessToken();
       const response = await fetch('/api/wishlist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -698,7 +727,7 @@ export default function Home() {
     rewardIdempotencyKeysRef.current.set(rewardType, idempotencyKey);
     setRewardActionType(rewardType);
     try {
-      const accessToken = liff.getAccessToken();
+      const accessToken = sessionAccessToken();
       if (!accessToken) throw new Error('LINE 登入已失效，請重新開啟會員頁');
       const response = await fetch('/api/member/rewards/redeem', {
         method: 'POST',
@@ -732,7 +761,7 @@ export default function Home() {
     });
     setRewardQrLoadingVoucherId(voucherId);
     try {
-      const accessToken = liff.getAccessToken();
+      const accessToken = sessionAccessToken();
       if (!accessToken) throw new Error('LINE 登入已失效，請重新開啟會員頁');
       const response = await fetch('/api/member/rewards/qr', {
         method: 'POST',
@@ -761,7 +790,7 @@ export default function Home() {
     setMemberQr(null);
     setMemberQrLoading(true);
     try {
-      const accessToken = liff.getAccessToken();
+      const accessToken = sessionAccessToken();
       if (!accessToken) throw new Error('LINE 登入已失效，請重新開啟會員頁');
       const response = await fetch('/api/member/qr', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accessToken, mode: 'member' }), cache: 'no-store' });
       const result = await response.json().catch(() => ({}));
@@ -848,7 +877,7 @@ export default function Home() {
     if (!window.confirm(confirmation)) return;
     setCancellingOrderNo(order.orderNo);
     try {
-      const accessToken = liff.getAccessToken();
+      const accessToken = sessionAccessToken();
       if (!accessToken) throw new Error('無法取得 LINE 登入驗證，請重新開啟此頁面');
       const response = await fetch('/api/cancel-order', {
         method: 'POST',

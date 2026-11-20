@@ -179,7 +179,7 @@ export default function MemberV2Page() {
 
   if (serviceTab !== 'member') return <main className={styles.shell}>
     <header className={styles.serviceTopbar}><button type="button" className={styles.iconButton} onClick={() => openService('member')} aria-label="回到會員錢包">‹</button><div><span>OMG! GELATO</span><strong>{serviceTitles[serviceTab]}</strong></div><span className={styles.serviceBadge}>單一 LIFF</span></header>
-    <iframe className={styles.serviceFrame} src={serviceSources[serviceTab]} title={serviceTitles[serviceTab]} />
+    <iframe className={styles.serviceFrame} src={serviceSources[serviceTab]} title={serviceTitles[serviceTab]} onLoad={(event) => event.currentTarget.contentWindow?.postMessage({ type: 'OMG_LIFF_SESSION', accessToken: accessToken() }, APP_ORIGIN)} />
     <nav className={styles.bottomNav} aria-label="主要導覽">
       <button type="button" onClick={() => openService('home')}><span>⌂</span><small>今日</small></button>
       <button type="button" onClick={() => openService('menu')}><span>✦</span><small>點餐</small></button>

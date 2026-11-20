@@ -2148,6 +2148,12 @@
     </script>
     <script type="module">
         const businessHoursRules = window.GelatoBusinessHours;
+        const embeddedMenu = new URLSearchParams(window.location.search).get('embedded') === '1';
+        window.addEventListener('message', (event) => {
+            if (event.origin === window.location.origin && event.data?.type === 'OMG_LIFF_SESSION' && typeof event.data.accessToken === 'string') {
+                window.liffAccessToken = event.data.accessToken;
+            }
+        });
         // 初始化 LIFF，取得 User ID
         const liff = await new Promise((resolve, reject) => {
             if (window.liff) {
@@ -2164,7 +2170,7 @@
             window.addEventListener('liff-sdk-error', handleError, { once: true });
         });
 
-        if (liff) {
+        if (liff && !embeddedMenu) {
             try {
                 await liff.init({ liffId: '2011536222-v4OvTSup' });
                 if (liff.isLoggedIn()) {
