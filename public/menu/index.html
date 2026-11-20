@@ -14,6 +14,20 @@
     </script>
     <script src="/business-hours-rules.js?v=20261116-1"></script>
     <script>
+        // 舊版點餐 LIFF ID 可用 /member-center state 開啟會員錢包。
+        // LINE 會把 liff.state 附加在 /menu/，先導回同網域的會員路由，避免顯示錯誤頁。
+        (function redirectMemberLiffState() {
+            const params = new URLSearchParams(window.location.search);
+            const state = params.get('liff.state') || params.get('liff_state') || '';
+            const normalizedState = state.replace(/\\/g, '').replace(/\/$/, '');
+            if (normalizedState !== '/member-center' && normalizedState !== '/member-v2') return;
+            const target = new URL('/member-center/', window.location.origin);
+            params.forEach((value, key) => {
+                if (key !== 'liff.state' && key !== 'liff_state') target.searchParams.set(key, value);
+            });
+            window.location.replace(target.href);
+        })();
+
         if (new URLSearchParams(window.location.search).get('embedded') === '1') {
             document.documentElement.classList.add('embedded-menu');
         }
