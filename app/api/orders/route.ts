@@ -4,6 +4,10 @@ import { adminDatabaseRef } from '@/lib/firebase-admin';
 
 export const runtime = 'nodejs';
 
+function normalizeId(value: unknown) {
+  return typeof value === 'string' || typeof value === 'number' ? String(value).trim() : '';
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => ({}));
@@ -23,9 +27,10 @@ export async function POST(request: Request) {
       const value = child.val();
       if (!value || typeof value !== 'object') return false;
       const order = value as Record<string, unknown>;
-      const belongsToMember = order.userId === member.userId
-        || (storedMemberKey && order.memberKey === storedMemberKey)
-        || (memberNo && order.memberNo === memberNo);
+      const belongsToMember = [order.userId, order.lineUserId, order.memberId]
+        .some((value) => normalizeId(value) === normalizeId(member.userId))
+        || (storedMemberKey && normalizeId(order.memberKey) === storedMemberKey)
+        || (memberNo && normalizeId(order.memberNo) === memberNo);
       if (belongsToMember) orders.push({ ...order, id: child.key });
       return false;
     });

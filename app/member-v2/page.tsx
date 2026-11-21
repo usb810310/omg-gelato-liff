@@ -84,6 +84,7 @@ export default function MemberV2Page() {
     setProfile(profileResult.profile);
     if (pointsResponse.ok && pointsResult.success) setPoints(pointsResult.points || {});
     if (ordersResponse.ok && ordersResult.success) setOrders(ordersResult.orders || []);
+    else if (!ordersResponse.ok || !ordersResult.success) throw new Error(ordersResult.error || `訂單查詢失敗（HTTP ${ordersResponse.status}）`);
   };
 
   const refresh = async () => {
