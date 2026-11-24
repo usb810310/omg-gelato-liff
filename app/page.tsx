@@ -1020,6 +1020,13 @@ export default function Home() {
               <div className={styles.heroScoopArt} aria-hidden="true"><span className={styles.heroScoopOne} /><span className={styles.heroScoopTwo} /><span className={styles.heroScoopThree} /><i /></div>
             </section>
 
+            {businessHours?.hoursAnnouncement?.trim() && (
+              <aside className={styles.hoursAnnouncementNotice} aria-label="營業時間公告">
+                <b>營業時間公告</b>
+                <p>{businessHours.hoursAnnouncement.trim()}</p>
+              </aside>
+            )}
+
             {!shopStatus.isOpen && <div className={styles.closedNotice}><b>{shopStatus.label}</b><span>{shopStatus.detail}</span></div>}
 
             <section className={styles.homeWelcomeCard}>

@@ -245,6 +245,13 @@ export async function PUT(request: Request) {
       if (Object.keys(payload.weekly).some((day) => !DAY_KEYS.includes(day as DayKey))) {
         return apiError('每週營業時間包含未知的星期欄位。', 400);
       }
+      const hasHoursAnnouncement = Object.prototype.hasOwnProperty.call(payload, 'hoursAnnouncement');
+      let hoursAnnouncement = '';
+      if (hasHoursAnnouncement) {
+        if (typeof payload.hoursAnnouncement !== 'string') return apiError('營業時間公告格式錯誤。', 400);
+        hoursAnnouncement = payload.hoursAnnouncement.trim();
+        if (hoursAnnouncement.length > 500) return apiError('營業時間公告不可超過 500 個字元。', 400);
+      }
       const weeklyPatch: Partial<Record<DayKey, { open: boolean; start?: string; end?: string }>> = {};
       for (const day of DAY_KEYS) {
         if (!Object.prototype.hasOwnProperty.call(payload.weekly, day)) continue;
@@ -288,7 +295,7 @@ export async function PUT(request: Request) {
       if (new Set(allDateKeys).size !== allDateKeys.length) {
         return apiError('特殊日期有重複設定，請重新載入後再試。', 400);
       }
-      if (!Object.keys(weeklyPatch).length && !specialUpdates.length && !removeSpecialDates.length) {
+      if (!Object.keys(weeklyPatch).length && !specialUpdates.length && !removeSpecialDates.length && !hasHoursAnnouncement) {
         return apiSuccess({ kind, updatedAt: changedAt, specialDateCount: 0, unchanged: true });
       }
 
@@ -299,6 +306,10 @@ export async function PUT(request: Request) {
           const update = weeklyPatch[day];
           if (update) next[day] = { ...plainRecord(next[day]), ...update };
         });
+        if (hasHoursAnnouncement) {
+          if (hoursAnnouncement) next.hoursAnnouncement = hoursAnnouncement;
+          else delete next.hoursAnnouncement;
+        }
         if (specialUpdates.length || removeSpecialDates.length) {
           const nextSpecialDates: DataRecord = { ...plainRecord(next.specialDates) };
           removeSpecialDates.forEach((dateKey) => { delete nextSpecialDates[dateKey]; });
@@ -323,6 +334,7 @@ export async function PUT(request: Request) {
         changedAt,
         changedBy: updatedBy,
         weekly: weeklyPatch,
+        hoursAnnouncementChanged: hasHoursAnnouncement,
         specialDateKeys: specialUpdates.map((item) => item.dateKey),
         removedDateKeys: removeSpecialDates,
       });

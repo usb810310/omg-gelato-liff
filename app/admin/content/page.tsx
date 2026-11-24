@@ -93,6 +93,8 @@ export default function ContentAdminPage() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [weeklyHours, setWeeklyHours] = useState<WeeklySchedule>(() => defaultWeeklySchedule());
   const savedWeeklyHoursRef = useRef<WeeklySchedule>(defaultWeeklySchedule());
+  const [hoursAnnouncement, setHoursAnnouncement] = useState('');
+  const savedHoursAnnouncementRef = useRef('');
   const [specialDates, setSpecialDates] = useState<SpecialDate[]>([]);
   const [removedSpecialDates, setRemovedSpecialDates] = useState<string[]>([]);
   const savedSpecialDatesRef = useRef<Record<string, SpecialDate>>({});
@@ -146,6 +148,9 @@ export default function ContentAdminPage() {
         timestamp: Number(item.timestamp) || 0,
       })).sort((a, b) => b.timestamp - a.timestamp));
       const hours = result.businessHours || {};
+      const nextHoursAnnouncement = typeof hours.hoursAnnouncement === 'string' ? hours.hoursAnnouncement : '';
+      setHoursAnnouncement(nextHoursAnnouncement);
+      savedHoursAnnouncementRef.current = nextHoursAnnouncement;
       const nextWeekly = defaultWeeklySchedule();
       WEEK_DAYS.forEach(({ key }) => {
         const rawDay = hours[key];
@@ -197,6 +202,8 @@ export default function ContentAdminPage() {
         setAnnouncements([]);
         setWeeklyHours(defaultWeeklySchedule());
         savedWeeklyHoursRef.current = defaultWeeklySchedule();
+        setHoursAnnouncement('');
+        savedHoursAnnouncementRef.current = '';
         setSpecialDates([]);
         setRemovedSpecialDates([]);
         savedSpecialDatesRef.current = {};
@@ -357,7 +364,9 @@ export default function ContentAdminPage() {
         const saved = savedSpecialDatesRef.current[item.dateKey];
         return !saved || item.open !== saved.open || item.start !== saved.start || item.end !== saved.end || item.reason !== saved.reason;
       });
-      if (!Object.keys(weeklyPatch).length && !specialDateUpdates.length && !removedSpecialDates.length) {
+      const hoursAnnouncementValue = hoursAnnouncement.trim();
+      const hoursAnnouncementChanged = hoursAnnouncementValue !== savedHoursAnnouncementRef.current;
+      if (!Object.keys(weeklyPatch).length && !specialDateUpdates.length && !removedSpecialDates.length && !hoursAnnouncementChanged) {
         setMessage('目前沒有尚未儲存的變更。');
         return;
       }
@@ -366,9 +375,10 @@ export default function ContentAdminPage() {
         weekly: weeklyPatch,
         specialDates: specialDateUpdates.map(({ dateKey, open, start, end, reason }) => ({ dateKey, open, start, end, reason })),
         removeSpecialDates: removedSpecialDates,
+        ...(hoursAnnouncementChanged ? { hoursAnnouncement: hoursAnnouncementValue } : {}),
       });
       await loadContent(user);
-      setMessage('營業時間與特殊日期已更新；顧客營業頁和點餐時段會讀取同一份設定。');
+      setMessage('營業時間公告、每週時段與特殊日期已更新。');
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : '儲存營業時間失敗。');
     } finally {
@@ -492,6 +502,14 @@ export default function ContentAdminPage() {
               <section className={styles.panel}>
                 <div className={styles.panelHeading}><div><p className={styles.eyebrow}>STORE HOURS & EXCEPTIONS</p><h2>營業時間／特殊日期</h2><p>設定每週常態營業時段，並以指定日期覆蓋為臨時店休或特別營業。</p></div><button type="button" className={styles.secondaryButton} onClick={() => void loadContent(user)} disabled={loading || busy}>{loading ? '載入中…' : '重新載入'}</button></div>
                 <div className={styles.hoursNote}>這裡調整的是門市實際營業時間。線上接單暫停／截止模式（shopMode）不會被這個表單修改。</div>
+
+                <section className={styles.hoursAnnouncementEditor} aria-labelledby="hours-announcement-heading">
+                  <div className={styles.sectionHeading}><div><h3 id="hours-announcement-heading">營業時間公告（獨立欄位）</h3><p>與「營業公告」清單分開；內容會顯示在顧客端會員中心首頁，不影響每週排程、店休日或接單模式。</p></div></div>
+                  <label htmlFor="hours-announcement-content">公告內容
+                    <textarea id="hours-announcement-content" maxLength={500} rows={3} value={hoursAnnouncement} onChange={(event) => setHoursAnnouncement(event.target.value)} placeholder="例如：本週五營業時間調整為 15:00–20:00，造成不便敬請見諒。" />
+                  </label>
+                  <div className={styles.hoursAnnouncementMeta}><span>{hoursAnnouncement.length}/500 字</span><span>清空內容並儲存即可移除公告</span></div>
+                </section>
 
                 <section className={styles.scheduleSection} aria-labelledby="weekly-hours-heading">
                   <div className={styles.sectionHeading}><div><h3 id="weekly-hours-heading">每週營業時間</h3><p>未設定的時段依目前系統預設 13:00–20:00。</p></div></div>

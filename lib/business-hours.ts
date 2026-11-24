@@ -10,6 +10,7 @@ export type SpecialDayHours = {
 export type BusinessHours = Partial<Record<'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun', DayHours>> & {
   shopMode?: 'auto' | 'open' | 'closed' | 'off';
   shopClosed?: boolean;
+  hoursAnnouncement?: string;
   specialDates?: Record<string, SpecialDayHours>;
 };
 

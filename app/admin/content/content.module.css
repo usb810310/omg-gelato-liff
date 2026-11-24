@@ -89,6 +89,12 @@ button:disabled { opacity: .48; cursor: not-allowed; }
 }
 
 .hoursNote { margin: 16px 0 2px; padding: 11px 13px; border-left: 3px solid #bd8c73; border-radius: 0 8px 8px 0; color: #725d50; background: #fbf4ee; font-size: 12px; line-height: 1.6; }
+.hoursAnnouncementEditor { display: grid; gap: 9px; margin-top: 17px; padding: 13px; border: 1px solid #eee2d8; border-radius: 12px; background: #fffaf5; }
+.hoursAnnouncementEditor .sectionHeading { margin-bottom: 0; }
+.hoursAnnouncementEditor label { display: grid; gap: 6px; color: #7e7066; font-size: 11px; font-weight: 700; }
+.hoursAnnouncementEditor textarea { width: 100%; min-height: 88px; box-sizing: border-box; padding: 10px 11px; border: 1px solid #e8dfd8; border-radius: 8px; color: #43372f; background: white; font: inherit; font-size: 13px; line-height: 1.65; resize: vertical; }
+.hoursAnnouncementEditor textarea:focus { outline: none; border-color: #bd8c73; box-shadow: 0 0 0 3px rgba(154, 87, 63, .09); }
+.hoursAnnouncementMeta { display: flex; justify-content: space-between; gap: 10px; color: #95867c; font-size: 10px; }
 .scheduleSection { margin-top: 26px; }
 .sectionHeading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
 .sectionHeading h3 { margin: 0; color: #46382f; font-size: 16px; }
