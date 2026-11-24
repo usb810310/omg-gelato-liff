@@ -1,0 +1,164 @@
+.page {
+  min-height: 100dvh;
+  padding: 28px 16px 40px;
+  color: #f4eee6;
+  background: radial-gradient(circle at 85% 5%, #49352b 0, transparent 34%), #1d1714;
+  font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Noto Sans TC", "PingFang TC", sans-serif;
+}
+
+.panel {
+  width: min(100%, 520px);
+  margin: 0 auto;
+  padding: 24px 20px;
+  border: 1px solid #57463c;
+  border-radius: 24px;
+  background: rgba(43, 33, 28, .96);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, .2);
+}
+
+.eyebrow {
+  margin: 0 0 9px;
+  color: #d3ae72;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+
+.panel h1 {
+  margin: 0;
+  color: #fff8ee;
+  font-size: 23px;
+  line-height: 1.35;
+  letter-spacing: -.04em;
+}
+
+.intro {
+  margin: 10px 0 22px;
+  color: #c2b5a9;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.authBadge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  color: #cfddc9;
+  font-size: 12px;
+}
+
+.authBadge span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #86c37b;
+  box-shadow: 0 0 0 4px rgba(134, 195, 123, .14);
+}
+
+.actions {
+  display: grid;
+  gap: 12px;
+}
+
+.actions button,
+.loginButton {
+  width: 100%;
+  min-height: 52px;
+  padding: 13px 16px;
+  border: 0;
+  border-radius: 14px;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform .15s ease, opacity .15s ease;
+}
+
+.actions button:active,
+.loginButton:active {
+  transform: scale(.985);
+}
+
+.actions button:disabled {
+  cursor: wait;
+  opacity: .65;
+}
+
+.restoreButton,
+.loginButton {
+  color: #211911;
+  background: linear-gradient(135deg, #efd49b, #d6ad6d);
+  box-shadow: 0 8px 18px rgba(214, 173, 109, .14);
+}
+
+.sellOutButton {
+  color: #fff2ef;
+  background: #873f39;
+  box-shadow: 0 8px 18px rgba(135, 63, 57, .18);
+}
+
+.securityNote {
+  margin: 15px 1px 0;
+  color: #a99c90;
+  font-size: 11px;
+  line-height: 1.65;
+}
+
+.authBox {
+  display: grid;
+  gap: 10px;
+  color: #d2c6ba;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.authBox p {
+  margin: 0;
+}
+
+.notice,
+.success,
+.error {
+  margin: 14px 0 0;
+  padding: 12px 13px;
+  border-radius: 12px;
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.notice {
+  color: #e8d5ad;
+  background: #473a28;
+}
+
+.success {
+  color: #d4edcc;
+  background: #273d2b;
+}
+
+.error {
+  color: #ffe0da;
+  background: #512d2a;
+}
+
+.footer {
+  width: min(100%, 520px);
+  margin: 14px auto 0;
+  color: #a99c90;
+  font-size: 11px;
+  line-height: 1.6;
+  text-align: center;
+}
+
+@media (max-width: 360px) {
+  .page { padding: 20px 12px 32px; }
+  .panel { padding: 21px 16px; }
+  .panel h1 { font-size: 21px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .actions button,
+  .loginButton { transition: none; }
+}

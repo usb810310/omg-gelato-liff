@@ -27,9 +27,12 @@ function LIFFProvider({ children }: { children: React.ReactNode }) {
       .then((liff) => liff.default)
       .then((liff) => {
         console.log("LIFF init...");
+        const liffId = window.location.pathname.startsWith("/admin/flavors")
+          ? "2011536222-27exC5Co"
+          : process.env.NEXT_PUBLIC_LIFF_ID!;
         liff
           .init({
-            liffId: process.env.NEXT_PUBLIC_LIFF_ID!,
+            liffId,
             withLoginOnExternalBrowser: false, // 關鍵：避免外部瀏覽器被強制跳去登入
           })
           .then(() => {
