@@ -1,0 +1,89 @@
+.page {
+  min-height: 100vh;
+  padding: 26px 20px 44px;
+  color: #2c2724;
+  background: radial-gradient(ellipse at 14% 0%, #f8eee4 0, transparent 38%), #f7f5f2;
+  font-family: Arial, "Noto Sans TC", sans-serif;
+}
+
+.shell { width: min(100%, 1040px); margin: 0 auto; }
+.topbar { min-height: 58px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid #e8e0d8; }
+.brand { display: inline-flex; align-items: center; gap: 11px; color: inherit; text-decoration: none; }
+.brandMark { display: grid; width: 42px; height: 42px; place-items: center; border-radius: 14px 14px 14px 5px; color: #fffaf5; background: #9a573f; font-size: 13px; font-weight: 800; letter-spacing: .04em; }
+.brand strong, .brand small { display: block; }
+.brand strong { font-size: 14px; letter-spacing: .02em; }
+.brand small { margin-top: 3px; color: #8c7a6e; font-size: 11px; }
+.account { display: flex; align-items: center; gap: 14px; color: #77685e; font-size: 12px; }
+.intro { max-width: 700px; padding: 48px 0 28px; }
+.eyebrow { margin: 0 0 9px; color: #9a573f; font-size: 10px; font-weight: 800; letter-spacing: .18em; }
+.intro h1 { margin: 0; color: #342a25; font-family: Georgia, "Noto Serif TC", serif; font-size: clamp(30px, 5vw, 46px); font-weight: 600; letter-spacing: .01em; }
+.intro > p:last-child { max-width: 590px; margin: 14px 0 0; color: #7a6f68; font-size: 14px; line-height: 1.8; }
+.loginCard, .panel { border: 1px solid #e9e1da; border-radius: 19px; background: rgba(255, 255, 255, .88); box-shadow: 0 14px 42px rgba(65, 47, 35, .045); }
+.loginCard { display: flex; align-items: center; gap: 18px; padding: 24px; }
+.loginCard h2 { margin: 0; font-size: 18px; }
+.loginCard p { max-width: 590px; margin: 7px 0 0; color: #786e68; font-size: 13px; line-height: 1.65; }
+.loginCard code { padding: 2px 5px; border-radius: 5px; color: #754431; background: #f7eee8; font-size: 12px; }
+.lockIcon { flex: 0 0 42px; display: grid; width: 42px; height: 42px; place-items: center; border-radius: 50%; color: #94583f; background: #f8ede5; font-family: Georgia, serif; font-size: 18px; font-weight: 700; }
+.primaryButton, .secondaryButton { min-height: 42px; padding: 0 17px; border: 0; border-radius: 10px; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; transition: transform .15s ease, background .15s ease; }
+.primaryButton { flex: 0 0 auto; color: white; background: #9a573f; }
+.primaryButton:hover:not(:disabled) { background: #80452f; transform: translateY(-1px); }
+.secondaryButton { color: #725c4e; border: 1px solid #e7d9ce; background: #fff; }
+.secondaryButton:hover:not(:disabled) { background: #fcf7f2; }
+button:disabled { opacity: .48; cursor: not-allowed; }
+.textButton { padding: 8px 4px; border: 0; color: #95553d; background: transparent; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.textButton:hover:not(:disabled) { color: #603722; text-decoration: underline; }
+.tabs { display: flex; gap: 8px; margin: 4px 0 14px; padding: 5px; border: 1px solid #eae2dc; border-radius: 13px; background: #eeeae6; }
+.tabs button { flex: 1; min-height: 42px; border: 0; border-radius: 9px; color: #766d67; background: transparent; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.tabs button span { margin-left: 6px; color: #a28c7d; font-size: 11px; }
+.tabs button.activeTab { color: #55372b; background: white; box-shadow: 0 2px 7px rgba(42, 30, 23, .08); }
+.panel { padding: 25px; }
+.panelHeading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding-bottom: 21px; border-bottom: 1px solid #eee8e3; }
+.panelHeading .eyebrow { margin-bottom: 6px; }
+.panelHeading h2 { margin: 0; font-family: Georgia, "Noto Serif TC", serif; font-size: 24px; font-weight: 600; }
+.panelHeading p:last-child { margin: 7px 0 0; color: #897c73; font-size: 12px; line-height: 1.65; }
+.panelHeading .secondaryButton { min-height: 36px; padding: 0 12px; font-size: 12px; }
+.list { display: grid; gap: 10px; padding: 16px 0; }
+.itemCard { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; align-items: center; gap: 13px; padding: 14px; border: 1px solid #eee8e3; border-radius: 13px; background: #fffdfa; }
+.announcementCard { align-items: start; }
+.itemNumber { display: grid; width: 32px; height: 32px; place-items: center; border-radius: 9px; color: #9a573f; background: #f8eee7; font-size: 10px; font-weight: 800; }
+.itemFields { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 12px; }
+.itemFields label { display: grid; gap: 6px; color: #7e7066; font-size: 11px; font-weight: 700; }
+.itemFields input, .itemFields textarea { width: 100%; min-width: 0; min-height: 40px; box-sizing: border-box; padding: 9px 10px; border: 1px solid #e9e2dc; border-radius: 8px; outline: none; color: #382f2a; background: white; font: inherit; font-size: 13px; font-weight: 400; }
+.itemFields textarea { min-height: 78px; resize: vertical; line-height: 1.55; }
+.itemFields input:focus, .itemFields textarea:focus { border-color: #bd8c73; box-shadow: 0 0 0 3px rgba(154, 87, 63, .1); }
+.itemActions { display: flex; align-items: center; gap: 6px; }
+.itemActions > button { width: 30px; height: 30px; border: 1px solid #e8dfd8; border-radius: 8px; color: #735e50; background: white; font-size: 14px; cursor: pointer; }
+.itemActions > button:hover:not(:disabled) { background: #f8eee7; }
+.checkLabel { display: inline-flex; align-items: center; gap: 6px; color: #786c64; font-size: 12px; white-space: nowrap; }
+.checkLabel input { accent-color: #9a573f; }
+.empty { padding: 26px 16px; border: 1px dashed #dfd3ca; border-radius: 12px; color: #8c7c72; text-align: center; font-size: 13px; }
+.panelFooter { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding-top: 16px; border-top: 1px solid #eee8e3; }
+.error, .success { margin-top: 14px; padding: 13px 15px; border-radius: 10px; font-size: 13px; line-height: 1.6; }
+.error { color: #8b342c; border: 1px solid #f0d4cf; background: #fff4f1; }
+.success { color: #41664e; border: 1px solid #d3e7d8; background: #f2faf4; }
+.footer { display: flex; justify-content: space-between; gap: 12px; padding-top: 24px; color: #a09288; font-size: 10px; }
+
+@media (max-width: 700px) {
+  .page { padding: 15px 14px 30px; }
+  .intro { padding: 36px 1px 23px; }
+  .loginCard { align-items: flex-start; flex-wrap: wrap; padding: 18px; }
+  .loginCard > div:nth-child(2) { flex: 1 1 calc(100% - 60px); }
+  .loginCard > button { margin-left: 60px; }
+  .panel { padding: 17px 13px; }
+  .panelHeading { align-items: center; }
+  .panelHeading h2 { font-size: 21px; }
+  .itemCard { grid-template-columns: 29px minmax(0, 1fr); gap: 9px; padding: 11px 9px; }
+  .itemNumber { width: 28px; height: 28px; }
+  .itemFields { grid-column: 2; grid-template-columns: 1fr; gap: 9px; }
+  .itemActions, .announcementCard > .checkLabel { grid-column: 2; justify-self: start; }
+  .announcementCard > .checkLabel { padding-top: 2px; }
+  .panelFooter { align-items: flex-start; }
+  .panelFooter .primaryButton { min-height: 40px; padding: 0 12px; font-size: 12px; }
+  .footer { flex-direction: column; }
+}
+
+@media (max-width: 410px) {
+  .account { gap: 7px; font-size: 10px; }
+  .account span { max-width: 145px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .panelHeading .secondaryButton { padding: 0 8px; }
+}
