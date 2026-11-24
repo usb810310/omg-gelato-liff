@@ -7,6 +7,10 @@ export const dynamic = 'force-dynamic';
 type DataRecord = Record<string, unknown>;
 type FlavorInput = { id?: unknown; name?: unknown; desc?: unknown; soldOut?: unknown };
 type AnnouncementInput = { id?: unknown; title?: unknown; content?: unknown; active?: unknown };
+type DayKey = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun';
+type BusinessHoursInput = { open?: unknown; start?: unknown; end?: unknown };
+type SpecialDateInput = { dateKey?: unknown; open?: unknown; start?: unknown; end?: unknown; reason?: unknown };
+const DAY_KEYS: DayKey[] = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 
 function isRecord(value: unknown): value is DataRecord {
   return Boolean(value && typeof value === 'object' && !Array.isArray(value));
@@ -62,6 +66,30 @@ function plainRecord(value: unknown): DataRecord {
   return isRecord(value) ? value : {};
 }
 
+function parseTime(value: unknown, label: string) {
+  if (typeof value !== 'string' || !/^\d{2}:\d{2}$/.test(value)) {
+    throw Object.assign(new Error(`${label}格式須為 HH:mm。`), { statusCode: 400 });
+  }
+  const [hour, minute] = value.split(':').map(Number);
+  if (hour > 23 || minute > 59) {
+    throw Object.assign(new Error(`${label}不是有效時間。`), { statusCode: 400 });
+  }
+  return hour * 60 + minute;
+}
+
+function validateDateKey(value: unknown) {
+  const dateKey = typeof value === 'string' ? value : '';
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) {
+    throw Object.assign(new Error('特殊日期格式須為 YYYY-MM-DD。'), { statusCode: 400 });
+  }
+  const [year, month, day] = dateKey.split('-').map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day, 12));
+  if (year < 2020 || year > 2100 || date.toISOString().slice(0, 10) !== dateKey) {
+    throw Object.assign(new Error('特殊日期不是有效日期。'), { statusCode: 400 });
+  }
+  return dateKey;
+}
+
 function validateItems<T>(value: unknown, maxCount: number, label: string): T[] {
   if (!Array.isArray(value) || value.length > maxCount) {
     throw Object.assign(new Error(`${label}資料格式錯誤或超過數量上限。`), { statusCode: 400 });
@@ -104,13 +132,15 @@ async function appendAudit(entry: DataRecord) {
 export async function GET(request: Request) {
   try {
     const operator = await requirePosAdmin(request);
-    const [flavorsSnapshot, announcementsSnapshot] = await Promise.all([
+    const [flavorsSnapshot, announcementsSnapshot, hoursSnapshot] = await Promise.all([
       adminDatabaseRef('todayFlavors').get(),
       adminDatabaseRef('announcements').get(),
+      adminDatabaseRef('businessHours').get(),
     ]);
     return apiSuccess({
       todayFlavors: plainRecord(flavorsSnapshot.val()),
       announcements: plainRecord(announcementsSnapshot.val()),
+      businessHours: plainRecord(hoursSnapshot.val()),
       operator: { uid: String(operator.uid || ''), email: String(operator.email || '') },
     });
   } catch (error) {
@@ -208,6 +238,95 @@ export async function PUT(request: Request) {
       if (!result.committed) throw new Error('營業公告更新未完成，請重新整理後再試。');
       await appendAudit({ kind, changedAt, changedBy: updatedBy, itemCount: assigned.length, itemIds: assigned.map((item) => item.id) });
       return apiSuccess({ kind, updatedAt: changedAt, itemCount: assigned.length });
+    }
+
+    if (kind === 'businessHours') {
+      if (!isRecord(payload.weekly)) return apiError('每週營業時間資料格式錯誤。', 400);
+      if (Object.keys(payload.weekly).some((day) => !DAY_KEYS.includes(day as DayKey))) {
+        return apiError('每週營業時間包含未知的星期欄位。', 400);
+      }
+      const weeklyPatch: Partial<Record<DayKey, { open: boolean; start?: string; end?: string }>> = {};
+      for (const day of DAY_KEYS) {
+        if (!Object.prototype.hasOwnProperty.call(payload.weekly, day)) continue;
+        const entry = payload.weekly[day] as BusinessHoursInput | undefined;
+        if (!entry || typeof entry !== 'object' || Array.isArray(entry) || typeof entry.open !== 'boolean') {
+          return apiError(`「${day}」營業狀態資料格式錯誤。`, 400);
+        }
+        if (!entry.open) {
+          weeklyPatch[day] = { open: false };
+          continue;
+        }
+        const start = typeof entry.start === 'string' ? entry.start : '';
+        const end = typeof entry.end === 'string' ? entry.end : '';
+        const startMinutes = parseTime(start, `${day} 開始時間`);
+        const endMinutes = parseTime(end, `${day} 結束時間`);
+        if (endMinutes <= startMinutes) return apiError(`${day} 結束時間必須晚於開始時間。`, 400);
+        weeklyPatch[day] = { open: entry.open, start, end };
+      }
+
+      const specialInputs = validateItems<SpecialDateInput>(payload.specialDates ?? [], 200, '特殊日期');
+      const specialUpdates = specialInputs.map((item) => {
+        if (!isRecord(item) || typeof item.open !== 'boolean') {
+          throw Object.assign(new Error('特殊日期營業狀態格式錯誤。'), { statusCode: 400 });
+        }
+        const dateKey = validateDateKey(item.dateKey);
+        const reason = typeof item.reason === 'string' ? item.reason.trim() : '';
+        if (reason.length > 240) throw Object.assign(new Error('特殊日期說明不可超過 240 個字元。'), { statusCode: 400 });
+        if (item.open) {
+          const start = typeof item.start === 'string' ? item.start : '';
+          const end = typeof item.end === 'string' ? item.end : '';
+          const startMinutes = parseTime(start, '特別營業開始時間');
+          const endMinutes = parseTime(end, '特別營業結束時間');
+          if (endMinutes <= startMinutes) throw Object.assign(new Error('特別營業結束時間必須晚於開始時間。'), { statusCode: 400 });
+          return { dateKey, open: true, start, end, reason };
+        }
+        return { dateKey, open: false, reason };
+      });
+      const removeInputs = validateItems<unknown>(payload.removeSpecialDates ?? [], 200, '待取消特殊日期');
+      const removeSpecialDates = removeInputs.map(validateDateKey);
+      const allDateKeys = [...specialUpdates.map((item) => item.dateKey), ...removeSpecialDates];
+      if (new Set(allDateKeys).size !== allDateKeys.length) {
+        return apiError('特殊日期有重複設定，請重新載入後再試。', 400);
+      }
+      if (!Object.keys(weeklyPatch).length && !specialUpdates.length && !removeSpecialDates.length) {
+        return apiSuccess({ kind, updatedAt: changedAt, specialDateCount: 0, unchanged: true });
+      }
+
+      const hoursRef = adminDatabaseRef('businessHours');
+      const result = await hoursRef.transaction((current) => {
+        const next: DataRecord = { ...plainRecord(current) };
+        DAY_KEYS.forEach((day) => {
+          const update = weeklyPatch[day];
+          if (update) next[day] = { ...plainRecord(next[day]), ...update };
+        });
+        if (specialUpdates.length || removeSpecialDates.length) {
+          const nextSpecialDates: DataRecord = { ...plainRecord(next.specialDates) };
+          removeSpecialDates.forEach((dateKey) => { delete nextSpecialDates[dateKey]; });
+          specialUpdates.forEach((item) => {
+            const old = plainRecord(nextSpecialDates[item.dateKey]);
+            const updated: DataRecord = { ...old, open: item.open, updatedAt: changedAt };
+            if (item.open) {
+              updated.start = item.start;
+              updated.end = item.end;
+            }
+            if (item.reason) updated.reason = item.reason;
+            else delete updated.reason;
+            nextSpecialDates[item.dateKey] = updated;
+          });
+          next.specialDates = nextSpecialDates;
+        }
+        return next;
+      });
+      if (!result.committed) throw new Error('營業時間更新未完成，請重新整理後再試。');
+      await appendAudit({
+        kind,
+        changedAt,
+        changedBy: updatedBy,
+        weekly: weeklyPatch,
+        specialDateKeys: specialUpdates.map((item) => item.dateKey),
+        removedDateKeys: removeSpecialDates,
+      });
+      return apiSuccess({ kind, updatedAt: changedAt, specialDateCount: specialUpdates.length });
     }
 
     return apiError('不支援的內容類型。', 400);

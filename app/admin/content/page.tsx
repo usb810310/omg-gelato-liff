@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { getApp, getApps, initializeApp } from 'firebase/app';
 import {
@@ -18,7 +18,50 @@ import styles from './content.module.css';
 
 type Flavor = { id: string; name: string; desc: string; soldOut: boolean; sortOrder: number };
 type Announcement = { id: string; title: string; content: string; active: boolean; timestamp: number };
-type ApiResult = { success?: boolean; error?: string; itemCount?: number; todayFlavors?: Record<string, unknown>; announcements?: Record<string, unknown> };
+type MemberSummary = { memberNo: string; displayName: string; phone: string; memberType: string; createdAt: number; pointsBalance: number; pointsUpdatedAt: number };
+type MemberPointEntry = { delta: number; type: string; sourceLabel: string; createdAt: number; orderNo: string | null; channel: string | null; ruleLabel: string | null };
+type MemberOrder = { orderNo: string; timestamp: number; total: number; paymentStatus: string; status: string; items: Array<{ name: string; quantity: number }> };
+type MemberLookupResult = { success?: boolean; error?: string; member?: MemberSummary; recentPoints?: MemberPointEntry[]; recentOrders?: MemberOrder[] };
+type DayKey = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun';
+type DaySchedule = { open: boolean; start: string; end: string };
+type WeeklySchedule = Record<DayKey, DaySchedule>;
+type SpecialDate = { dateKey: string; open: boolean; start: string; end: string; reason: string };
+type ApiResult = { success?: boolean; error?: string; itemCount?: number; todayFlavors?: Record<string, unknown>; announcements?: Record<string, unknown>; businessHours?: Record<string, unknown> };
+
+const WEEK_DAYS: Array<{ key: DayKey; label: string }> = [
+  { key: 'mon', label: '星期一' }, { key: 'tue', label: '星期二' }, { key: 'wed', label: '星期三' },
+  { key: 'thu', label: '星期四' }, { key: 'fri', label: '星期五' }, { key: 'sat', label: '星期六' },
+  { key: 'sun', label: '星期日' },
+];
+
+function defaultWeeklySchedule(): WeeklySchedule {
+  return Object.fromEntries(WEEK_DAYS.map(({ key }) => [key, { open: true, start: '13:00', end: '20:00' }])) as WeeklySchedule;
+}
+
+function taipeiToday() {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(new Date());
+  const get = (type: string) => parts.find((part) => part.type === type)?.value || '0';
+  return `${get('year')}-${get('month')}-${get('day')}`;
+}
+
+function isDateKey(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(`${value}T12:00:00Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
+function formatTaipeiTimestamp(value: number) {
+  if (!value) return '—';
+  return new Intl.DateTimeFormat('zh-TW', {
+    timeZone: 'Asia/Taipei', dateStyle: 'medium', timeStyle: 'short',
+  }).format(value);
+}
+
+function formatAmount(value: number) {
+  return new Intl.NumberFormat('zh-TW', { maximumFractionDigits: 0 }).format(value);
+}
 
 const firebaseConfig = {
   apiKey: 'AIzaSyDvzZKr2x3TGeOFZGisKKXjbYH00DLVhKg',
@@ -45,9 +88,23 @@ export default function ContentAdminPage() {
   const authRef = useRef<Auth | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [adminClaim, setAdminClaim] = useState<boolean | null>(null);
-  const [tab, setTab] = useState<'flavors' | 'announcements'>('flavors');
+  const [tab, setTab] = useState<'flavors' | 'announcements' | 'hours' | 'members'>('flavors');
   const [flavors, setFlavors] = useState<Flavor[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [weeklyHours, setWeeklyHours] = useState<WeeklySchedule>(() => defaultWeeklySchedule());
+  const savedWeeklyHoursRef = useRef<WeeklySchedule>(defaultWeeklySchedule());
+  const [specialDates, setSpecialDates] = useState<SpecialDate[]>([]);
+  const [removedSpecialDates, setRemovedSpecialDates] = useState<string[]>([]);
+  const savedSpecialDatesRef = useRef<Record<string, SpecialDate>>({});
+  const [newSpecialDate, setNewSpecialDate] = useState(taipeiToday);
+  const [newSpecialOpen, setNewSpecialOpen] = useState(false);
+  const [newSpecialStart, setNewSpecialStart] = useState('13:00');
+  const [newSpecialEnd, setNewSpecialEnd] = useState('20:00');
+  const [newSpecialReason, setNewSpecialReason] = useState('');
+  const [memberQuery, setMemberQuery] = useState('');
+  const [memberResult, setMemberResult] = useState<MemberLookupResult | null>(null);
+  const [memberLoading, setMemberLoading] = useState(false);
+  const [memberError, setMemberError] = useState('');
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
@@ -88,6 +145,34 @@ export default function ContentAdminPage() {
         active: item.active !== false,
         timestamp: Number(item.timestamp) || 0,
       })).sort((a, b) => b.timestamp - a.timestamp));
+      const hours = result.businessHours || {};
+      const nextWeekly = defaultWeeklySchedule();
+      WEEK_DAYS.forEach(({ key }) => {
+        const rawDay = hours[key];
+        if (rawDay && typeof rawDay === 'object' && !Array.isArray(rawDay)) {
+          const day = rawDay as Record<string, unknown>;
+          nextWeekly[key] = {
+            open: day.open !== false,
+            start: typeof day.start === 'string' ? day.start : '13:00',
+            end: typeof day.end === 'string' ? day.end : '20:00',
+          };
+        }
+      });
+      setWeeklyHours(nextWeekly);
+      savedWeeklyHoursRef.current = Object.fromEntries(WEEK_DAYS.map(({ key }) => [key, { ...nextWeekly[key] }])) as WeeklySchedule;
+      const specialNode = hours.specialDates && typeof hours.specialDates === 'object' && !Array.isArray(hours.specialDates)
+        ? hours.specialDates as Record<string, unknown>
+        : {};
+      const loadedSpecialDates = objectEntries(specialNode, (dateKey, item) => ({
+        dateKey,
+        open: item.open !== false,
+        start: typeof item.start === 'string' ? item.start : '13:00',
+        end: typeof item.end === 'string' ? item.end : '20:00',
+        reason: typeof item.reason === 'string' ? item.reason : '',
+      })).filter((item) => isDateKey(item.dateKey)).sort((a, b) => a.dateKey.localeCompare(b.dateKey));
+      savedSpecialDatesRef.current = Object.fromEntries(loadedSpecialDates.map((item) => [item.dateKey, { ...item }]));
+      setSpecialDates(loadedSpecialDates);
+      setRemovedSpecialDates([]);
       setMessage('已同步最新資料。');
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : '讀取內容失敗。');
@@ -110,6 +195,15 @@ export default function ContentAdminPage() {
         setAdminClaim(null);
         setFlavors([]);
         setAnnouncements([]);
+        setWeeklyHours(defaultWeeklySchedule());
+        savedWeeklyHoursRef.current = defaultWeeklySchedule();
+        setSpecialDates([]);
+        setRemovedSpecialDates([]);
+        savedSpecialDatesRef.current = {};
+        setMemberResult(null);
+        setMemberQuery('');
+        setMemberError('');
+        setMemberLoading(false);
         return;
       }
       try {
@@ -156,6 +250,39 @@ export default function ContentAdminPage() {
     }
   }
 
+  async function lookupMember(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!user) return;
+    const requestedUid = user.uid;
+    const query = memberQuery.trim();
+    setMemberError('');
+    setMemberResult(null);
+    if (query.length < 3 || query.length > 120) {
+      setMemberError('請輸入完整會員編號或電話（3 至 120 個字元）。');
+      return;
+    }
+    setMemberLoading(true);
+    try {
+      const token = await user.getIdToken();
+      const response = await fetch('/api/admin/members', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query }),
+        cache: 'no-store',
+      });
+      const result = await response.json().catch(() => ({})) as MemberLookupResult;
+      if (!response.ok || !result.member) throw new Error(result.error || `會員查詢失敗（${response.status}）`);
+      if (authRef.current?.currentUser?.uid !== requestedUid) return;
+      setMemberResult(result);
+    } catch (lookupError) {
+      if (authRef.current?.currentUser?.uid === requestedUid) {
+        setMemberError(lookupError instanceof Error ? lookupError.message : '會員查詢失敗。');
+      }
+    } finally {
+      setMemberLoading(false);
+    }
+  }
+
   function changeFlavor(index: number, patch: Partial<Flavor>) {
     setFlavors((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, ...patch } : item));
   }
@@ -168,6 +295,85 @@ export default function ContentAdminPage() {
       [next[index], next[target]] = [next[target], next[index]];
       return next;
     });
+  }
+
+  function changeDayHours(day: DayKey, patch: Partial<DaySchedule>) {
+    setWeeklyHours((current) => ({ ...current, [day]: { ...current[day], ...patch } }));
+  }
+
+  function changeSpecialDate(dateKey: string, patch: Partial<SpecialDate>) {
+    setSpecialDates((current) => current.map((item) => item.dateKey === dateKey ? { ...item, ...patch } : item));
+  }
+
+  function addSpecialDate() {
+    setError('');
+    setMessage('');
+    if (!isDateKey(newSpecialDate)) {
+      setError('請選擇有效的特殊日期。');
+      return;
+    }
+    if (specialDates.some((item) => item.dateKey === newSpecialDate)) {
+      setError('此日期已有特殊營業設定，請直接編輯清單中的項目。');
+      return;
+    }
+    const newItem: SpecialDate = {
+      dateKey: newSpecialDate,
+      open: newSpecialOpen,
+      start: newSpecialStart,
+      end: newSpecialEnd,
+      reason: newSpecialReason.trim(),
+    };
+    setSpecialDates((current) => [...current, newItem].sort((a, b) => a.dateKey.localeCompare(b.dateKey)));
+    setRemovedSpecialDates((current) => current.filter((dateKey) => dateKey !== newSpecialDate));
+    setNewSpecialReason('');
+    setMessage('特殊日期已加入草稿，請儲存後才會套用。');
+  }
+
+  function removeSpecialDate(dateKey: string) {
+    if (!window.confirm(`確定取消 ${dateKey} 的特殊日期設定？儲存後將改回每週排程。`)) return;
+    setSpecialDates((current) => current.filter((item) => item.dateKey !== dateKey));
+    if (savedSpecialDatesRef.current[dateKey]) {
+      setRemovedSpecialDates((current) => current.includes(dateKey) ? current : [...current, dateKey]);
+    }
+    setMessage(`${dateKey} 已從草稿移除；請儲存後才會套用。`);
+    setError('');
+  }
+
+  async function saveBusinessHours() {
+    if (!user) return;
+    setBusy(true);
+    setError('');
+    setMessage('');
+    try {
+      const weeklyPatch: Partial<WeeklySchedule> = {};
+      WEEK_DAYS.forEach(({ key }) => {
+        const current = weeklyHours[key];
+        const saved = savedWeeklyHoursRef.current[key];
+        if (current.open !== saved.open || current.start !== saved.start || current.end !== saved.end) {
+          weeklyPatch[key] = current;
+        }
+      });
+      const specialDateUpdates = specialDates.filter((item) => {
+        const saved = savedSpecialDatesRef.current[item.dateKey];
+        return !saved || item.open !== saved.open || item.start !== saved.start || item.end !== saved.end || item.reason !== saved.reason;
+      });
+      if (!Object.keys(weeklyPatch).length && !specialDateUpdates.length && !removedSpecialDates.length) {
+        setMessage('目前沒有尚未儲存的變更。');
+        return;
+      }
+      await request(user, 'PUT', {
+        kind: 'businessHours',
+        weekly: weeklyPatch,
+        specialDates: specialDateUpdates.map(({ dateKey, open, start, end, reason }) => ({ dateKey, open, start, end, reason })),
+        removeSpecialDates: removedSpecialDates,
+      });
+      await loadContent(user);
+      setMessage('營業時間與特殊日期已更新；顧客營業頁和點餐時段會讀取同一份設定。');
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : '儲存營業時間失敗。');
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function saveFlavors() {
@@ -221,8 +427,8 @@ export default function ContentAdminPage() {
 
         <section className={styles.intro}>
           <p className={styles.eyebrow}>STORE CONTENT · ADMIN ONLY</p>
-          <h1>公告與今日口味</h1>
-          <p>在此更新後，顧客端會從既有 Firebase 節點即時讀取。儲存僅更新管理欄位，保留其他資料，不會直接刪除現有項目。</p>
+          <h1>店務內容與營業時間</h1>
+          <p>公告、今日口味和營業排程會同步至顧客端。營業時間分頁只管理門市時段與特殊日期，不會變更線上接單模式。</p>
         </section>
 
         {!user ? (
@@ -239,9 +445,11 @@ export default function ContentAdminPage() {
           </section>
         ) : (
           <>
-            <nav className={styles.tabs} aria-label="內容類型">
+            <nav className={styles.tabs} aria-label="管理分頁">
               <button type="button" className={tab === 'flavors' ? styles.activeTab : ''} onClick={() => setTab('flavors')}>今日口味 <span>{flavors.length}</span></button>
               <button type="button" className={tab === 'announcements' ? styles.activeTab : ''} onClick={() => setTab('announcements')}>營業公告 <span>{announcements.length}</span></button>
+              <button type="button" className={tab === 'hours' ? styles.activeTab : ''} onClick={() => setTab('hours')}>營業時間 <span>{specialDates.length}</span></button>
+              <button type="button" className={tab === 'members' ? styles.activeTab : ''} onClick={() => setTab('members')}>會員資料</button>
             </nav>
 
             {tab === 'flavors' ? (
@@ -262,7 +470,7 @@ export default function ContentAdminPage() {
                 </div>
                 <div className={styles.panelFooter}><button type="button" className={styles.textButton} onClick={() => setFlavors((current) => [...current, { id: '', name: '', desc: '', soldOut: false, sortOrder: current.length }])} disabled={busy}>＋ 新增口味</button><button type="button" className={styles.primaryButton} onClick={() => void saveFlavors()} disabled={busy || loading}>{busy ? '儲存中…' : '儲存今日口味'}</button></div>
               </section>
-            ) : (
+            ) : tab === 'announcements' ? (
               <section className={styles.panel}>
                 <div className={styles.panelHeading}><div><p className={styles.eyebrow}>STORE ANNOUNCEMENTS</p><h2>營業公告</h2><p>可發布店休、營業異動或一般公告；停用的公告會保留但不顯示。</p></div><button type="button" className={styles.secondaryButton} onClick={() => void loadContent(user)} disabled={loading || busy}>{loading ? '載入中…' : '重新載入'}</button></div>
                 <div className={styles.list}>
@@ -279,6 +487,112 @@ export default function ContentAdminPage() {
                   {!announcements.length && <div className={styles.empty}>目前沒有公告，新增後可發布店休或營業資訊。</div>}
                 </div>
                 <div className={styles.panelFooter}><button type="button" className={styles.textButton} onClick={() => setAnnouncements((current) => [{ id: '', title: '', content: '', active: true, timestamp: Date.now() }, ...current])} disabled={busy}>＋ 新增公告</button><button type="button" className={styles.primaryButton} onClick={() => void saveAnnouncements()} disabled={busy || loading}>{busy ? '儲存中…' : '儲存營業公告'}</button></div>
+              </section>
+            ) : tab === 'hours' ? (
+              <section className={styles.panel}>
+                <div className={styles.panelHeading}><div><p className={styles.eyebrow}>STORE HOURS & EXCEPTIONS</p><h2>營業時間／特殊日期</h2><p>設定每週常態營業時段，並以指定日期覆蓋為臨時店休或特別營業。</p></div><button type="button" className={styles.secondaryButton} onClick={() => void loadContent(user)} disabled={loading || busy}>{loading ? '載入中…' : '重新載入'}</button></div>
+                <div className={styles.hoursNote}>這裡調整的是門市實際營業時間。線上接單暫停／截止模式（shopMode）不會被這個表單修改。</div>
+
+                <section className={styles.scheduleSection} aria-labelledby="weekly-hours-heading">
+                  <div className={styles.sectionHeading}><div><h3 id="weekly-hours-heading">每週營業時間</h3><p>未設定的時段依目前系統預設 13:00–20:00。</p></div></div>
+                  <div className={styles.weeklyGrid}>
+                    {WEEK_DAYS.map(({ key, label }) => {
+                      const schedule = weeklyHours[key];
+                      return (
+                        <div className={styles.weekdayRow} key={key}>
+                          <strong className={styles.dayName}>{label}</strong>
+                          <label className={styles.openToggle}><input type="checkbox" checked={schedule.open} onChange={(event) => changeDayHours(key, { open: event.target.checked })} />營業</label>
+                          <div className={styles.timeInputs}>
+                            <input type="time" step={1800} aria-label={`${label}開始時間`} value={schedule.start} disabled={!schedule.open} onChange={(event) => changeDayHours(key, { start: event.target.value })} />
+                            <span>至</span>
+                            <input type="time" step={1800} aria-label={`${label}結束時間`} value={schedule.end} disabled={!schedule.open} onChange={(event) => changeDayHours(key, { end: event.target.value })} />
+                          </div>
+                          <span className={schedule.open ? styles.openBadge : styles.closedBadge}>{schedule.open ? '營業中' : '固定公休'}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+
+                <section className={styles.scheduleSection} aria-labelledby="special-dates-heading">
+                  <div className={styles.sectionHeading}><div><h3 id="special-dates-heading">特殊店休日／特別營業</h3><p>特殊日期會覆蓋該日的每週排程；移除後即恢復每週設定。</p></div></div>
+                  <div className={styles.specialAdd}>
+                    <label>日期<input type="date" min={taipeiToday()} value={newSpecialDate} onChange={(event) => setNewSpecialDate(event.target.value)} /></label>
+                    <label>當日安排<select value={newSpecialOpen ? 'open' : 'closed'} onChange={(event) => setNewSpecialOpen(event.target.value === 'open')}><option value="closed">臨時店休</option><option value="open">特別營業</option></select></label>
+                    {newSpecialOpen && <div className={styles.timeInputs}><label>開始<input type="time" step={1800} value={newSpecialStart} onChange={(event) => setNewSpecialStart(event.target.value)} /></label><label>結束<input type="time" step={1800} value={newSpecialEnd} onChange={(event) => setNewSpecialEnd(event.target.value)} /></label></div>}
+                    <label className={styles.reasonField}>原因／備註<input maxLength={240} value={newSpecialReason} onChange={(event) => setNewSpecialReason(event.target.value)} placeholder="例如：設備保養、節日延長營業" /></label>
+                    <button type="button" className={styles.secondaryButton} onClick={addSpecialDate} disabled={busy}>＋ 加入日期</button>
+                  </div>
+
+                  <div className={styles.specialDateList}>
+                    {specialDates.map((item) => (
+                      <article className={styles.specialDateCard} key={item.dateKey}>
+                        <div className={styles.specialDateTop}><strong>{item.dateKey}</strong><button type="button" className={styles.dangerButton} onClick={() => removeSpecialDate(item.dateKey)} disabled={busy}>取消設定</button></div>
+                        <div className={styles.specialDateFields}>
+                          <label>安排<select value={item.open ? 'open' : 'closed'} onChange={(event) => changeSpecialDate(item.dateKey, { open: event.target.value === 'open' })}><option value="closed">臨時店休</option><option value="open">特別營業</option></select></label>
+                          {item.open && <div className={styles.timeInputs}><label>開始<input type="time" step={1800} value={item.start} onChange={(event) => changeSpecialDate(item.dateKey, { start: event.target.value })} /></label><label>結束<input type="time" step={1800} value={item.end} onChange={(event) => changeSpecialDate(item.dateKey, { end: event.target.value })} /></label></div>}
+                          <label className={styles.reasonField}>原因／備註<input maxLength={240} value={item.reason} onChange={(event) => changeSpecialDate(item.dateKey, { reason: event.target.value })} placeholder="選填" /></label>
+                        </div>
+                      </article>
+                    ))}
+                    {!specialDates.length && <div className={styles.empty}>目前沒有特殊日期；顧客端會依每週排程計算營業狀態。</div>}
+                  </div>
+                </section>
+
+                <div className={styles.panelFooter}><span className={styles.pendingNote}>{removedSpecialDates.length ? `待取消 ${removedSpecialDates.length} 個特殊日期` : '修改尚未套用，請儲存後發布'}</span><button type="button" className={styles.primaryButton} onClick={() => void saveBusinessHours()} disabled={busy || loading}>{busy ? '儲存中…' : '儲存營業時間'}</button></div>
+              </section>
+            ) : (
+              <section className={styles.panel}>
+                <div className={styles.panelHeading}><div><p className={styles.eyebrow}>MEMBER LOOKUP · ADMIN ONLY</p><h2>會員資料查詢</h2><p>僅能精確查詢單一會員；此頁唯讀，不提供會員名單或資料修改。</p></div></div>
+                <form className={styles.memberSearch} onSubmit={(event) => void lookupMember(event)}>
+                  <label htmlFor="member-lookup-query">會員編號或完整電話
+                    <input id="member-lookup-query" type="search" autoComplete="off" maxLength={120} value={memberQuery} onChange={(event) => { setMemberQuery(event.target.value); setMemberResult(null); setMemberError(''); }} placeholder="輸入完整會員編號或已登記電話" />
+                  </label>
+                  <button type="submit" className={styles.primaryButton} disabled={memberLoading}>{memberLoading ? '查詢中…' : '查詢會員'}</button>
+                  {memberQuery && <button type="button" className={styles.textButton} onClick={() => { setMemberQuery(''); setMemberResult(null); setMemberError(''); }}>清除</button>}
+                </form>
+                <p className={styles.memberPrivacy}>只接受完整會員編號／電話，不做模糊搜尋；電話會遮罩顯示。LINE 身分識別碼與登入 token 不會回傳。</p>
+                {memberError && <div role="alert" className={styles.memberError}>{memberError}</div>}
+
+                {memberResult?.member && (
+                  <>
+                    <article className={styles.memberProfile}>
+                      <div className={styles.memberProfileHead}>
+                        <div><p className={styles.eyebrow}>MEMBER PROFILE</p><h3>{memberResult.member.displayName}</h3><span className={styles.memberType}>{memberResult.member.memberType === 'line' ? 'LINE 會員' : memberResult.member.memberType === 'guest' ? '現場會員' : memberResult.member.memberType}</span></div>
+                        <strong className={styles.memberNumber}>{memberResult.member.memberNo}</strong>
+                      </div>
+                      <dl className={styles.memberFacts}>
+                        <div><dt>電話</dt><dd>{memberResult.member.phone}</dd></div>
+                        <div><dt>目前點數</dt><dd className={styles.memberBalance}>{formatAmount(memberResult.member.pointsBalance)} 點</dd></div>
+                        <div><dt>加入時間</dt><dd>{formatTaipeiTimestamp(memberResult.member.createdAt)}</dd></div>
+                        <div><dt>點數更新時間</dt><dd>{formatTaipeiTimestamp(memberResult.member.pointsUpdatedAt)}</dd></div>
+                      </dl>
+                    </article>
+
+                    <div className={styles.memberHistoryGrid}>
+                      <section className={styles.memberRecordPanel} aria-labelledby="member-points-heading">
+                        <div className={styles.memberRecordHeading}><h3 id="member-points-heading">最近點數紀錄</h3><span>最多 20 筆</span></div>
+                        {memberResult.recentPoints?.length ? <ul className={styles.memberRecordList}>{memberResult.recentPoints.map((entry, index) => (
+                          <li className={styles.memberRecordRow} key={`${entry.createdAt}-${entry.orderNo || index}`}>
+                            <div><strong>{entry.sourceLabel || entry.type}</strong><small>{formatTaipeiTimestamp(entry.createdAt)}{entry.orderNo ? ` · 訂單 ${entry.orderNo}` : ''}</small></div>
+                            <b className={entry.delta >= 0 ? styles.pointsPositive : styles.pointsNegative}>{entry.delta > 0 ? '+' : ''}{formatAmount(entry.delta)}</b>
+                          </li>
+                        ))}</ul> : <div className={styles.memberEmpty}>尚無點數流水紀錄。</div>}
+                      </section>
+
+                      <section className={styles.memberRecordPanel} aria-labelledby="member-orders-heading">
+                        <div className={styles.memberRecordHeading}><h3 id="member-orders-heading">最近訂單</h3><span>最多 20 筆</span></div>
+                        {memberResult.recentOrders?.length ? <ul className={styles.memberRecordList}>{memberResult.recentOrders.map((order, index) => (
+                          <li className={styles.memberOrderRow} key={`${order.orderNo}-${order.timestamp}-${index}`}>
+                            <div className={styles.memberOrderTop}><strong>{order.orderNo}</strong><b>NT$ {formatAmount(order.total)}</b></div>
+                            <small>{formatTaipeiTimestamp(order.timestamp)} · {order.status || '狀態未記錄'} · {order.paymentStatus || '付款狀態未記錄'}</small>
+                            <p>{order.items.length ? order.items.map((item) => `${item.name} × ${item.quantity}`).join('、') : '無商品明細'}</p>
+                          </li>
+                        ))}</ul> : <div className={styles.memberEmpty}>尚無可對應的訂單。</div>}
+                      </section>
+                    </div>
+                  </>
+                )}
               </section>
             )}
           </>

@@ -87,3 +87,120 @@ button:disabled { opacity: .48; cursor: not-allowed; }
   .account span { max-width: 145px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .panelHeading .secondaryButton { padding: 0 8px; }
 }
+
+.hoursNote { margin: 16px 0 2px; padding: 11px 13px; border-left: 3px solid #bd8c73; border-radius: 0 8px 8px 0; color: #725d50; background: #fbf4ee; font-size: 12px; line-height: 1.6; }
+.scheduleSection { margin-top: 26px; }
+.sectionHeading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.sectionHeading h3 { margin: 0; color: #46382f; font-size: 16px; }
+.sectionHeading p { margin: 5px 0 0; color: #93847a; font-size: 11px; line-height: 1.5; }
+.weeklyGrid { overflow-x: auto; overflow-y: hidden; border: 1px solid #eee8e3; border-radius: 12px; background: #fffdfa; }
+.weekdayRow { display: grid; grid-template-columns: 90px 82px minmax(180px, 1fr) 74px; align-items: center; gap: 12px; min-height: 62px; padding: 9px 14px; border-bottom: 1px solid #f0ebe7; }
+.weekdayRow:last-child { border-bottom: 0; }
+.dayName { color: #51443b; font-size: 13px; }
+.openToggle { display: inline-flex; align-items: center; gap: 6px; color: #75665d; font-size: 12px; }
+.openToggle input { accent-color: #9a573f; }
+.timeInputs { display: flex; align-items: center; gap: 8px; color: #9a8b81; font-size: 11px; }
+.timeInputs input, .specialAdd input, .specialAdd select, .specialDateFields input, .specialDateFields select { min-height: 38px; box-sizing: border-box; padding: 7px 9px; border: 1px solid #e8dfd8; border-radius: 8px; color: #43372f; background: white; font: inherit; font-size: 12px; }
+.timeInputs input:focus, .specialAdd input:focus, .specialAdd select:focus, .specialDateFields input:focus, .specialDateFields select:focus { outline: none; border-color: #bd8c73; box-shadow: 0 0 0 3px rgba(154, 87, 63, .09); }
+.timeInputs input:disabled { color: #aa9e96; background: #f5f1ee; }
+.openBadge, .closedBadge { justify-self: end; padding: 5px 8px; border-radius: 999px; font-size: 10px; white-space: nowrap; }
+.openBadge { color: #4e765b; background: #edf6ef; }
+.closedBadge { color: #8b5d4d; background: #f7eee8; }
+.specialAdd { display: grid; grid-template-columns: minmax(145px, 1fr) minmax(125px, .75fr) minmax(220px, 1.5fr) auto; align-items: end; gap: 10px; padding: 13px; border: 1px solid #eee8e3; border-radius: 12px; background: #fffdfa; }
+.specialAdd > label, .specialAdd .timeInputs label, .specialDateFields > label, .specialDateFields .timeInputs label { display: grid; gap: 6px; color: #7e7066; font-size: 10px; font-weight: 700; }
+.specialAdd .timeInputs { gap: 7px; }
+.specialAdd .timeInputs input, .specialDateFields .timeInputs input { width: 100%; }
+.specialAdd .timeInputs label, .specialDateFields .timeInputs label { flex: 1; }
+.reasonField { min-width: 150px; }
+.specialAdd .secondaryButton { min-height: 38px; padding: 0 12px; white-space: nowrap; }
+.specialDateList { display: grid; gap: 9px; margin-top: 11px; }
+.specialDateCard { padding: 13px; border: 1px solid #eee8e3; border-radius: 12px; background: #fffdfa; }
+.specialDateTop { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 11px; }
+.specialDateTop strong { color: #503b30; font-size: 13px; }
+.specialDateFields { display: grid; grid-template-columns: minmax(130px, .7fr) minmax(240px, 1.2fr) minmax(180px, 1fr); align-items: end; gap: 10px; }
+.specialDateFields select, .specialDateFields input { width: 100%; }
+.specialDateFields .timeInputs { min-height: 38px; }
+.dangerButton { padding: 6px 9px; border: 1px solid #efd9d5; border-radius: 8px; color: #9b5044; background: #fff9f7; font: inherit; font-size: 10px; cursor: pointer; }
+.dangerButton:hover:not(:disabled) { background: #fff0ec; }
+.pendingNote { color: #95867c; font-size: 11px; }
+
+@media (max-width: 700px) {
+  .weekdayRow { grid-template-columns: 75px 72px minmax(130px, 1fr); gap: 8px; padding: 9px 10px; }
+  .weekdayRow .openBadge, .weekdayRow .closedBadge { display: none; }
+  .timeInputs { gap: 5px; }
+  .weekdayRow .timeInputs input { min-width: 0; width: 100%; padding: 6px 5px; font-size: 11px; }
+  .specialAdd { grid-template-columns: 1fr 1fr; }
+  .specialAdd .reasonField { grid-column: 1 / -1; }
+  .specialAdd .secondaryButton { justify-self: start; }
+  .specialDateFields { grid-template-columns: 1fr 1.5fr; }
+  .specialDateFields .reasonField { grid-column: 1 / -1; }
+  .specialDateFields .timeInputs { gap: 6px; }
+  .pendingNote { max-width: 145px; line-height: 1.5; }
+}
+
+@media (max-width: 410px) {
+  .weekdayRow { min-width: 271px; box-sizing: border-box; grid-template-columns: 63px 62px minmax(120px, 1fr); gap: 5px; padding: 8px; }
+  .dayName { font-size: 11px; }
+  .openToggle { gap: 3px; font-size: 10px; }
+  .weekdayRow .timeInputs input { font-size: 10px; }
+  .specialDateFields { grid-template-columns: 1fr; }
+  .specialDateFields .reasonField { grid-column: auto; }
+}
+
+.memberSearch { display: flex; align-items: end; gap: 10px; margin-top: 18px; padding: 14px; border: 1px solid #eee8e3; border-radius: 12px; background: #fffdfa; }
+.memberSearch label { display: grid; flex: 1; gap: 6px; color: #7e7066; font-size: 11px; font-weight: 700; }
+.memberSearch input { width: 100%; min-height: 42px; box-sizing: border-box; padding: 9px 11px; border: 1px solid #e8dfd8; border-radius: 8px; color: #43372f; background: white; font: inherit; font-size: 13px; }
+.memberSearch input:focus { outline: none; border-color: #bd8c73; box-shadow: 0 0 0 3px rgba(154, 87, 63, .09); }
+.memberPrivacy { margin: 9px 2px 15px; color: #95867c; font-size: 11px; line-height: 1.6; }
+.memberError { margin: 12px 0; padding: 12px 14px; border: 1px solid #f0d4cf; border-radius: 9px; color: #8b342c; background: #fff4f1; font-size: 12px; line-height: 1.6; }
+.memberProfile { padding: 17px; border: 1px solid #eee8e3; border-radius: 14px; background: linear-gradient(135deg, #fffdfa, #fbf4ee); }
+.memberProfileHead { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding-bottom: 14px; border-bottom: 1px solid #eee8e3; }
+.memberProfileHead .eyebrow { margin-bottom: 5px; }
+.memberProfileHead h3 { display: inline-block; margin: 0 9px 0 0; color: #342a25; font-family: Georgia, "Noto Serif TC", serif; font-size: 20px; font-weight: 600; }
+.memberType { display: inline-block; padding: 4px 7px; border-radius: 999px; color: #806148; background: #f5ebe1; font-size: 10px; vertical-align: 2px; }
+.memberNumber { padding: 7px 10px; border: 1px solid #e8dfd8; border-radius: 8px; color: #694836; background: white; font-size: 12px; letter-spacing: .04em; white-space: nowrap; }
+.memberFacts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 14px 0 0; }
+.memberFacts > div { min-width: 0; }
+.memberFacts dt { margin-bottom: 5px; color: #95867c; font-size: 10px; }
+.memberFacts dd { margin: 0; overflow-wrap: anywhere; color: #51443b; font-size: 12px; }
+.memberFacts .memberBalance { color: #9a573f; font-size: 18px; font-weight: 800; }
+.memberHistoryGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 15px; }
+.memberRecordPanel { min-width: 0; overflow: hidden; border: 1px solid #eee8e3; border-radius: 12px; background: #fffdfa; }
+.memberRecordHeading { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 13px 14px; border-bottom: 1px solid #f0ebe7; }
+.memberRecordHeading h3 { margin: 0; color: #46382f; font-size: 14px; }
+.memberRecordHeading span { color: #a09288; font-size: 10px; white-space: nowrap; }
+.memberRecordList { display: grid; max-height: 430px; overflow-y: auto; margin: 0; padding: 0; list-style: none; }
+.memberRecordRow, .memberOrderRow { padding: 12px 14px; border-bottom: 1px solid #f3eeea; }
+.memberRecordRow:last-child, .memberOrderRow:last-child { border-bottom: 0; }
+.memberRecordRow { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.memberRecordRow > div { min-width: 0; }
+.memberRecordRow strong, .memberRecordRow small { display: block; }
+.memberRecordRow strong { overflow: hidden; color: #51443b; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.memberRecordRow small, .memberOrderRow small { margin-top: 4px; color: #95867c; font-size: 10px; line-height: 1.5; }
+.memberRecordRow > b { flex: 0 0 auto; font-size: 13px; }
+.pointsPositive { color: #4e765b; }
+.pointsNegative { color: #9b5044; }
+.memberOrderTop { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.memberOrderTop strong { color: #51443b; font-size: 11px; }
+.memberOrderTop b { color: #694836; font-size: 12px; white-space: nowrap; }
+.memberOrderRow > small { display: block; }
+.memberOrderRow p { margin: 7px 0 0; color: #75665d; font-size: 10px; line-height: 1.6; overflow-wrap: anywhere; }
+.memberEmpty { padding: 20px 13px; color: #95867c; text-align: center; font-size: 11px; }
+
+@media (max-width: 700px) {
+  .tabs { overflow-x: auto; }
+  .tabs button { min-width: max-content; padding: 0 11px; }
+  .memberSearch { align-items: stretch; flex-wrap: wrap; padding: 11px; }
+  .memberSearch label { flex: 1 1 100%; }
+  .memberSearch .primaryButton { flex: 1; }
+  .memberFacts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .memberHistoryGrid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 410px) {
+  .memberProfile { padding: 12px; }
+  .memberProfileHead { align-items: flex-start; }
+  .memberProfileHead h3 { font-size: 18px; }
+  .memberNumber { padding: 6px 7px; font-size: 10px; }
+  .memberFacts { gap: 10px; }
+}
